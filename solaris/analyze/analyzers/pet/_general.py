@@ -1,7 +1,7 @@
 from functools import cached_property
 from typing import Any
 
-from solaris.analyze.base import BaseAnalyzer, DataImportConfig
+from solaris.analyze.base import BaseDataSourceAnalyzer, DataImportConfig
 
 general_import_config = DataImportConfig(
 	html5_paths=(
@@ -21,7 +21,7 @@ general_import_config = DataImportConfig(
 )
 
 
-class BasePetAnalyzer(BaseAnalyzer):
+class BasePetAnalyzer(BaseDataSourceAnalyzer):
 	@classmethod
 	def get_data_import_config(cls) -> DataImportConfig:
 		return general_import_config

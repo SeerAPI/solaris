@@ -1,9 +1,10 @@
-from typing import TYPE_CHECKING, Any, Optional, Self
+from typing import TYPE_CHECKING, Any, Optional
+from typing_extensions import Self
 
 from pydantic import BaseModel
 from sqlmodel import Field, Relationship, SQLModel
 
-from solaris.analyze.base import BaseAnalyzer, DataImportConfig
+from solaris.analyze.base import BaseDataSourceAnalyzer, DataImportConfig
 from solaris.analyze.model import (
 	BaseCategoryModel,
 	BaseResModel,
@@ -398,7 +399,7 @@ class EquipEffectiveOccasionORM(EquipEffectiveOccasionBase, table=True):
 	)
 
 
-class EquipAnalyzer(BaseAnalyzer):
+class EquipAnalyzer(BaseDataSourceAnalyzer):
 	"""装备数据解析器"""
 
 	@classmethod

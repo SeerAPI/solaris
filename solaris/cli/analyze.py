@@ -15,35 +15,7 @@ from solaris.analyze.base import (
 	DataSourceDirSettings,
 )
 from solaris.analyze.model import ApiMetadata
-from solaris.analyze.utils import merge_import_config
 from solaris.settings import BaseSettings, CreateSettingsError
-from solaris.typing import Paths
-
-
-def format_data_import_configs(*configs: DataImportConfig) -> str:
-	config = merge_import_config(*configs)
-	patch_paths_set = set(config.patch_paths)
-
-	def _format_paths(paths: Paths, *, exclude_patch: bool = False) -> str:
-		path_set = set(paths)
-		if exclude_patch:
-			path_set -= patch_paths_set  # 排除补丁创建的文件
-		if not path_set:
-			return 'None'
-		return '\n'.join(
-			str(Path(path).relative_to(config.SOURCE_DIR_SETTINGS.BASE_DIR))
-			for path in path_set
-		)
-
-	string = 'DataImportConfig: \n'
-	string += f'patch_paths: \n{_format_paths(config.patch_paths)}\n\n'
-	string += f'h5_paths: \n{_format_paths(config.html5_paths, exclude_patch=True)}\n\n'
-	string += (
-		f'unity_paths: \n{_format_paths(config.unity_paths, exclude_patch=True)}\n\n'
-	)
-	string += f'flash_paths: \n{_format_paths(config.flash_paths, exclude_patch=True)}'
-	return string
-
 
 TSettings = TypeVar('TSettings', bound=BaseSettings)
 
@@ -154,8 +126,11 @@ def analyze(
 	ctx.obj['analyzer_classes'] = analyzer_classes
 
 	if list_analyzers:
-		configs = (analyzer.get_data_import_config() for analyzer in analyzer_classes)
-		string = format_data_import_configs(*configs)
+		string = f'找到 {len(analyzer_classes)} 个分析器:\n'
+		string += '\n'.join(
+			analyzer_class.get_list_info()
+			for analyzer_class in analyzer_classes
+		)
 		click.echo(string)
 		return
 
@@ -168,8 +143,14 @@ def analyze(
 		ctx,
 		ApiMetadata,
 		msg_maps={
-			'api_url': '未获取到有效的API URL，请使用 --api-url 指定，或设置环境变量 SOLARIS_API_URL',
-			'api_version': '未获取到有效的API版本，请使用 --api-version 指定，或设置环境变量 SOLARIS_API_VERSION',
+			'api_url': (
+				'未获取到有效的API URL，请使用 --api-url 指定，'
+				'或设置环境变量 SOLARIS_API_URL'
+			),
+			'api_version': (
+				'未获取到有效的API版本，请使用 --api-version 指定，'
+				'或设置环境变量 SOLARIS_API_VERSION'
+			),
 		},
 		api_url=api_url,
 		api_version=api_version,

@@ -2,7 +2,7 @@ from typing import Any
 
 from sqlmodel import Field, Relationship
 
-from solaris.analyze.base import BaseAnalyzer, DataImportConfig
+from solaris.analyze.base import BaseDataSourceAnalyzer, DataImportConfig
 from solaris.analyze.model import (
 	BaseCategoryModel,
 	BaseResModel,
@@ -131,7 +131,7 @@ class PetEffectGroupORM(PetEffectGroupBase, table=True):
 	)
 
 
-class NewSeAnalyzer(BaseAnalyzer):
+class NewSeAnalyzer(BaseDataSourceAnalyzer):
 	"""分析并提取特性/特质数据"""
 
 	@classmethod

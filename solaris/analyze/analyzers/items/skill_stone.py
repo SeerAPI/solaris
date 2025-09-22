@@ -2,7 +2,7 @@ from typing import TYPE_CHECKING, Any
 
 from sqlmodel import Field, Relationship, SQLModel
 
-from solaris.analyze.base import AnalyzeResult, BaseAnalyzer, DataImportConfig
+from solaris.analyze.base import AnalyzeResult, BaseDataSourceAnalyzer, DataImportConfig
 from solaris.analyze.model import (
 	BaseCategoryModel,
 	BaseResModel,
@@ -116,7 +116,7 @@ class SkillStoneCategoryORM(SkillStoneCategoryBase, table=True):
 	)
 
 
-class SkillStoneAnalyzer(BaseAnalyzer):
+class SkillStoneAnalyzer(BaseDataSourceAnalyzer):
 	@classmethod
 	def get_data_import_config(cls) -> DataImportConfig:
 		return DataImportConfig(

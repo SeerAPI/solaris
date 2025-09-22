@@ -4,7 +4,12 @@ import inspect
 from typing import TYPE_CHECKING, Any, ClassVar, Generic, TypeVar, overload
 from typing_extensions import Self, TypeIs
 
-from pydantic import AnyUrl, BaseModel, GetJsonSchemaHandler, computed_field
+from pydantic import (
+	AnyUrl,
+	BaseModel,
+	GetJsonSchemaHandler,
+	computed_field,
+)
 from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import core_schema as cs
 from sqlalchemy.orm import column_property, declared_attr
@@ -335,7 +340,8 @@ class EidEffectInUseORM(EidEffectInUseBase, table=True):
 
 
 class SixAttributes(
-	BaseResModelWithOptionalId, BaseGeneralModel, ConvertToORM['SixAttributesORM']
+	BaseResModelWithOptionalId,
+	BaseGeneralModel,ConvertToORM['SixAttributesORM']
 ):
 	"""六维属性类"""
 
@@ -471,7 +477,9 @@ class SkillEffectInUseBase(BaseResModelWithOptionalId):
 
 
 class SkillEffectInUse(
-	SkillEffectInUseBase, BaseGeneralModel, ConvertToORM['SkillEffectInUseORM']
+	SkillEffectInUseBase,
+	BaseGeneralModel,
+	ConvertToORM['SkillEffectInUseORM']
 ):
 	effect: 'ResourceRef'
 
@@ -501,6 +509,9 @@ class SkillEffectInUseORM(SkillEffectInUseBase, table=True):
 	)
 	gem: list['GemORM'] = Relationship(
 		back_populates='skill_effect_in_use',
+		sa_relationship_kwargs={
+			'secondary': 'gemeffectlink',
+		},
 	)
 	skill_stone_category: list['SkillStoneCategoryORM'] = Relationship(
 		back_populates='hide_effect',

@@ -1,9 +1,10 @@
 from dataclasses import KW_ONLY, dataclass
+from functools import cached_property
 from typing import TYPE_CHECKING, Literal
 
 from sqlmodel import JSON, Field, Relationship, SQLModel
 
-from solaris.analyze.base import BaseAnalyzer, DataImportConfig
+from solaris.analyze.base import BaseDataSourceAnalyzer, DataImportConfig
 from solaris.analyze.model import (
 	BaseCategoryModel,
 	BaseResModel,
@@ -347,16 +348,149 @@ class SkillORM(SkillBase, table=True):
 
 	pet_links: list['SkillInPetORM'] = Relationship(
 		back_populates='skill',
-		# sa_relationship_kwargs={
-		# "secondary": "pet",
-		# }
 	)
 
 
-class SkillAnalyzer(BaseAnalyzer):
+class BaseSkillEffectAnalyzer(BaseDataSourceAnalyzer):
 	@classmethod
 	def get_data_import_config(cls) -> DataImportConfig:
-		return DataImportConfig(
+		return DataImportConfig(html5_paths=('xml/effectInfo.json',))
+
+	@cached_property
+	def effect_param_map(self) -> dict[int, SkillEffectParam]:
+		effect_param_data: list[dict] = self._get_data(
+			'html5',
+			'xml/effectInfo.json'
+		)['root']['ParamType']
+
+		effect_param_map: dict[int, SkillEffectParam] = {}
+		for effect_param in effect_param_data:
+			id_ = effect_param['id']
+			infos = None
+			if param_str := effect_param.get('params'):
+				infos = param_str.split('|')
+			effect_param_map[id_] = SkillEffectParam(
+				id=id_,
+				infos=infos,
+			)
+
+		return effect_param_map
+
+	@cached_property
+	def effect_type_map(self) -> dict[int, SkillEffectType]:
+		effect_type_data: list[dict] = self._get_data(
+			'html5',
+			'xml/effectInfo.json'
+		)['root']['Effect']
+
+		effect_type_map: dict[int, SkillEffectType] = {}
+		for effect_type in effect_type_data:
+			if not (info := effect_type.get('info')):
+				continue
+			id_ = effect_type['id']
+			params: list[SkillEffectParamInType] | None = None
+			if param_list := effect_type.get('param'):
+				param_list = param_list.split('|')
+				params = [
+					SkillEffectParamInType(
+						position=start_index,
+						param=ResourceRef.from_model(self.effect_param_map[id_]),
+					)
+					for id_, start_index, _ in [
+						tuple(int(i) for i in param.split(',')) for param in param_list
+					]
+				]
+			effect_type_map[id_] = SkillEffectType(
+				id=id_,
+				args_num=effect_type['argsNum'],
+				param=params,
+				info=info,
+				skill=[],
+			)
+		return effect_type_map
+
+	def create_skill_effect(
+		self,
+		type_ids: list[int],
+		args: list[int]
+	) -> list[SkillEffectInUse]:
+		"""根据效果类型ID和参数列表，创建技能效果对象元组。
+
+		Args:
+			type_ids: 技能效果的类型ID列表。
+			args: 所有技能效果的参数列表。
+
+		Returns:
+			一个包含SkillEffect对象的列表。如果出现未知效果类型或参数错误，则返回空元组。
+		"""
+		args_nums = []
+		# 遍历每个效果类型ID，从effect_type_map中获取所需参数数量
+		for i in type_ids:
+			if i not in self.effect_type_map:
+				return []
+
+			args_nums.append(self.effect_type_map[i].args_num)
+
+		# 使用_slice_args辅助函数，根据每个效果所需的参数数量，将扁平的args列表
+		# 切分为嵌套列表
+		sliced_args: list[list[int]] = _slice_args(
+			args_nums,
+			list(args),
+		)
+		results = []
+		# 遍历切分后的参数和对应的效果类型ID
+		format_mode_map = {16: 'none', 24: '-'}
+		for type_id, effect_args in zip(type_ids, sliced_args):
+			type_ = self.effect_type_map[type_id]
+			# info_args用于格式化效果描述字符串，初始值为效果参数的副本
+			info_args: list[int | StatChange | str | None] = list(effect_args)
+			# 处理需要特殊格式化的参数
+			for p in type_.param or []:
+				param_index = p.position
+				param_ref = p.param
+				param = self.effect_param_map[param_ref.id]
+				# param_id为0, 16, 24表示这是一个StatChange（状态变化）参数
+				if (param_id := param.id) in (0, 16, 24):
+					# 将6个参数合并为一个StatChange对象
+					slice_ = slice(param_index, param_index + 6)
+
+					kwargs = {}
+					if mode := format_mode_map.get(param_id):
+						kwargs['format_mode'] = mode
+
+					info_args[slice_] = [
+						StatChange(*effect_args[slice_], **kwargs)
+					] + [None] * 5  # 由于状态变化占用6个参数位置，所以填充5个None
+					continue
+				# 如果参数有预定义的描述信息(param.infos)
+				if isinstance(param_infos := param.infos, list):
+					pos = effect_args[param_index]
+					try:
+						# 使用参数值作为索引，在infos中查找对应的描述文本并使用
+						info_args[param_index] = param_infos[pos]
+					except IndexError:
+						return []
+				# 额外处理id为14的参数
+				elif param_id == 14:
+					info_args[param_index] = f'{effect_args[param_index]:+d}'
+					continue
+
+			results.append(
+				SkillEffectInUse(
+					effect=ResourceRef.from_model(type_),
+					args=effect_args,
+					info=type_.info.format(*info_args),
+				)
+			)
+
+		return results
+
+
+class SkillAnalyzer(BaseSkillEffectAnalyzer):
+	@classmethod
+	def get_data_import_config(cls) -> DataImportConfig:
+		super_config = super().get_data_import_config()
+		config = DataImportConfig(
 			html5_paths=(
 				'xml/moves.json',
 				'xml/side_effect.json',
@@ -368,6 +502,7 @@ class SkillAnalyzer(BaseAnalyzer):
 				'skill_category.json',
 			),
 		)
+		return super_config + config
 
 	def analyze(self) -> tuple[AnalyzeResult, ...]:
 		SkillEffectInUse.model_rebuild(
@@ -382,122 +517,6 @@ class SkillAnalyzer(BaseAnalyzer):
 		skill_data: list[dict] = self._get_data('html5', 'xml/moves.json')['MovesTbl'][
 			'Moves'
 		]['Move']
-		effect_type_data: list[dict] = self._get_data('html5', 'xml/effectInfo.json')[
-			'root'
-		]['Effect']
-		effect_param_data: list[dict] = self._get_data('html5', 'xml/effectInfo.json')[
-			'root'
-		]['ParamType']
-
-		effect_param_map: dict[int, SkillEffectParam] = {}
-		for effect_param in effect_param_data:
-			id_ = effect_param['id']
-			infos = None
-			if param_str := effect_param.get('params'):
-				infos = param_str.split('|')
-			effect_param_map[id_] = SkillEffectParam(
-				id=id_,
-				infos=infos,
-			)
-
-		effect_type_map: dict[int, SkillEffectType] = {}
-		for effect_type in effect_type_data:
-			if not (info := effect_type.get('info')):
-				continue
-			id_ = effect_type['id']
-			params: list[SkillEffectParamInType] | None = None
-			if param_list := effect_type.get('param'):
-				param_list = param_list.split('|')
-				params = [
-					SkillEffectParamInType(
-						position=start_index,
-						param=ResourceRef.from_model(effect_param_map[id_]),
-					)
-					for id_, start_index, _ in [
-						tuple(int(i) for i in param.split(',')) for param in param_list
-					]
-				]
-			effect_type_map[id_] = SkillEffectType(
-				id=id_,
-				args_num=effect_type['argsNum'],
-				param=params,
-				info=info,
-				skill=[],
-			)
-
-		def _create_skill_effect(
-			type_ids: list[int], args: list[int]
-		) -> list[SkillEffectInUse]:
-			"""根据效果类型ID和参数列表，创建技能效果对象元组。
-
-			Args:
-				type_ids: 技能效果的类型ID列表。
-				args: 所有技能效果的参数列表。
-
-			Returns:
-				一个包含SkillEffect对象的可变元组。如果出现未知效果类型或参数错误，则返回空元组。
-			"""
-			args_nums = []
-			# 遍历每个效果类型ID，从effect_type_map中获取所需参数数量
-			for i in type_ids:
-				if i not in effect_type_map:
-					return []
-
-				args_nums.append(effect_type_map[i].args_num)
-
-			# 使用_slice_args辅助函数，根据每个效果所需的参数数量，将扁平的args列表切分为嵌套列表
-			sliced_args: list[list[int]] = _slice_args(
-				args_nums,
-				list(args),
-			)
-			results = []
-			# 遍历切分后的参数和对应的效果类型ID
-			format_mode_map = {16: 'none', 24: '-'}
-			for type_id, effect_args in zip(type_ids, sliced_args):
-				type_ = effect_type_map[type_id]
-				# info_args用于格式化效果描述字符串，初始值为效果参数的副本
-				info_args: list[int | StatChange | str | None] = list(effect_args)
-				# 处理需要特殊格式化的参数
-				for p in type_.param or []:
-					param_index = p.position
-					param_ref = p.param
-					param = effect_param_map[param_ref.id]
-					# param_id为0, 16, 24表示这是一个StatChange（状态变化）参数
-					if (param_id := param.id) in (0, 16, 24):
-						# 将6个参数合并为一个StatChange对象
-						slice_ = slice(param_index, param_index + 6)
-
-						kwargs = {}
-						if mode := format_mode_map.get(param_id):
-							kwargs['format_mode'] = mode
-
-						info_args[slice_] = [
-							StatChange(*effect_args[slice_], **kwargs)
-						] + [None] * 5  # 由于状态变化占用6个参数位置，所以填充5个None
-						continue
-					# 如果参数有预定义的描述信息(param.infos)
-					if isinstance(param_infos := param.infos, list):
-						pos = effect_args[param_index]
-						try:
-							# 使用参数值作为索引，在infos中查找对应的描述文本并使用
-							info_args[param_index] = param_infos[pos]
-						except IndexError:
-							return []
-					# 额外处理id为14的参数
-					elif param_id == 14:
-						info_args[param_index] = f'{effect_args[param_index]:+d}'
-						continue
-
-				results.append(
-					SkillEffectInUse(
-						effect=ResourceRef.from_model(type_),
-						args=effect_args,
-						info=type_.info.format(*info_args),
-					)
-				)
-
-			return results
-
 		category_map: CategoryMap[int, SkillCategory, ResourceRef] = (
 			create_category_map(
 				category_csv,
@@ -521,11 +540,11 @@ class SkillAnalyzer(BaseAnalyzer):
 				resource_name='element_type_combination',
 			)
 			skill_category = ResourceRef.from_model(category_map[skill['Category']])
-			skill_side_effect = _create_skill_effect(
+			skill_side_effect = self.create_skill_effect(
 				split_string_arg(skill.get('SideEffect', 0)),
 				split_string_arg(skill.get('SideEffectArg', 0)),
 			)
-			skill_friend_side_effect = _create_skill_effect(
+			skill_friend_side_effect = self.create_skill_effect(
 				split_string_arg(skill.get('FriendSideEffect', 0)),
 				split_string_arg(skill.get('FriendSideEffectArg', 0)),
 			)
@@ -551,7 +570,7 @@ class SkillAnalyzer(BaseAnalyzer):
 			# 将技能添加到技能效果列表
 			for effect in skill_model.skill_effect:
 				effect_id = effect.effect.id
-				effect_type_map[effect_id].skill.append(skill_ref)
+				self.effect_type_map[effect_id].skill.append(skill_ref)
 
 			# 将技能添加到技能分类
 			category_map.add_element(skill_model.category.id, skill_ref)
@@ -574,8 +593,8 @@ class SkillAnalyzer(BaseAnalyzer):
 
 		return (
 			AnalyzeResult(model=Skill, data=skill_map),
-			AnalyzeResult(model=SkillEffectType, data=effect_type_map),
-			AnalyzeResult(model=SkillEffectParam, data=effect_param_map),
+			AnalyzeResult(model=SkillEffectType, data=self.effect_type_map),
+			AnalyzeResult(model=SkillEffectParam, data=self.effect_param_map),
 			AnalyzeResult(model=SkillHideEffect, data=hide_effect_map),
 			AnalyzeResult(model=SkillCategory, data=category_map),
 		)

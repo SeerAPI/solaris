@@ -1,8 +1,10 @@
+from functools import cached_property
 from typing import Any, Optional, cast
 
 from sqlmodel import Field, Relationship, SQLModel
 
-from solaris.analyze.base import BaseAnalyzer, DataImportConfig
+from solaris.analyze.analyzers.skill import BaseSkillEffectAnalyzer
+from solaris.analyze.base import DataImportConfig
 from solaris.analyze.model import (
 	BaseCategoryModel,
 	BaseResModel,
@@ -14,6 +16,15 @@ from solaris.analyze.model import (
 from solaris.analyze.typing_ import AnalyzeResult
 from solaris.analyze.utils import CategoryMap
 from solaris.utils import split_string_arg
+
+
+class GemEffectLink(SQLModel, table=True):
+	gem_id: int | None = Field(
+		default=None, foreign_key='gem.id', primary_key=True
+	)
+	skill_effect_in_use_id: int | None = Field(
+		default=None, foreign_key='skill_effect_in_use.id', primary_key=True
+	)
 
 
 class GemBase(BaseResModel):
@@ -34,7 +45,7 @@ class GemResRefs(SQLModel):
 		description='该宝石的下一等级的引用，当为None时表示该宝石为最高等级',
 	)
 	category: ResourceRef = Field(description='宝石类型引用')
-	effect: SkillEffectInUse = Field(description='宝石效果')
+	effect: list[SkillEffectInUse] = Field(description='宝石效果')
 
 
 class Gem(GemBase, GemResRefs, ConvertToORM['GemORM']):
@@ -80,7 +91,7 @@ class Gem(GemBase, GemResRefs, ConvertToORM['GemORM']):
 			gen2_part=gen2_part,
 			next_level_gem_id=self.next_level_gem.id if self.next_level_gem else None,
 			category_id=self.category.id,
-			skill_effect_in_use=self.effect.to_orm(),
+			skill_effect_in_use=[effect.to_orm() for effect in self.effect],
 		)
 
 	def to_detailed(self) -> 'GemGen1 | GemGen2':
@@ -137,8 +148,9 @@ class GemORM(GemBase, table=True):
 	skill_effect_in_use_id: int | None = Field(
 		default=None, foreign_key='skill_effect_in_use.id'
 	)
-	skill_effect_in_use: Optional['SkillEffectInUseORM'] = Relationship(
+	skill_effect_in_use: list['SkillEffectInUseORM'] = Relationship(
 		back_populates='gem',
+		link_model=GemEffectLink,
 	)
 
 	gen1_part: Optional['GemGen1PartORM'] = Relationship(
@@ -273,32 +285,33 @@ def _get_generation_id_from_category(category_id: int) -> int:
 		raise ValueError(f'Invalid category id: {category_id}')
 
 
-def _create_gem_effect(data: dict[str, Any]) -> SkillEffectInUse:
-	effect = data['SkillEffects'][0]['Effect']
-	id_ = effect['EffectId']
-	args = effect.get('Param')
-	return SkillEffectInUse(
-		effect=ResourceRef(
-			id=id_,
-			resource_name='skill_effect_type',
-		),
-		args=split_string_arg(args) if args else [],
-		info='',  # TODO: 添加宝石效果描述
-	)
-
-
-class GemAnalyzer(BaseAnalyzer):
+class GemAnalyzer(BaseSkillEffectAnalyzer):
 	"""刻印宝石数据解析器"""
 
 	@classmethod
 	def get_data_import_config(cls) -> DataImportConfig:
-		return DataImportConfig(
-			html5_paths=('xml/gems.json',),
+		return (
+			super().get_data_import_config()
+			+ DataImportConfig(html5_paths=('xml/gems.json',))
 		)
+
+	@cached_property
+	def gem_data(self) -> list[dict[str, Any]]:
+		return self._get_data('html5', 'xml/gems.json')['Gems']['Gem']
+
+	def _create_gem_effect(self, data: dict[str, Any]) -> list[SkillEffectInUse]:
+		effect = data['SkillEffects'][0]['Effect']
+		id_ = effect['EffectId']
+		param = effect.get('Param')
+		args = split_string_arg(param) if param else []
+		effect_in_use_list = self.create_skill_effect(type_ids=[id_], args=args)
+		if not effect_in_use_list:
+			raise ValueError(f'宝石效果创建失败: {id_} {args}')
+
+		return effect_in_use_list
 
 	def analyze(self) -> tuple[AnalyzeResult, ...]:
 		"""分析宝石数据并返回模式构建器列表"""
-		gems_data = self._get_data('html5', 'xml/gems.json')['Gems']['Gem']
 		gem_map: dict[int, Gem] = {}
 		gem_category_map: CategoryMap[int, GemCategory, ResourceRef] = CategoryMap(
 			'gem'
@@ -306,7 +319,7 @@ class GemAnalyzer(BaseAnalyzer):
 		gem_gen_category_map: CategoryMap[int, GemGenCategory, ResourceRef] = (
 			CategoryMap('gem_category')
 		)
-		for gem_data in gems_data:
+		for gem_data in self.gem_data:
 			category_id = gem_data['Category']
 			if category_id in gem_category_map:
 				continue
@@ -326,7 +339,7 @@ class GemAnalyzer(BaseAnalyzer):
 				id=generation_id,
 			)
 
-		origin_gem_map: dict[int, dict[str, Any]] = {i['ID']: i for i in gems_data}
+		origin_gem_map: dict[int, dict[str, Any]] = {i['ID']: i for i in self.gem_data}
 		for gem_id, gem_data in origin_gem_map.items():
 			category_id = gem_data['Category']
 			category_ref = ResourceRef.from_model(gem_category_map[category_id])
@@ -352,7 +365,7 @@ class GemAnalyzer(BaseAnalyzer):
 				category=category_ref,
 				inlay_rate=gem_data['InlayProb'] / 100,
 				equivalent_level1_count=equivalent_level1_count,
-				effect=_create_gem_effect(gem_data),
+				effect=self._create_gem_effect(gem_data),
 				upgrade_cost=upgrade_cost,
 				fail_compensate_range=fail_compensate_range,
 			)

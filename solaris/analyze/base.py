@@ -49,29 +49,29 @@ class DataImportConfig:
 
 	def __post_init__(self):
 		self.patch_paths = self._resolve_paths(
-			self.patch_paths, self.SOURCE_DIR_SETTINGS.PATCH_DIR
+			self.SOURCE_DIR_SETTINGS.PATCH_DIR, self.patch_paths
 		)
 		self.html5_paths = self._resolve_paths(
-			self.html5_paths, self.SOURCE_DIR_SETTINGS.HTML5_DIR
+			self.SOURCE_DIR_SETTINGS.HTML5_DIR, self.html5_paths
 		)
 		self.unity_paths = self._resolve_paths(
-			self.unity_paths, self.SOURCE_DIR_SETTINGS.UNITY_DIR
+			self.SOURCE_DIR_SETTINGS.UNITY_DIR, self.unity_paths
 		)
 		self.flash_paths = self._resolve_paths(
-			self.flash_paths, self.SOURCE_DIR_SETTINGS.FLASH_DIR
+			self.SOURCE_DIR_SETTINGS.FLASH_DIR, self.flash_paths
 		)
 
-	def _resolve_paths(self, paths: Paths, base_dir: Path) -> tuple[Path, ...]:
+	def _resolve_paths(self, base_dir: Path, paths: Paths) -> tuple[Path, ...]:
 		"""将字符串路径解析为完整的Path对象"""
 		return tuple(base_dir.joinpath(path) for path in paths)
 
 	def __add__(self, other: 'DataImportConfig') -> 'DataImportConfig':
-		return DataImportConfig(
-			patch_paths=self.patch_paths + other.patch_paths,
-			html5_paths=self.html5_paths + other.html5_paths,
-			unity_paths=self.unity_paths + other.unity_paths,
-			flash_paths=self.flash_paths + other.flash_paths,
-		)
+		obj = DataImportConfig()
+		obj.patch_paths = self.patch_paths + other.patch_paths
+		obj.html5_paths = self.html5_paths + other.html5_paths
+		obj.unity_paths = self.unity_paths + other.unity_paths
+		obj.flash_paths = self.flash_paths + other.flash_paths
+		return obj
 
 	@classmethod
 	def set_source_dir(cls, settings: DataSourceDirSettings) -> None:
@@ -135,7 +135,8 @@ class DataLoader(ABC):
 	) -> dict[str, Any]:
 		"""根据路径列表和加载函数加载数据"""
 		return {
-			str(Path(path).relative_to(base_dir)): loader_func(path) for path in paths
+			str(Path(path).relative_to(base_dir)): loader_func(path)
+			for path in paths
 		}
 
 	@classmethod
@@ -188,9 +189,64 @@ class DataLoader(ABC):
 		return new_content
 
 
-class BaseAnalyzer(DataLoader):
+class BaseAnalyzer(ABC):
 	"""分析器抽象基类"""
-
 	@abstractmethod
 	def analyze(self) -> tuple[AnalyzeResult, ...]:
 		pass
+
+	@classmethod
+	def get_list_info(cls) -> str:
+		"""获取在列表选项中显示的信息字符串
+
+		Returns:
+			str: 包含分析器信息的字符串，包括类名和数据导入配置
+		"""
+		class_name = cls.__name__
+		class_path = cls.__module__
+		return f"分析器: {class_name} | {class_path}"
+
+
+class BaseDataSourceAnalyzer(DataLoader, BaseAnalyzer):
+	"""数据源分析器抽象基类"""
+
+	@classmethod
+	def get_list_info(cls) -> str:
+		"""获取在列表选项中显示的信息字符串
+
+		Returns:
+			str: 包含分析器信息的字符串，包括类名、模块路径和数据导入配置
+		"""
+		class_name = cls.__name__
+		class_path = cls.__module__
+		config = cls.get_data_import_config()
+
+		# 基本信息
+		info_parts = [f"分析器: {class_name} | {class_path}"]
+
+		# 格式化路径信息
+		def _format_paths(paths: Paths, source_type: str) -> str:
+			if not paths:
+				return ""
+			base_dir = config.SOURCE_DIR_SETTINGS.BASE_DIR
+			paths_str = '\n'.join(
+				f"    {Path(path).relative_to(base_dir)}"
+				for path in paths
+			)
+			return f"{source_type}: \n{paths_str}"
+
+		# 收集数据源路径信息
+		path_info = []
+		if config.patch_paths:
+			path_info.append(_format_paths(config.patch_paths, "补丁文件"))
+		if config.html5_paths:
+			path_info.append(_format_paths(config.html5_paths, "HTML5文件"))
+		if config.unity_paths:
+			path_info.append(_format_paths(config.unity_paths, "Unity文件"))
+		if config.flash_paths:
+			path_info.append(_format_paths(config.flash_paths, "Flash文件"))
+
+		if path_info:
+			info_parts.extend(path_info)
+
+		return "\n  ".join(info_parts)

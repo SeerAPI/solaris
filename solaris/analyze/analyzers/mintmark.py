@@ -5,7 +5,7 @@ from sqlmodel import Field, Relationship, SQLModel
 
 from solaris.utils import split_string_arg
 
-from ..base import BaseAnalyzer, DataImportConfig
+from ..base import BaseDataSourceAnalyzer, DataImportConfig
 from ..model import (
 	BaseCategoryModel,
 	BaseResModel,
@@ -478,7 +478,7 @@ def _create_attr_values(data: dict[str, Any]) -> dict[str, Any]:
 	return data
 
 
-class MintmarkAnalyzer(BaseAnalyzer):
+class MintmarkAnalyzer(BaseDataSourceAnalyzer):
 	"""刻印相关数据分析器"""
 
 	@classmethod

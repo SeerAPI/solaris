@@ -4,8 +4,9 @@ from sqlmodel import Field, Relationship
 
 from solaris.analyze.base import AnalyzeResult
 from solaris.analyze.model import BaseResModel, ConvertToORM, ResourceRef
-from solaris.analyze.analyzers.pet._general import BasePetAnalyzer
 from solaris.analyze.utils import CategoryMap
+
+from ._general import BasePetAnalyzer
 
 if TYPE_CHECKING:
 	from .pet import Pet, PetORM

@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 from pydantic import computed_field
 from sqlmodel import Boolean, Column, Computed, Field, Relationship
 
-from solaris.analyze.base import BaseAnalyzer, DataImportConfig
+from solaris.analyze.base import BaseDataSourceAnalyzer, DataImportConfig
 from solaris.analyze.model import BaseResModel, ConvertToORM, ResourceRef
 from solaris.analyze.typing_ import AnalyzeResult
 from solaris.utils import split_string_arg
@@ -120,7 +120,7 @@ class TypeCombinationORM(TypeCombinationBase, table=True):
 	)
 
 
-class ElementTypeAnalyzer(BaseAnalyzer):
+class ElementTypeAnalyzer(BaseDataSourceAnalyzer):
 	@classmethod
 	def get_data_import_config(cls) -> DataImportConfig:
 		return DataImportConfig(

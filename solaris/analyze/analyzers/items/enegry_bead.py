@@ -2,7 +2,7 @@ from typing import Any, Optional, cast
 
 from sqlmodel import Field, Relationship
 
-from solaris.analyze.base import BaseAnalyzer, DataImportConfig
+from solaris.analyze.base import BaseDataSourceAnalyzer, DataImportConfig
 from solaris.analyze.model import (
 	BaseResModel,
 	ConvertToORM,
@@ -121,7 +121,7 @@ def _convert_beads_arg(args: list[int], primary: bool = False) -> SixAttributes:
 	return SixAttributes.from_list(ability_args)
 
 
-class EnergyBeadAnalyzer(BaseAnalyzer):
+class EnergyBeadAnalyzer(BaseDataSourceAnalyzer):
 	@classmethod
 	def get_data_import_config(cls) -> DataImportConfig:
 		return DataImportConfig(

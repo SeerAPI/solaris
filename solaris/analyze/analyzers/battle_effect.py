@@ -4,7 +4,7 @@ from sqlmodel import Field, Relationship, SQLModel
 
 from solaris.utils import get_nested_value
 
-from ..base import BaseAnalyzer, DataImportConfig
+from ..base import BaseDataSourceAnalyzer, DataImportConfig
 from ..model import BaseCategoryModel, BaseResModel, ConvertToORM, ResourceRef
 from ..typing_ import AnalyzeResult
 from ..utils import create_category_map
@@ -92,7 +92,7 @@ class BattleEffectCategoryORM(BattleEffectCategoryBase, table=True):
 	)
 
 
-class BattleEffectAnalyzer(BaseAnalyzer):
+class BattleEffectAnalyzer(BaseDataSourceAnalyzer):
 	"""异常状态数据解析器"""
 
 	@classmethod

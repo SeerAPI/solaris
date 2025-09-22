@@ -3,7 +3,7 @@ from typing import Any
 from sqlmodel import Field, Relationship
 
 from solaris.analyze.analyzers.items._general import Item, ItemORM
-from solaris.analyze.base import BaseAnalyzer, DataImportConfig
+from solaris.analyze.base import BaseDataSourceAnalyzer, DataImportConfig
 from solaris.analyze.model import BaseResModel, ConvertToORM, ResourceRef
 from solaris.analyze.typing_ import AnalyzeResult
 
@@ -47,7 +47,7 @@ class SkillActivationItemORM(SkillActivationItemBase, table=True):
 	skill_in_pet: 'SkillInPetORM' = Relationship(back_populates='skill_activation_item')
 
 
-class SkillActivationItemAnalyzer(BaseAnalyzer):
+class SkillActivationItemAnalyzer(BaseDataSourceAnalyzer):
 	@classmethod
 	def get_data_import_config(cls) -> DataImportConfig:
 		return DataImportConfig(html5_paths=('xml/sp_hide_moves.json',))
