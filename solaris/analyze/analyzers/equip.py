@@ -447,7 +447,8 @@ class EquipAnalyzer(BaseDataSourceAnalyzer):
 
 					attr: SixAttributes | None = None
 					# 浴火之前的套装使用EffectID+EffectArgs来表示属性加成，
-					# 从浴火开始使用独立的AddArgs字段，该字段第一个参数表示是否为百分比加成
+					# 从浴火开始使用独立的AddArgs字段，
+					# 该字段第一个参数表示是否为百分比加成
 					if effect_args:
 						if effect_id == 630:
 							attr = SixAttributes.from_list(effect_args, percent=True)

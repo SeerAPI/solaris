@@ -7,6 +7,7 @@ from typing_extensions import Self, TypeIs
 from pydantic import (
 	AnyUrl,
 	BaseModel,
+	ConfigDict,
 	GetJsonSchemaHandler,
 	computed_field,
 )
@@ -339,9 +340,9 @@ class EidEffectInUseORM(EidEffectInUseBase, table=True):
 	suit_bonus: 'SuitBonusORM' = Relationship(back_populates='effect_in_use')
 
 
-class SixAttributes(
+class SixAttributesBase(
 	BaseResModelWithOptionalId,
-	BaseGeneralModel,ConvertToORM['SixAttributesORM']
+	BaseGeneralModel
 ):
 	"""六维属性类"""
 
@@ -361,12 +362,6 @@ class SixAttributes(
 		default=False,
 		description='该对象描述的是否是百分比加成，如果为true，属性值为省略百分比（%）符号的加成',
 	)
-
-	@computed_field
-	@property
-	def total(self) -> int:
-		"""总属性值"""
-		return self.atk + self.def_ + self.sp_atk + self.sp_def + self.spd + self.hp
 
 	@classmethod
 	def schema_path(cls) -> str:
@@ -433,6 +428,14 @@ class SixAttributes(
 	def resource_name(cls) -> str:
 		return 'six_attributes'
 
+
+class SixAttributes(SixAttributesBase, BaseGeneralModel, ConvertToORM['SixAttributesORM']):
+	@computed_field
+	@property
+	def total(self) -> int:
+		"""总属性值"""
+		return self.atk + self.def_ + self.sp_atk + self.sp_def + self.spd + self.hp
+
 	@classmethod
 	def get_orm_model(cls) -> type['SixAttributesORM']:
 		return SixAttributesORM
@@ -449,8 +452,9 @@ class SixAttributes(
 		)
 
 
-class SixAttributesORM(SixAttributes):
-	@computed_field(return_type=int)
+class SixAttributesORM(SixAttributesBase):
+	model_config = ConfigDict(ignored_types=(declared_attr,))  # type: ignore
+
 	@declared_attr
 	def total(self):  # type: ignore
 		return column_property(
