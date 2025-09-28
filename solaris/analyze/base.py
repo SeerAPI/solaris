@@ -135,8 +135,7 @@ class DataLoader(ABC):
 	) -> dict[str, Any]:
 		"""根据路径列表和加载函数加载数据"""
 		return {
-			str(Path(path).relative_to(base_dir)): loader_func(path)
-			for path in paths
+			str(Path(path).relative_to(base_dir)): loader_func(path) for path in paths
 		}
 
 	@classmethod
@@ -191,6 +190,7 @@ class DataLoader(ABC):
 
 class BaseAnalyzer(ABC):
 	"""分析器抽象基类"""
+
 	@abstractmethod
 	def analyze(self) -> tuple[AnalyzeResult, ...]:
 		pass
@@ -204,7 +204,7 @@ class BaseAnalyzer(ABC):
 		"""
 		class_name = cls.__name__
 		class_path = cls.__module__
-		return f"分析器: {class_name} | {class_path}"
+		return f'分析器: {class_name} | {class_path}'
 
 
 class BaseDataSourceAnalyzer(DataLoader, BaseAnalyzer):
@@ -222,31 +222,30 @@ class BaseDataSourceAnalyzer(DataLoader, BaseAnalyzer):
 		config = cls.get_data_import_config()
 
 		# 基本信息
-		info_parts = [f"分析器: {class_name} | {class_path}"]
+		info_parts = [f'分析器: {class_name} | {class_path}']
 
 		# 格式化路径信息
 		def _format_paths(paths: Paths, source_type: str) -> str:
 			if not paths:
-				return ""
+				return ''
 			base_dir = config.SOURCE_DIR_SETTINGS.BASE_DIR
 			paths_str = '\n'.join(
-				f"    {Path(path).relative_to(base_dir)}"
-				for path in paths
+				f'    {Path(path).relative_to(base_dir)}' for path in paths
 			)
-			return f"{source_type}: \n{paths_str}"
+			return f'{source_type}: \n{paths_str}'
 
 		# 收集数据源路径信息
 		path_info = []
 		if config.patch_paths:
-			path_info.append(_format_paths(config.patch_paths, "补丁文件"))
+			path_info.append(_format_paths(config.patch_paths, '补丁文件'))
 		if config.html5_paths:
-			path_info.append(_format_paths(config.html5_paths, "HTML5文件"))
+			path_info.append(_format_paths(config.html5_paths, 'HTML5文件'))
 		if config.unity_paths:
-			path_info.append(_format_paths(config.unity_paths, "Unity文件"))
+			path_info.append(_format_paths(config.unity_paths, 'Unity文件'))
 		if config.flash_paths:
-			path_info.append(_format_paths(config.flash_paths, "Flash文件"))
+			path_info.append(_format_paths(config.flash_paths, 'Flash文件'))
 
 		if path_info:
 			info_parts.extend(path_info)
 
-		return "\n  ".join(info_parts)
+		return '\n  '.join(info_parts)

@@ -177,7 +177,7 @@ class SuitBonusBase(BaseResModelWithOptionalId):
 
 class SuitBonus(SuitBonusBase, ConvertToORM['SuitBonusORM']):
 	effect: EquipEffect = Field(description='套装效果')
-	effective_pets: list[ResourceRef["Pet"]] | None = Field(
+	effective_pets: list[ResourceRef['Pet']] | None = Field(
 		default=None,
 		description='表示套装效果仅在这些精灵上生效，null表示对所有精灵都生效',
 	)
@@ -242,7 +242,9 @@ class SuitBase(BaseResModel):
 
 
 class Suit(SuitBase, ConvertToORM['SuitORM']):
-	equips: list[ResourceRef["Equip"]] = Field(default_factory=list, description='部件列表')
+	equips: list[ResourceRef['Equip']] = Field(
+		default_factory=list, description='部件列表'
+	)
 	bonus: SuitBonus | None = Field(
 		default=None, description='套装效果，仅当该套装为能力加成套装时有效'
 	)
@@ -287,13 +289,13 @@ class Equip(EquipBase, ConvertToORM['EquipORM']):
 	bonus: EquipBonus | None = Field(
 		default=None, description='部件效果，仅当该部件为能力加成部件时有效'
 	)
-	occasion: ResourceRef["EquipEffectiveOccasion"] | None = Field(
+	occasion: ResourceRef['EquipEffectiveOccasion'] | None = Field(
 		default=None, description='部件生效场合，仅当该部件为能力加成部件时有效'
 	)
 	suit: ResourceRef[Suit] | None = Field(
 		default=None, description='部件所属套装，仅当该部件有套装时有效'
 	)
-	part_type: ResourceRef["EquipType"] = Field(description='部件类型')
+	part_type: ResourceRef['EquipType'] = Field(description='部件类型')
 	pk_attribute: PkAttribute | None = Field(
 		default=None,
 		description='部件PK加成，战队保卫战等老玩法使用，当三个加成项都为0时为null',
@@ -480,8 +482,7 @@ class EquipAnalyzer(BaseDataSourceAnalyzer):
 				name=suit['name'],
 				suit_desc=suit['suitdes'],
 				equips=[
-					ResourceRef.from_model(Equip, id=equip_id)
-					for equip_id in equip_ids
+					ResourceRef.from_model(Equip, id=equip_id) for equip_id in equip_ids
 				],
 				transform=bool(suit.get('transform')),
 				tran_speed=suit.get('tranSpeed'),

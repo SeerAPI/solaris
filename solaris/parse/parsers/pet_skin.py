@@ -37,15 +37,15 @@ class PetSkinParser(BaseParser[_Data]):
 
 	@classmethod
 	def source_config_filename(cls) -> str:
-		return "pet_skin.bytes"
+		return 'pet_skin.bytes'
 
 	@classmethod
 	def parsed_config_filename(cls) -> str:
-		return "petSkin.json"
+		return 'petSkin.json'
 
 	def parse(self, data: bytes) -> _Data:
 		reader = BytesReader(data)
-		result: _Data = {"pet_skins": {"skin": []}}
+		result: _Data = {'pet_skins': {'skin': []}}
 
 		# 根标志
 		if not reader.read_bool():
@@ -69,25 +69,25 @@ class PetSkinParser(BaseParser[_Data]):
 				n = reader.read_i32()
 				for _ in range(n):
 					item: _SkinKindItem = {
-						"id": reader.read_i32(),
-						"life_time": reader.read_i32(),
-						"skin_type": reader.read_i32(),
-						"type": reader.read_i32(),
-						"year": reader.read_i32(),
+						'id': reader.read_i32(),
+						'life_time': reader.read_i32(),
+						'skin_type': reader.read_i32(),
+						'type': reader.read_i32(),
+						'year': reader.read_i32(),
 					}
 					skin_kind.append(item)
 
 			skin_type = reader.read_i32()
 
 			skin_item: _SkinItem = {
-				"go": go,
-				"go_type": go_type,
-				"name": name,
-				"skin_kind": skin_kind,
-				"id": sid,
-				"mon_id": mon_id,
-				"type": skin_type,
+				'go': go,
+				'go_type': go_type,
+				'name': name,
+				'skin_kind': skin_kind,
+				'id': sid,
+				'mon_id': mon_id,
+				'type': skin_type,
 			}
-			result["pet_skins"]["skin"].append(skin_item)
+			result['pet_skins']['skin'].append(skin_item)
 
 		return result

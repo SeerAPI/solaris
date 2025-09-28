@@ -88,8 +88,7 @@ class MoveStonesParser(BaseParser[MoveStonesData]):
 							if reader.ReadBoolean():
 								se_arg_count = reader.ReadSignedInt()
 								effect_item['side_effect_arg'] = [
-									reader.ReadSignedInt()
-									for _ in range(se_arg_count)
+									reader.ReadSignedInt() for _ in range(se_arg_count)
 								]
 
 							stone_item['move_effect'].append(effect_item)

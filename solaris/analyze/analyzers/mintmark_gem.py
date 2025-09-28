@@ -19,9 +19,7 @@ from solaris.utils import split_string_arg
 
 
 class GemEffectLink(SQLModel, table=True):
-	gem_id: int | None = Field(
-		default=None, foreign_key='gem.id', primary_key=True
-	)
+	gem_id: int | None = Field(default=None, foreign_key='gem.id', primary_key=True)
 	skill_effect_in_use_id: int | None = Field(
 		default=None, foreign_key='skill_effect_in_use.id', primary_key=True
 	)
@@ -290,9 +288,8 @@ class GemAnalyzer(BaseSkillEffectAnalyzer):
 
 	@classmethod
 	def get_data_import_config(cls) -> DataImportConfig:
-		return (
-			super().get_data_import_config()
-			+ DataImportConfig(html5_paths=('xml/gems.json',))
+		return super().get_data_import_config() + DataImportConfig(
+			html5_paths=('xml/gems.json',)
 		)
 
 	@cached_property

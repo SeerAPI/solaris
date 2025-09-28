@@ -117,6 +117,7 @@ class ArchivesStoryInfoParser(BaseParser[_ArchivesStoryData]):
 # petbook 配置结构与解析器
 class _PbPlaceItem(TypedDict):
 	"""地点条目"""
+
 	desc: str
 	go: str
 	redirect: str
@@ -131,6 +132,7 @@ class _PbPlaceItem(TypedDict):
 
 class _PbBranch(TypedDict):
 	"""分支信息"""
+
 	title: str
 	id: int
 	intro: str
@@ -139,12 +141,14 @@ class _PbBranch(TypedDict):
 
 class _PbTypeItem(TypedDict):
 	"""类型条目"""
+
 	branch: list[_PbBranch]
 	id: int
 
 
 class _PbPetDataItem(TypedDict):
 	"""热点精灵数据"""
+
 	tag_b: list[int]
 	id: int
 	pid: int
@@ -153,6 +157,7 @@ class _PbPetDataItem(TypedDict):
 
 class _PbItem(TypedDict):
 	"""热点信息条目"""
+
 	_text: list[str]
 	intro: str
 	place: list[_PbPlaceItem]
@@ -169,6 +174,7 @@ class _PbHotspot(TypedDict):
 
 class _PbMonsterItem(TypedDict):
 	"""精灵条目（petbook）"""
+
 	def_name: str
 	features: str
 	target: str
@@ -193,6 +199,7 @@ class _PbData(TypedDict):
 
 class PetbookParser(BaseParser[_PbData]):
 	"""解析 petbook.bytes（正式服百科）"""
+
 	@classmethod
 	def source_config_filename(cls) -> str:
 		return 'petbook.bytes'
@@ -227,12 +234,14 @@ class PetbookParser(BaseParser[_PbData]):
 						tag_b = [reader.read_i32() for _ in range(m)]
 					item_id = reader.read_i32()
 					item_pid = reader.read_i32()
-					pet_data.append({
-						'tag_b': tag_b,
-						'id': item_id,
-						'pid': item_pid,
-						'tag_a': item_tag_a,
-					})
+					pet_data.append(
+						{
+							'tag_b': tag_b,
+							'id': item_id,
+							'pid': item_pid,
+							'tag_a': item_tag_a,
+						}
+					)
 
 			types: list[_PbTypeItem] = []
 			if reader.read_bool():
@@ -349,6 +358,7 @@ class PetbookParser(BaseParser[_PbData]):
 # pet_advance 配置结构与解析器
 class _PaBackItem(TypedDict):
 	"""回收条目"""
+
 	desc: str
 	id: int
 	is_back: int
@@ -425,6 +435,7 @@ class _PaData(TypedDict):
 
 class PetAdvanceParser(BaseParser[_PaData]):
 	"""解析 pet_advance.bytes（进化/养成）"""
+
 	@classmethod
 	def source_config_filename(cls) -> str:
 		return 'pet_advance.bytes'
@@ -456,14 +467,16 @@ class PetAdvanceParser(BaseParser[_PaData]):
 					per_need_coin_b = reader.read_i32()
 					task_id = reader.read_i32()
 					desc = reader.ReadUTFBytesWithLength()
-					back_list.append({
-						'id': bid,
-						'is_back': is_back,
-						'monster_id': monster_id,
-						'per_need_coin_b': per_need_coin_b,
-						'task_id': task_id,
-						'desc': desc,
-					})
+					back_list.append(
+						{
+							'id': bid,
+							'is_back': is_back,
+							'monster_id': monster_id,
+							'per_need_coin_b': per_need_coin_b,
+							'task_id': task_id,
+							'desc': desc,
+						}
+					)
 			free_cnt = reader.read_i32()
 			refresh_add_cost = reader.read_i32()
 			refresh_base_cost = reader.read_i32()

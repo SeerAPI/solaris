@@ -103,15 +103,14 @@ class MovesParser(BaseParser[MovesData]):
 							'side_effect_arg': [],
 							'type': 0,
 							'info': '',
-							'ordinary': 0
+							'ordinary': 0,
 						}
 
 						# 读取可选的FriendSideEffect数组
 						if reader.ReadBoolean():
 							friend_se_count = reader.ReadSignedInt()
 							move_item['friend_side_effect'] = [
-								reader.ReadSignedInt()
-								for _ in range(friend_se_count)
+								reader.ReadSignedInt() for _ in range(friend_se_count)
 							]
 
 						# 读取可选的FriendSideEffectArg数组
@@ -135,16 +134,14 @@ class MovesParser(BaseParser[MovesData]):
 						if reader.ReadBoolean():
 							se_count = reader.ReadSignedInt()
 							move_item['side_effect'] = [
-								reader.ReadSignedInt()
-								for _ in range(se_count)
+								reader.ReadSignedInt() for _ in range(se_count)
 							]
 
 						# 读取可选的SideEffectArg数组
 						if reader.ReadBoolean():
 							se_arg_count = reader.ReadSignedInt()
 							move_item['side_effect_arg'] = [
-								reader.ReadSignedInt()
-								for _ in range(se_arg_count)
+								reader.ReadSignedInt() for _ in range(se_arg_count)
 							]
 
 						# 完成剩余字段
@@ -190,13 +187,14 @@ class MoveFgtvDesParser(BaseParser[MoveFgtvDesData]):
 				for _ in range(move_count):
 					move_item: FgtvDesMoveItem = {
 						'fgtv_des': reader.ReadUTFBytesWithLength(),
-						'id': reader.ReadSignedInt()
+						'id': reader.ReadSignedInt(),
 					}
 					root['move'].append(move_item)
 
 			result['root'] = root
 
 		return result
+
 
 # 技能变更项结构
 class MovesItem(TypedDict):
@@ -247,7 +245,7 @@ class MoveChangeParser(BaseParser[MoveChangeData]):
 						'new_name': reader.ReadUTFBytesWithLength(),
 						'skin_id': reader.ReadSignedInt(),
 						'move_name1': reader.ReadUTFBytesWithLength(),
-						'move_name2': reader.ReadUTFBytesWithLength()
+						'move_name2': reader.ReadUTFBytesWithLength(),
 					}
 					move['moves'].append(moves_item)
 

@@ -44,7 +44,9 @@ class SkillTypeParser(BaseParser[_Data]):
 				'en': [
 					reader.ReadUTFBytesWithLength()
 					for _ in range(reader.ReadSignedInt())
-				] if reader.ReadBoolean() else [],
+				]
+				if reader.ReadBoolean()
+				else [],
 				'id': reader.ReadSignedInt(),
 				'is_dou': reader.ReadSignedInt(),
 			}

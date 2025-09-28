@@ -128,8 +128,7 @@ def analyze(
 	if list_analyzers:
 		string = f'找到 {len(analyzer_classes)} 个分析器:\n'
 		string += '\n'.join(
-			analyzer_class.get_list_info()
-			for analyzer_class in analyzer_classes
+			analyzer_class.get_list_info() for analyzer_class in analyzer_classes
 		)
 		click.echo(string)
 		return

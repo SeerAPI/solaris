@@ -358,10 +358,9 @@ class BaseSkillEffectAnalyzer(BaseDataSourceAnalyzer):
 
 	@cached_property
 	def effect_param_map(self) -> dict[int, SkillEffectParam]:
-		effect_param_data: list[dict] = self._get_data(
-			'html5',
-			'xml/effectInfo.json'
-		)['root']['ParamType']
+		effect_param_data: list[dict] = self._get_data('html5', 'xml/effectInfo.json')[
+			'root'
+		]['ParamType']
 
 		effect_param_map: dict[int, SkillEffectParam] = {}
 		for effect_param in effect_param_data:
@@ -378,10 +377,9 @@ class BaseSkillEffectAnalyzer(BaseDataSourceAnalyzer):
 
 	@cached_property
 	def effect_type_map(self) -> dict[int, SkillEffectType]:
-		effect_type_data: list[dict] = self._get_data(
-			'html5',
-			'xml/effectInfo.json'
-		)['root']['Effect']
+		effect_type_data: list[dict] = self._get_data('html5', 'xml/effectInfo.json')[
+			'root'
+		]['Effect']
 
 		effect_type_map: dict[int, SkillEffectType] = {}
 		for effect_type in effect_type_data:
@@ -410,9 +408,7 @@ class BaseSkillEffectAnalyzer(BaseDataSourceAnalyzer):
 		return effect_type_map
 
 	def create_skill_effect(
-		self,
-		type_ids: list[int],
-		args: list[int]
+		self, type_ids: list[int], args: list[int]
 	) -> list[SkillEffectInUse]:
 		"""根据效果类型ID和参数列表，创建技能效果对象元组。
 
@@ -458,9 +454,9 @@ class BaseSkillEffectAnalyzer(BaseDataSourceAnalyzer):
 					if mode := format_mode_map.get(param_id):
 						kwargs['format_mode'] = mode
 
-					info_args[slice_] = [
-						StatChange(*effect_args[slice_], **kwargs)
-					] + [None] * 5  # 由于状态变化占用6个参数位置，所以填充5个None
+					info_args[slice_] = [StatChange(*effect_args[slice_], **kwargs)] + [
+						None
+					] * 5  # 由于状态变化占用6个参数位置，所以填充5个None
 					continue
 				# 如果参数有预定义的描述信息(param.infos)
 				if isinstance(param_infos := param.infos, list):

@@ -1,7 +1,15 @@
 from abc import ABC, abstractmethod
 from datetime import datetime
 import inspect
-from typing import TYPE_CHECKING, Any, ClassVar, Generic, TypeVar, cast, get_args, overload
+from typing import (
+	TYPE_CHECKING,
+	Any,
+	ClassVar,
+	Generic,
+	TypeVar,
+	cast,
+	overload,
+)
 from typing_extensions import Self, TypeIs
 
 from pydantic import (
@@ -188,6 +196,7 @@ _TResModelArg = TypeVar('_TResModelArg', bound=BaseResModel)
 
 class ResourceRef(BaseGeneralModel, Generic[TResModel]):
 	"""API资源类"""
+
 	__arg__: ClassVar[type]
 
 	base_data_url: ClassVar[str] = ''
@@ -217,7 +226,7 @@ class ResourceRef(BaseGeneralModel, Generic[TResModel]):
 		model: _TResModelArg,
 		*,
 		resource_name: str | None = None,
-	) -> "ResourceRef[_TResModelArg]": ...
+	) -> 'ResourceRef[_TResModelArg]': ...
 
 	@overload
 	@classmethod
@@ -227,7 +236,7 @@ class ResourceRef(BaseGeneralModel, Generic[TResModel]):
 		*,
 		id: int,
 		resource_name: str | None = None,
-	) -> "ResourceRef[_TResModelArg]": ...
+	) -> 'ResourceRef[_TResModelArg]': ...
 
 	@classmethod
 	def from_model(
@@ -236,7 +245,7 @@ class ResourceRef(BaseGeneralModel, Generic[TResModel]):
 		*,
 		id: int | None = None,
 		resource_name: str | None = None,
-	) -> "ResourceRef[_TResModelArg]":
+	) -> 'ResourceRef[_TResModelArg]':
 		if not inspect.isclass(model):
 			id = model.id
 		if id is None:
@@ -342,10 +351,7 @@ class EidEffectInUseORM(EidEffectInUseBase, table=True):
 	suit_bonus: 'SuitBonusORM' = Relationship(back_populates='effect_in_use')
 
 
-class SixAttributesBase(
-	BaseResModelWithOptionalId,
-	BaseGeneralModel
-):
+class SixAttributesBase(BaseResModelWithOptionalId, BaseGeneralModel):
 	"""六维属性类"""
 
 	atk: int = Field(description='攻击')
@@ -431,7 +437,9 @@ class SixAttributesBase(
 		return 'six_attributes'
 
 
-class SixAttributes(SixAttributesBase, BaseGeneralModel, ConvertToORM['SixAttributesORM']):
+class SixAttributes(
+	SixAttributesBase, BaseGeneralModel, ConvertToORM['SixAttributesORM']
+):
 	@computed_field
 	@property
 	def total(self) -> int:
@@ -483,9 +491,7 @@ class SkillEffectInUseBase(BaseResModelWithOptionalId):
 
 
 class SkillEffectInUse(
-	SkillEffectInUseBase,
-	BaseGeneralModel,
-	ConvertToORM['SkillEffectInUseORM']
+	SkillEffectInUseBase, BaseGeneralModel, ConvertToORM['SkillEffectInUseORM']
 ):
 	effect: 'ResourceRef'
 

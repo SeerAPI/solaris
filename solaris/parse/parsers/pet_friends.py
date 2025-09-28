@@ -25,15 +25,15 @@ class PetFriendsParser(BaseParser[_Data]):
 
 	@classmethod
 	def source_config_filename(cls) -> str:
-		return "pet_friends.bytes"
+		return 'pet_friends.bytes'
 
 	@classmethod
 	def parsed_config_filename(cls) -> str:
-		return "petFriends.json"
+		return 'petFriends.json'
 
 	def parse(self, data: bytes) -> _Data:
 		reader = BytesReader(data)
-		result: _Data = {"pet_friends": {"friendship": []}}
+		result: _Data = {'pet_friends': {'friendship': []}}
 
 		# 根标志
 		if not reader.read_bool():
@@ -62,11 +62,11 @@ class PetFriendsParser(BaseParser[_Data]):
 			pet_id = reader.read_i32()
 
 			item: _FriendshipItem = {
-				"effect_args": effect_args,
-				"effect_id": effect_id,
-				"friend_id": friend_id,
-				"pet_id": pet_id,
+				'effect_args': effect_args,
+				'effect_id': effect_id,
+				'friend_id': friend_id,
+				'pet_id': pet_id,
 			}
-			result["pet_friends"]["friendship"].append(item)
+			result['pet_friends']['friendship'].append(item)
 
 		return result
