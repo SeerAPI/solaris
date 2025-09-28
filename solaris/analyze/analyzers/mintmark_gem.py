@@ -40,11 +40,11 @@ class GemBase(BaseResModel):
 
 
 class GemResRefs(SQLModel):
-	next_level_gem: ResourceRef | None = Field(
+	next_level_gem: ResourceRef['Gem'] | None = Field(
 		default=None,
 		description='该宝石的下一等级的引用，当为None时表示该宝石为最高等级',
 	)
-	category: ResourceRef = Field(description='宝石类型引用')
+	category: ResourceRef['GemCategory'] = Field(description='宝石类型引用')
 	effect: list[SkillEffectInUse] = Field(description='宝石效果')
 
 

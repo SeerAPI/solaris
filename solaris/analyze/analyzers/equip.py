@@ -1,4 +1,5 @@
-from typing import TYPE_CHECKING, Any, Optional
+from functools import cached_property
+from typing import TYPE_CHECKING, Any, Optional, cast
 from typing_extensions import Self
 
 from pydantic import BaseModel
@@ -22,7 +23,7 @@ from solaris.analyze.utils import create_category_map
 from solaris.utils import get_nested_value, split_string_arg
 
 if TYPE_CHECKING:
-	from .pet.pet import PetORM
+	from .pet.pet import Pet, PetORM
 
 
 def _create_pk_attribute(equip: dict[str, Any]) -> 'PkAttribute | None':
@@ -176,7 +177,7 @@ class SuitBonusBase(BaseResModelWithOptionalId):
 
 class SuitBonus(SuitBonusBase, ConvertToORM['SuitBonusORM']):
 	effect: EquipEffect = Field(description='套装效果')
-	effective_pets: list[ResourceRef] | None = Field(
+	effective_pets: list[ResourceRef["Pet"]] | None = Field(
 		default=None,
 		description='表示套装效果仅在这些精灵上生效，null表示对所有精灵都生效',
 	)
@@ -241,7 +242,7 @@ class SuitBase(BaseResModel):
 
 
 class Suit(SuitBase, ConvertToORM['SuitORM']):
-	equips: list[ResourceRef] = Field(default_factory=list, description='部件列表')
+	equips: list[ResourceRef["Equip"]] = Field(default_factory=list, description='部件列表')
 	bonus: SuitBonus | None = Field(
 		default=None, description='套装效果，仅当该套装为能力加成套装时有效'
 	)
@@ -286,13 +287,13 @@ class Equip(EquipBase, ConvertToORM['EquipORM']):
 	bonus: EquipBonus | None = Field(
 		default=None, description='部件效果，仅当该部件为能力加成部件时有效'
 	)
-	occasion: ResourceRef | None = Field(
+	occasion: ResourceRef["EquipEffectiveOccasion"] | None = Field(
 		default=None, description='部件生效场合，仅当该部件为能力加成部件时有效'
 	)
-	suit: ResourceRef | None = Field(
+	suit: ResourceRef[Suit] | None = Field(
 		default=None, description='部件所属套装，仅当该部件有套装时有效'
 	)
-	part_type: ResourceRef = Field(description='部件类型')
+	part_type: ResourceRef["EquipType"] = Field(description='部件类型')
 	pk_attribute: PkAttribute | None = Field(
 		default=None,
 		description='部件PK加成，战队保卫战等老玩法使用，当三个加成项都为0时为null',
@@ -409,35 +410,24 @@ class EquipAnalyzer(BaseDataSourceAnalyzer):
 			patch_paths=('equip_effective_occasion.json', 'equip_type.json'),
 		)
 
-	def analyze(self) -> tuple[AnalyzeResult, ...]:
-		items_data: dict = self._get_data('html5', 'xml/items.json')
-		suit_data: dict = self._get_data('html5', 'xml/suit.json')
-		equip_data: dict = self._get_data('html5', 'xml/equip.json')
-
-		part_type_csv = self._get_data('patch', 'equip_type.json')
-		occasion_csv = self._get_data('patch', 'equip_effective_occasion.json')
-
-		origin_equip_map: dict[int, dict[str, Any]] = {
-			item['ID']: item
-			for category in items_data['Items']['Cat']
-			if category['Name'] == '个人装扮'
-			for item in category['Item']
-		}
-		equip_map: dict[int, Equip] = {}
-		ability_equip_map = {
-			equip['ItemID']: equip for equip in equip_data['Equips']['Equip']
+	@cached_property
+	def _ability_equip_map(self) -> dict[int, dict[str, Any]]:
+		return {
+			equip['ItemID']: equip
+			for equip in self._get_data('html5', 'xml/equip.json')['Equips']['Equip']
 		}
 
-		# 下面一整段代码仅处理套装，部件在更下面处理
+	def _get_equip_to_suit_map(self, suit_data: dict) -> dict[int, Suit]:
+		"""
+		获取装备到套装的映射关系
+		"""
 		suit_map: dict[int, Suit] = {}
-		# 用于快速查找套装效果，key为装备ID，value为套装对象
-		equip_to_suit_map: dict[int, Suit] = {}
 		for suit in suit_data['root']['item']:
 			suit: dict
 			suit_id = suit['id']
 			suit_bonus: SuitBonus | None = None
 			equip_ids = split_string_arg(suit['cloths'])
-			if part_dict := ability_equip_map.get(equip_ids[0]):
+			if part_dict := self._ability_equip_map.get(equip_ids[0]):
 				effect_id = part_dict.get('SuitEffectID')
 				newse_id = part_dict.get('SuitNewseId')
 				if effect_id or newse_id:
@@ -460,7 +450,7 @@ class EquipAnalyzer(BaseDataSourceAnalyzer):
 							attr = SixAttributes.from_list(add_args, percent=percent)
 
 					equip_effect = EquipEffect(
-						newse_id=newse_id,
+						newse_id=cast(int, newse_id),
 						eid_effect=EidEffectInUse(
 							effect=ResourceRef.from_model(EidEffect, id=effect_id),
 							effect_args=effect_args,
@@ -490,19 +480,36 @@ class EquipAnalyzer(BaseDataSourceAnalyzer):
 				name=suit['name'],
 				suit_desc=suit['suitdes'],
 				equips=[
-					ResourceRef.from_model(
-						Equip,
-						id=equip_id,
-					)
+					ResourceRef.from_model(Equip, id=equip_id)
 					for equip_id in equip_ids
 				],
 				transform=bool(suit.get('transform')),
 				tran_speed=suit.get('tranSpeed'),
 				bonus=suit_bonus,
 			)
-			suit_ref = ResourceRef.from_model(suit_obj)
 			suit_map[suit_id] = suit_obj
-			equip_to_suit_map |= dict.fromkeys(equip_ids, suit_obj)
+
+		return suit_map
+
+	def analyze(self) -> tuple[AnalyzeResult, ...]:
+		items_data: dict = self._get_data('html5', 'xml/items.json')
+		suit_data: dict = self._get_data('html5', 'xml/suit.json')
+
+		part_type_csv = self._get_data('patch', 'equip_type.json')
+		occasion_csv = self._get_data('patch', 'equip_effective_occasion.json')
+
+		origin_equip_map: dict[int, dict[str, Any]] = {
+			item['ID']: item
+			for category in items_data['Items']['Cat']
+			if category['Name'] == '个人装扮'
+			for item in category['Item']
+		}
+		suit_map = self._get_equip_to_suit_map(suit_data)
+		equip_to_suit_map = {
+			equip_ref.id: suit_obj
+			for suit_obj in suit_map.values()
+			for equip_ref in suit_obj.equips
+		}
 
 		# 处理部件
 		part_type_map_for_name = {row['name']: row for row in part_type_csv.values()}
@@ -516,15 +523,15 @@ class EquipAnalyzer(BaseDataSourceAnalyzer):
 			model_cls=EquipEffectiveOccasion,
 			array_key='equip',
 		)
+		equip_map: dict[int, Equip] = {}
 		for equip_id, equip_dict in origin_equip_map.items():
 			equip_name = equip_dict['Name']
-			equip_ref = ResourceRef.from_model(
-				Equip,
-				id=equip_id,
-			)
-			equip_bonus: EquipBonus | None = None
-			occasion: ResourceRef | None = None
-			if ability_equip := ability_equip_map.get(equip_id):
+			equip_ref = ResourceRef.from_model(Equip, id=equip_id)
+			equip_bonus = None
+			occasion = None
+
+			# 处理部件加成
+			if ability_equip := self._ability_equip_map.get(equip_id):
 				occasion = ResourceRef.from_model(
 					occasion_map[ability_equip['Occasion']]
 				)
@@ -543,7 +550,7 @@ class EquipAnalyzer(BaseDataSourceAnalyzer):
 						if any(other_attr_args)
 						else None
 					)
-					equip_effect: EquipEffect | None = None
+					equip_effect = None
 					if effect_id := bonus.get('EffectID'):
 						effect_args = split_string_arg(bonus['EffectArgs'])
 						equip_effect = EquipEffect(
@@ -563,28 +570,29 @@ class EquipAnalyzer(BaseDataSourceAnalyzer):
 					)
 				occasion_map.add_element(occasion.id, equip_ref)
 
-			suit_ref: ResourceRef | None = None
+			suit_ref = None
 			if suit_obj := equip_to_suit_map.get(equip_id):
 				suit_ref = ResourceRef.from_model(
 					suit_obj,
 				)
 
-			pk_attribute: PkAttribute | None = _create_pk_attribute(equip_dict)
-			part_type_name = equip_dict.pop('type')
+			part_type_name = equip_dict.get('type')
 			part_type_id = part_type_map_for_name[part_type_name]['id']
 			part_type_ref = ResourceRef.from_model(part_type_map[part_type_id])
+
 			speed = equip_dict.get('speed')  # int or null
-			part_type_map.add_element(part_type_id, equip_ref)
 			equip_map[equip_id] = Equip(
 				id=equip_id,
 				name=equip_name,
 				part_type=part_type_ref,
 				speed=speed,
-				pk_attribute=pk_attribute,
+				pk_attribute=_create_pk_attribute(equip_dict),
 				suit=suit_ref,
 				bonus=equip_bonus,
 				occasion=occasion,
 			)
+			part_type_map.add_element(part_type_id, equip_ref)
+
 		return (
 			AnalyzeResult(model=Equip, data=equip_map),
 			AnalyzeResult(model=Suit, data=suit_map),

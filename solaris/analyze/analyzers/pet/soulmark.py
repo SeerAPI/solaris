@@ -49,10 +49,10 @@ class Soulmark(SoulmarkBase, ConvertToORM['SoulmarkORM']):
 	pet: list[ResourceRef] = Field(description='可持有该魂印的精灵ID')
 	effect: EidEffectInUse | None = Field(description='魂印效果')
 	tag: list[ResourceRef] = Field(description='魂印标签，例如强攻，断回合等')
-	intensified_to: None | ResourceRef = Field(
+	intensified_to: ResourceRef['Soulmark'] | None = Field(
 		description='强化后的魂印资源，该字段仅在该魂印有强化版时有效，否则为null'
 	)
-	from_: None | ResourceRef = Field(
+	from_: ResourceRef['Soulmark'] | None = Field(
 		description='魂印资源，该字段仅在该魂印是强化/觉醒魂印时有效',
 		schema_extra={'serialization_alias': 'from'},
 	)

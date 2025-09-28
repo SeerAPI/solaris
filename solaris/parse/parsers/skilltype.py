@@ -9,7 +9,7 @@ class SkillType(TypedDict):
 	id: int
 	is_dou: int
 	cn: str
-	en: str | None
+	en: list[str]
 	att: str
 
 
@@ -24,7 +24,7 @@ class _Data(TypedDict):
 class SkillTypeParser(BaseParser[_Data]):
 	@classmethod
 	def source_config_filename(cls) -> str:
-		return 'skilltype.bytes'
+		return 'skillTypes.bytes'
 
 	@classmethod
 	def parsed_config_filename(cls) -> str:
@@ -41,12 +41,10 @@ class SkillTypeParser(BaseParser[_Data]):
 			item: SkillType = {
 				'att': reader.ReadUTFBytesWithLength(),
 				'cn': reader.ReadUTFBytesWithLength(),
-				'en': '_'.join(
+				'en': [
 					reader.ReadUTFBytesWithLength()
 					for _ in range(reader.ReadSignedInt())
-				)
-				if reader.ReadBoolean()
-				else '',
+				] if reader.ReadBoolean() else [],
 				'id': reader.ReadSignedInt(),
 				'is_dou': reader.ReadSignedInt(),
 			}

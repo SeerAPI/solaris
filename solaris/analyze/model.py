@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from datetime import datetime
 import inspect
-from typing import TYPE_CHECKING, Any, ClassVar, Generic, TypeVar, overload
+from typing import TYPE_CHECKING, Any, ClassVar, Generic, TypeVar, cast, get_args, overload
 from typing_extensions import Self, TypeIs
 
 from pydantic import (
@@ -29,7 +29,7 @@ if TYPE_CHECKING:
 	from solaris.analyze.analyzers.pet.soulmark import SoulmarkORM
 	from solaris.analyze.analyzers.skill import SkillEffectTypeORM, SkillORM
 
-T = TypeVar('T', bound=SQLModel)
+TModel = TypeVar('TModel', bound=SQLModel)
 
 
 class BaseMetadata(BaseModel):
@@ -116,15 +116,15 @@ class BaseResModelWithOptionalId(SQLModel, BaseModelMethods, ABC):
 		return cls.resource_name()
 
 
-class ConvertToORM(ABC, Generic[T]):
+class ConvertToORM(ABC, Generic[TModel]):
 	@classmethod
 	@abstractmethod
-	def get_orm_model(cls) -> type[T]:
+	def get_orm_model(cls) -> type[TModel]:
 		"""获取SQLModel ORM模型类型"""
 		pass
 
 	@abstractmethod
-	def to_orm(self) -> T:
+	def to_orm(self) -> TModel:
 		"""将Pydantic模型转为SQLModel ORM模型"""
 		pass
 
@@ -171,21 +171,24 @@ class BaseGeneralModel(SQLModel, ABC):
 
 	@classmethod
 	@abstractmethod
-	def schema_path(cls) -> str: ...
+	def schema_path(cls) -> str:
+		pass
 
 	@classmethod
 	def schema_url(cls) -> str:
 		return '/'.join([cls.base_url, cls.schema_path()])
 
 
-class BaseCategoryModel(BaseResModel, ABC, Generic[T]): ...
+class BaseCategoryModel(BaseResModel, ABC, Generic[TModel]): ...
 
 
-T = TypeVar('T', bound=BaseResModel)
+TResModel = TypeVar('TResModel', bound=BaseResModel)
+_TResModelArg = TypeVar('_TResModelArg', bound=BaseResModel)
 
 
-class ResourceRef(BaseGeneralModel, Generic[T]):
+class ResourceRef(BaseGeneralModel, Generic[TResModel]):
 	"""API资源类"""
+	__arg__: ClassVar[type]
 
 	base_data_url: ClassVar[str] = ''
 	id: int = Field(description='资源ID')
@@ -211,38 +214,37 @@ class ResourceRef(BaseGeneralModel, Generic[T]):
 	@classmethod
 	def from_model(
 		cls,
-		model: T,
+		model: _TResModelArg,
 		*,
 		resource_name: str | None = None,
-	) -> Self: ...
+	) -> "ResourceRef[_TResModelArg]": ...
 
 	@overload
 	@classmethod
 	def from_model(
 		cls,
-		model: type[T],
+		model: type[_TResModelArg],
 		*,
 		id: int,
 		resource_name: str | None = None,
-	) -> Self: ...
+	) -> "ResourceRef[_TResModelArg]": ...
 
 	@classmethod
 	def from_model(
 		cls,
-		model: type[T] | T,
+		model: type[_TResModelArg] | _TResModelArg,
 		*,
 		id: int | None = None,
 		resource_name: str | None = None,
-	) -> Self:
+	) -> "ResourceRef[_TResModelArg]":
 		if not inspect.isclass(model):
 			id = model.id
 		if id is None:
 			raise ValueError('id is required')
+
 		resource_name = resource_name or model.resource_name()
-		return cls(
-			id=id,
-			resource_name=resource_name,
-		)
+		obj = cls(id=id, resource_name=resource_name)
+		return cast(ResourceRef[_TResModelArg], obj)
 
 
 class NamedResourceRef(ResourceRef):

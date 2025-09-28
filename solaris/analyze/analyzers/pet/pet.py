@@ -654,7 +654,7 @@ class PetAnalyzer(BasePetAnalyzer):
 				mount_type = 1
 			elif pet_dict.get('isFlyPet', False):
 				mount_type = 2
-			mount_type_ref: ResourceRef | None = None
+			mount_type_ref = None
 			if mount_type:
 				mount_type_ref = ResourceRef.from_model(pet_mount_type_map[mount_type])
 
