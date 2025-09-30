@@ -26,12 +26,12 @@ class _BattleEffects(TypedDict):
 
 
 # 顶层数据结构
-class _Data(TypedDict):
+class BattleEffectsConfig(TypedDict):
 	battle_effects: _BattleEffects
 
 
 # 战斗效果Parser实现
-class BattleEffectsParser(BaseParser[_Data]):
+class BattleEffectsParser(BaseParser[BattleEffectsConfig]):
 	"""解析战斗效果配置数据"""
 
 	@classmethod
@@ -42,9 +42,9 @@ class BattleEffectsParser(BaseParser[_Data]):
 	def parsed_config_filename(cls) -> str:
 		return 'battleEffects.json'
 
-	def parse(self, data: bytes) -> _Data:
+	def parse(self, data: bytes) -> BattleEffectsConfig:
 		reader = BytesReader(data)
-		result: _Data = {'battle_effects': {'battle_effect': []}}
+		result: BattleEffectsConfig = {'battle_effects': {'battle_effect': []}}
 
 		# 检查根布尔标志
 		if not reader.read_bool():

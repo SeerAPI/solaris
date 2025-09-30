@@ -16,11 +16,11 @@ class _PetFriends(TypedDict):
 	friendship: list[_FriendshipItem]
 
 
-class _Data(TypedDict):
+class PetFriendsConfig(TypedDict):
 	pet_friends: _PetFriends
 
 
-class PetFriendsParser(BaseParser[_Data]):
+class PetFriendsParser(BaseParser[PetFriendsConfig]):
 	"""解析精灵好友情配置数据"""
 
 	@classmethod
@@ -31,9 +31,9 @@ class PetFriendsParser(BaseParser[_Data]):
 	def parsed_config_filename(cls) -> str:
 		return 'petFriends.json'
 
-	def parse(self, data: bytes) -> _Data:
+	def parse(self, data: bytes) -> PetFriendsConfig:
 		reader = BytesReader(data)
-		result: _Data = {'pet_friends': {'friendship': []}}
+		result: PetFriendsConfig = {'pet_friends': {'friendship': []}}
 
 		# 根标志
 		if not reader.read_bool():

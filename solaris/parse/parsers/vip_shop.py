@@ -34,7 +34,7 @@ class _VipItemShopRoot(TypedDict):
 	item: list[VipItemShopItem]  # 对应 C# 的 Item 数组
 
 
-class _VipItemShopData(TypedDict):
+class VipItemShopConfig(TypedDict):
 	"""VIP道具商店顶层数据"""
 
 	root: _VipItemShopRoot
@@ -68,7 +68,7 @@ class _VipPetShopRoot(TypedDict):
 	pet: list[VipPetShopItem]  # 对应 C# 的 Pet 数组
 
 
-class _VipPetShopData(TypedDict):
+class VipPetShopConfig(TypedDict):
 	"""VIP宠物商店顶层数据"""
 
 	root: _VipPetShopRoot
@@ -77,7 +77,7 @@ class _VipPetShopData(TypedDict):
 # ============ Parser 实现 ============
 
 
-class VipItemShopParser(BaseParser[_VipItemShopData]):
+class VipItemShopParser(BaseParser[VipItemShopConfig]):
 	"""VIP道具商店配置解析器"""
 
 	@classmethod
@@ -88,9 +88,9 @@ class VipItemShopParser(BaseParser[_VipItemShopData]):
 	def parsed_config_filename(cls) -> str:
 		return 'vipItemShop.json'
 
-	def parse(self, data: bytes) -> _VipItemShopData:
+	def parse(self, data: bytes) -> VipItemShopConfig:
 		reader = BytesReader(data)
-		result: _VipItemShopData = {'root': {'item': []}}
+		result: VipItemShopConfig = {'root': {'item': []}}
 
 		# 检查header - 根据IRootInterface.Parse逻辑
 		if not reader.ReadBoolean():
@@ -134,7 +134,7 @@ class VipItemShopParser(BaseParser[_VipItemShopData]):
 		return result
 
 
-class VipPetShopParser(BaseParser[_VipPetShopData]):
+class VipPetShopParser(BaseParser[VipPetShopConfig]):
 	"""VIP宠物商店配置解析器"""
 
 	@classmethod
@@ -145,9 +145,9 @@ class VipPetShopParser(BaseParser[_VipPetShopData]):
 	def parsed_config_filename(cls) -> str:
 		return 'vipPetShop.json'
 
-	def parse(self, data: bytes) -> _VipPetShopData:
+	def parse(self, data: bytes) -> VipPetShopConfig:
 		reader = BytesReader(data)
-		result: _VipPetShopData = {'root': {'pet': []}}
+		result: VipPetShopConfig = {'root': {'pet': []}}
 
 		# 检查header - 根据IRootInterface.Parse逻辑
 		if not reader.ReadBoolean():

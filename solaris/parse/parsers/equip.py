@@ -37,13 +37,13 @@ class _Equips(TypedDict):
 
 
 # 顶层数据结构
-class _Data(TypedDict):
+class EquipConfig(TypedDict):
 	"""装备配置数据"""
 
 	equips: _Equips
 
 
-class EquipParser(BaseParser[_Data]):
+class EquipParser(BaseParser[EquipConfig]):
 	"""装备配置解析器"""
 
 	@classmethod
@@ -54,9 +54,9 @@ class EquipParser(BaseParser[_Data]):
 	def parsed_config_filename(cls) -> str:
 		return 'equip.json'
 
-	def parse(self, data: bytes) -> _Data:
+	def parse(self, data: bytes) -> EquipConfig:
 		reader = BytesReader(data)
-		result: _Data = {'equips': {'equip': []}}
+		result: EquipConfig = {'equips': {'equip': []}}
 
 		# 检查是否有装备数据
 		if not reader.ReadBoolean():

@@ -30,7 +30,7 @@ class _WishsuitsContainer(TypedDict):
 	wishsuit: list[WishsuitItem]
 
 
-class _WishsuitData(TypedDict):
+class WishsuitConfig(TypedDict):
 	wishsuits: _WishsuitsContainer | None
 
 
@@ -49,7 +49,7 @@ class _WishskinsContainer(TypedDict):
 	wishskin: list[WishskinItem]
 
 
-class _WishskinData(TypedDict):
+class WishskinConfig(TypedDict):
 	wishskins: _WishskinsContainer | None
 
 
@@ -69,7 +69,7 @@ class _WishpetsContainer(TypedDict):
 	wishpet: list[WishpetItem]
 
 
-class _WishpetData(TypedDict):
+class WishpetConfig(TypedDict):
 	wishpets: _WishpetsContainer | None
 
 
@@ -90,14 +90,14 @@ class _WishpartsContainer(TypedDict):
 	wishpart: list[WishpartItem]
 
 
-class _WishpartData(TypedDict):
+class WishpartConfig(TypedDict):
 	wishparts: _WishpartsContainer | None
 
 
 # ============ Parser 实现 ============
 
 
-class WishsuitParser(BaseParser[_WishsuitData]):
+class WishsuitParser(BaseParser[WishsuitConfig]):
 	"""套装许愿解析器"""
 
 	@classmethod
@@ -108,9 +108,9 @@ class WishsuitParser(BaseParser[_WishsuitData]):
 	def parsed_config_filename(cls) -> str:
 		return 'wishsuit.json'
 
-	def parse(self, data: bytes) -> _WishsuitData:
+	def parse(self, data: bytes) -> WishsuitConfig:
 		reader = BytesReader(data)
-		result: _WishsuitData = {'wishsuits': None}
+		result: WishsuitConfig = {'wishsuits': None}
 
 		# 检查是否有许愿套装数据
 		if reader.ReadBoolean():
@@ -140,7 +140,7 @@ class WishsuitParser(BaseParser[_WishsuitData]):
 		return result
 
 
-class WishskinParser(BaseParser[_WishskinData]):
+class WishskinParser(BaseParser[WishskinConfig]):
 	"""皮肤许愿解析器"""
 
 	@classmethod
@@ -151,9 +151,9 @@ class WishskinParser(BaseParser[_WishskinData]):
 	def parsed_config_filename(cls) -> str:
 		return 'wishskin.json'
 
-	def parse(self, data: bytes) -> _WishskinData:
+	def parse(self, data: bytes) -> WishskinConfig:
 		reader = BytesReader(data)
-		result: _WishskinData = {'wishskins': None}
+		result: WishskinConfig = {'wishskins': None}
 
 		# 检查是否有许愿皮肤数据
 		if reader.ReadBoolean():
@@ -177,7 +177,7 @@ class WishskinParser(BaseParser[_WishskinData]):
 		return result
 
 
-class WishpetParser(BaseParser[_WishpetData]):
+class WishpetParser(BaseParser[WishpetConfig]):
 	"""精灵许愿解析器"""
 
 	@classmethod
@@ -188,9 +188,9 @@ class WishpetParser(BaseParser[_WishpetData]):
 	def parsed_config_filename(cls) -> str:
 		return 'wishpet.json'
 
-	def parse(self, data: bytes) -> _WishpetData:
+	def parse(self, data: bytes) -> WishpetConfig:
 		reader = BytesReader(data)
-		result: _WishpetData = {'wishpets': None}
+		result: WishpetConfig = {'wishpets': None}
 
 		# 检查是否有许愿精灵数据
 		if reader.ReadBoolean():
@@ -215,7 +215,7 @@ class WishpetParser(BaseParser[_WishpetData]):
 		return result
 
 
-class WishpartParser(BaseParser[_WishpartData]):
+class WishpartParser(BaseParser[WishpartConfig]):
 	"""部件许愿解析器"""
 
 	@classmethod
@@ -226,9 +226,9 @@ class WishpartParser(BaseParser[_WishpartData]):
 	def parsed_config_filename(cls) -> str:
 		return 'wishpart.json'
 
-	def parse(self, data: bytes) -> _WishpartData:
+	def parse(self, data: bytes) -> WishpartConfig:
 		reader = BytesReader(data)
-		result: _WishpartData = {'wishparts': None}
+		result: WishpartConfig = {'wishparts': None}
 
 		# 检查是否有许愿部件数据
 		if reader.ReadBoolean():

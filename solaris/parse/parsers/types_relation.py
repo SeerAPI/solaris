@@ -24,13 +24,13 @@ class _TypesRelationRoot(TypedDict):
 	relation: list[TypeRelationItem]  # 对应 C# 的 Relation 数组
 
 
-class _TypesRelationData(TypedDict):
+class TypesRelationConfig(TypedDict):
 	"""类型关系顶层数据"""
 
 	root: _TypesRelationRoot
 
 
-class TypesRelationParser(BaseParser[_TypesRelationData]):
+class TypesRelationParser(BaseParser[TypesRelationConfig]):
 	"""类型关系配置解析器"""
 
 	@classmethod
@@ -41,9 +41,9 @@ class TypesRelationParser(BaseParser[_TypesRelationData]):
 	def parsed_config_filename(cls) -> str:
 		return 'typesRelation.json'
 
-	def parse(self, data: bytes) -> _TypesRelationData:
+	def parse(self, data: bytes) -> TypesRelationConfig:
 		reader = BytesReader(data)
-		result: _TypesRelationData = {'root': {'relation': []}}
+		result: TypesRelationConfig = {'root': {'relation': []}}
 
 		# 检查header - 根据IRootInterface.Parse逻辑
 		if not reader.ReadBoolean():

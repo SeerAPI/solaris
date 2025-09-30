@@ -27,11 +27,11 @@ class _MoveStones(TypedDict):
 
 
 # 技能石数据根结构
-class MoveStonesData(TypedDict):
+class MoveStonesConfig(TypedDict):
 	root: _MoveStones | None
 
 
-class MoveStonesParser(BaseParser[MoveStonesData]):
+class MoveStonesParser(BaseParser[MoveStonesConfig]):
 	"""技能石解析器"""
 
 	@classmethod
@@ -42,9 +42,9 @@ class MoveStonesParser(BaseParser[MoveStonesData]):
 	def parsed_config_filename(cls) -> str:
 		return 'moveStones.json'
 
-	def parse(self, data: bytes) -> MoveStonesData:
+	def parse(self, data: bytes) -> MoveStonesConfig:
 		reader = BytesReader(data)
-		result: MoveStonesData = {'root': None}
+		result: MoveStonesConfig = {'root': None}
 
 		# 检查是否有MoveStones数据
 		if reader.ReadBoolean():

@@ -26,13 +26,13 @@ class _PetFightSkinSkillRoot(TypedDict):
 	item: list[PetFightSkinSkillItem]
 
 
-class _PetFightSkinSkillData(TypedDict):
+class PetFightSkinSkillReplaceConfig(TypedDict):
 	"""精灵战斗皮肤技能顶层数据"""
 
 	root: _PetFightSkinSkillRoot
 
 
-class PetFightSkinSkillReplaceParser(BaseParser[_PetFightSkinSkillData]):
+class PetFightSkinSkillReplaceParser(BaseParser[PetFightSkinSkillReplaceConfig]):
 	"""精灵战斗皮肤技能替换配置解析器"""
 
 	@classmethod
@@ -43,9 +43,9 @@ class PetFightSkinSkillReplaceParser(BaseParser[_PetFightSkinSkillData]):
 	def parsed_config_filename(cls) -> str:
 		return 'petFightSkinSkillReplace.json'
 
-	def parse(self, data: bytes) -> _PetFightSkinSkillData:
+	def parse(self, data: bytes) -> PetFightSkinSkillReplaceConfig:
 		reader = BytesReader(data)
-		result: _PetFightSkinSkillData = {'root': {'item': []}}
+		result: PetFightSkinSkillReplaceConfig = {'root': {'item': []}}
 
 		# 检查header - 根据IRootInterface.Parse逻辑
 		if not reader.ReadBoolean():

@@ -33,12 +33,12 @@ class _Root(TypedDict):
 
 
 # 顶层数据结构
-class _Data(TypedDict):
+class EffectIconConfig(TypedDict):
 	root: _Root
 
 
 # 效果图标Parser实现
-class EffectIconParser(BaseParser[_Data]):
+class EffectIconParser(BaseParser[EffectIconConfig]):
 	"""解析效果图标配置数据"""
 
 	@classmethod
@@ -49,9 +49,9 @@ class EffectIconParser(BaseParser[_Data]):
 	def parsed_config_filename(cls) -> str:
 		return 'effectIcon.json'
 
-	def parse(self, data: bytes) -> _Data:
+	def parse(self, data: bytes) -> EffectIconConfig:
 		reader = BytesReader(data)
-		result: _Data = {'root': {'effect': []}}
+		result: EffectIconConfig = {'root': {'effect': []}}
 
 		# 检查根布尔标志
 		if not reader.read_bool():

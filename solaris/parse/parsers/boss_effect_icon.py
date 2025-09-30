@@ -22,12 +22,12 @@ class _Root(TypedDict):
 
 
 # 顶层数据结构
-class _Data(TypedDict):
+class BossEffectIconConfig(TypedDict):
 	root: _Root
 
 
 # BOSS效果图标Parser实现
-class BossEffectIconParser(BaseParser[_Data]):
+class BossEffectIconParser(BaseParser[BossEffectIconConfig]):
 	"""解析BOSS效果图标配置数据"""
 
 	@classmethod
@@ -38,9 +38,9 @@ class BossEffectIconParser(BaseParser[_Data]):
 	def parsed_config_filename(cls) -> str:
 		return 'bossEffectIcon.json'
 
-	def parse(self, data: bytes) -> _Data:
+	def parse(self, data: bytes) -> BossEffectIconConfig:
 		reader = BytesReader(data)
-		result: _Data = {'root': {'boss_effect': []}}
+		result: BossEffectIconConfig = {'root': {'boss_effect': []}}
 
 		# 检查根布尔标志
 		if not reader.read_bool():

@@ -13,11 +13,11 @@ class ArchivesBook(TypedDict):
 	txtdivide: list[int]
 
 
-class _ArchivesBookConfig(TypedDict):
+class ArchivesBookConfig(TypedDict):
 	data: list[ArchivesBook]
 
 
-class ArchivesBookParser(BaseParser[_ArchivesBookConfig]):
+class ArchivesBookParser(BaseParser[ArchivesBookConfig]):
 	@classmethod
 	def source_config_filename(cls) -> str:
 		return 'archivesBook.bytes'
@@ -26,12 +26,12 @@ class ArchivesBookParser(BaseParser[_ArchivesBookConfig]):
 	def parsed_config_filename(cls) -> str:
 		return 'archivesBook.json'
 
-	def parse(self, data: bytes) -> _ArchivesBookConfig:
+	def parse(self, data: bytes) -> ArchivesBookConfig:
 		reader = BytesReader(data)
 		if not reader.read_bool():
-			return _ArchivesBookConfig(data=[])
+			return ArchivesBookConfig(data=[])
 
-		result = _ArchivesBookConfig(data=[])
+		result = ArchivesBookConfig(data=[])
 		for _ in range(reader.read_i32()):
 			bookid = reader.read_i32()
 			chapterid = reader.read_i32()
@@ -74,11 +74,11 @@ class ArchivesStoryInfo(TypedDict):
 	txt: str
 
 
-class _ArchivesStoryData(TypedDict):
+class ArchivesStoryData(TypedDict):
 	data: list[ArchivesStoryInfo]
 
 
-class ArchivesStoryInfoParser(BaseParser[_ArchivesStoryData]):
+class ArchivesStoryInfoParser(BaseParser[ArchivesStoryData]):
 	@classmethod
 	def source_config_filename(cls) -> str:
 		return 'archivesStory.bytes'
@@ -87,8 +87,8 @@ class ArchivesStoryInfoParser(BaseParser[_ArchivesStoryData]):
 	def parsed_config_filename(cls) -> str:
 		return 'archivesStory.json'
 
-	def parse(self, data: bytes) -> _ArchivesStoryData:
-		result = _ArchivesStoryData(data=[])
+	def parse(self, data: bytes) -> ArchivesStoryData:
+		result = ArchivesStoryData(data=[])
 		reader = BytesReader(data)
 		if not reader.read_bool():
 			return result
@@ -193,11 +193,11 @@ class _PbRoot(TypedDict):
 	rec_mintmark: _PbRecMintmark | None
 
 
-class _PbData(TypedDict):
+class PetBookConfig(TypedDict):
 	root: _PbRoot
 
 
-class PetbookParser(BaseParser[_PbData]):
+class PetBookParser(BaseParser[PetBookConfig]):
 	"""解析 petbook.bytes（正式服百科）"""
 
 	@classmethod
@@ -208,9 +208,9 @@ class PetbookParser(BaseParser[_PbData]):
 	def parsed_config_filename(cls) -> str:
 		return 'petbook.json'
 
-	def parse(self, data: bytes) -> _PbData:
+	def parse(self, data: bytes) -> PetBookConfig:
 		reader = BytesReader(data)
-		result: _PbData = {
+		result: PetBookConfig = {
 			'root': {
 				'hot_pet': None,
 				'hotspot': None,
@@ -429,11 +429,11 @@ class _PaRoot(TypedDict):
 	task: list[_PaTaskItem]
 
 
-class _PaData(TypedDict):
+class PetAdvanceConfig(TypedDict):
 	root: _PaRoot
 
 
-class PetAdvanceParser(BaseParser[_PaData]):
+class PetAdvanceParser(BaseParser[PetAdvanceConfig]):
 	"""解析 pet_advance.bytes（进化/养成）"""
 
 	@classmethod
@@ -444,9 +444,9 @@ class PetAdvanceParser(BaseParser[_PaData]):
 	def parsed_config_filename(cls) -> str:
 		return 'petAdvance.json'
 
-	def parse(self, data: bytes) -> _PaData:
+	def parse(self, data: bytes) -> PetAdvanceConfig:
 		reader = BytesReader(data)
-		result: _PaData = {'root': {'back_monsters': None, 'task': []}}
+		result: PetAdvanceConfig = {'root': {'back_monsters': None, 'task': []}}
 		if not reader.read_bool():
 			return result
 

@@ -34,13 +34,13 @@ class _Root(TypedDict):
 
 
 # 顶层数据结构
-class _Data(TypedDict):
+class MonsterpoolConfig(TypedDict):
 	"""精灵池配置数据"""
 
 	root: _Root
 
 
-class MonsterpoolParser(BaseParser[_Data]):
+class MonsterpoolParser(BaseParser[MonsterpoolConfig]):
 	"""精灵池配置解析器"""
 
 	@classmethod
@@ -51,9 +51,9 @@ class MonsterpoolParser(BaseParser[_Data]):
 	def parsed_config_filename(cls) -> str:
 		return 'monsterpool.json'
 
-	def parse(self, data: bytes) -> _Data:
+	def parse(self, data: bytes) -> MonsterpoolConfig:
 		reader = BytesReader(data)
-		result: _Data = {'root': {'pool': []}}
+		result: MonsterpoolConfig = {'root': {'pool': []}}
 
 		# 检查是否有精灵池数据
 		if not reader.ReadBoolean():

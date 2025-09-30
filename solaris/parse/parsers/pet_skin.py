@@ -28,11 +28,11 @@ class _PetSkins(TypedDict):
 	skin: list[_SkinItem]
 
 
-class _Data(TypedDict):
+class PetSkinConfig(TypedDict):
 	pet_skins: _PetSkins
 
 
-class PetSkinParser(BaseParser[_Data]):
+class PetSkinParser(BaseParser[PetSkinConfig]):
 	"""解析精灵皮肤配置数据"""
 
 	@classmethod
@@ -43,9 +43,9 @@ class PetSkinParser(BaseParser[_Data]):
 	def parsed_config_filename(cls) -> str:
 		return 'petSkin.json'
 
-	def parse(self, data: bytes) -> _Data:
+	def parse(self, data: bytes) -> PetSkinConfig:
 		reader = BytesReader(data)
-		result: _Data = {'pet_skins': {'skin': []}}
+		result: PetSkinConfig = {'pet_skins': {'skin': []}}
 
 		# 根标志
 		if not reader.read_bool():

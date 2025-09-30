@@ -29,13 +29,13 @@ class _Root(TypedDict):
 
 
 # 顶层数据结构
-class _Data(TypedDict):
+class SuitConfig(TypedDict):
 	"""套装配置数据"""
 
 	root: _Root
 
 
-class SuitParser(BaseParser[_Data]):
+class SuitParser(BaseParser[SuitConfig]):
 	"""套装配置解析器"""
 
 	@classmethod
@@ -46,9 +46,9 @@ class SuitParser(BaseParser[_Data]):
 	def parsed_config_filename(cls) -> str:
 		return 'suit.json'
 
-	def parse(self, data: bytes) -> _Data:
+	def parse(self, data: bytes) -> SuitConfig:
 		reader = BytesReader(data)
-		result: _Data = {'root': {'item': []}}
+		result: SuitConfig = {'root': {'item': []}}
 
 		# 检查是否有套装数据
 		if not reader.ReadBoolean():

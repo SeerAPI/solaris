@@ -17,13 +17,13 @@ class UnbindActivity(TypedDict):
 	unbindmintinfo: list[UnbindMintinfoItem]  # 对应 C# 的 Unbindmintinfo 数组
 
 
-class _UnbindMintinfoData(TypedDict):
+class UnbindMintinfoConfig(TypedDict):
 	"""解绑刻印信息顶层数据"""
 
 	unbind_activity: UnbindActivity | None  # 对应 C# 的 UnbindActivity
 
 
-class UnbindMintinfoParser(BaseParser[_UnbindMintinfoData]):
+class UnbindMintinfoParser(BaseParser[UnbindMintinfoConfig]):
 	"""解绑刻印信息配置解析器"""
 
 	@classmethod
@@ -34,9 +34,9 @@ class UnbindMintinfoParser(BaseParser[_UnbindMintinfoData]):
 	def parsed_config_filename(cls) -> str:
 		return 'unbindMintinfo.json'
 
-	def parse(self, data: bytes) -> _UnbindMintinfoData:
+	def parse(self, data: bytes) -> UnbindMintinfoConfig:
 		reader = BytesReader(data)
-		result: _UnbindMintinfoData = {'unbind_activity': None}
+		result: UnbindMintinfoConfig = {'unbind_activity': None}
 
 		# 检查header - 根据IRootInterface.Parse逻辑
 		if not reader.ReadBoolean():

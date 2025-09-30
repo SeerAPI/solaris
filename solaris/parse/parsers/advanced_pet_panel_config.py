@@ -39,13 +39,13 @@ class _Root(TypedDict):
 	task: list[TaskItem]
 
 
-class _Data(TypedDict):
+class AdvancedPetPanelConfig(TypedDict):
 	"""顶层数据结构"""
 
 	root: _Root
 
 
-class AdvancedPetPanelConfigParser(BaseParser[_Data]):
+class AdvancedPetPanelConfigParser(BaseParser[AdvancedPetPanelConfig]):
 	"""高级宠物面板配置解析器"""
 
 	@classmethod
@@ -56,9 +56,9 @@ class AdvancedPetPanelConfigParser(BaseParser[_Data]):
 	def parsed_config_filename(cls) -> str:
 		return 'advancedPetPanelConfig.json'
 
-	def parse(self, data: bytes) -> _Data:
+	def parse(self, data: bytes) -> AdvancedPetPanelConfig:
 		reader = BytesReader(data)
-		result: _Data = {'root': {'task': []}}
+		result: AdvancedPetPanelConfig = {'root': {'task': []}}
 
 		# 检查根数据是否存在
 		if not reader.ReadBoolean():

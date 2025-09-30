@@ -23,12 +23,12 @@ class _Root(TypedDict):
 
 
 # 顶层数据结构
-class _Data(TypedDict):
+class EffectDesConfig(TypedDict):
 	root: _Root
 
 
 # 效果描述Parser实现
-class EffectDesParser(BaseParser[_Data]):
+class EffectDesParser(BaseParser[EffectDesConfig]):
 	"""解析效果描述配置数据"""
 
 	@classmethod
@@ -39,9 +39,9 @@ class EffectDesParser(BaseParser[_Data]):
 	def parsed_config_filename(cls) -> str:
 		return 'effectDes.json'
 
-	def parse(self, data: bytes) -> _Data:
+	def parse(self, data: bytes) -> EffectDesConfig:
 		reader = BytesReader(data)
-		result: _Data = {'root': {'item': []}}
+		result: EffectDesConfig = {'root': {'item': []}}
 
 		# 检查根布尔标志
 		if not reader.read_bool():

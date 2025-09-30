@@ -53,13 +53,13 @@ class _ShopConfigRoot(TypedDict):
 	menu: list[ShopMenuItem]
 
 
-class _ShopConfigData(TypedDict):
+class ShopConfig(TypedDict):
 	"""商店配置顶层数据"""
 
 	root: _ShopConfigRoot
 
 
-class ShopConfigParser(BaseParser[_ShopConfigData]):
+class ShopConfigParser(BaseParser[ShopConfig]):
 	"""商店配置解析器"""
 
 	@classmethod
@@ -175,9 +175,9 @@ class ShopConfigParser(BaseParser[_ShopConfigData]):
 			menu=menu_list,
 		)
 
-	def parse(self, data: bytes) -> _ShopConfigData:
+	def parse(self, data: bytes) -> ShopConfig:
 		reader = BytesReader(data)
-		result: _ShopConfigData = {'root': {'menu': []}}
+		result: ShopConfig = {'root': {'menu': []}}
 
 		# 检查header - 根据IRootInterface.Parse逻辑
 		if not reader.ReadBoolean():

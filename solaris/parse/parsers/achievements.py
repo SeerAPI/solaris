@@ -46,19 +46,19 @@ class AchievementTypeItem(TypedDict):
 	id: int  # 对应 C# 的 ID
 
 
-class _AchievementRulesRoot(TypedDict):
+class AchievementRulesRoot(TypedDict):
 	"""成就规则根节点"""
 
 	type: list[AchievementTypeItem]  # 对应 C# 的 type[]
 
 
-class _AchievementsData(TypedDict):
+class AchievementsConfig(TypedDict):
 	"""成就系统顶层数据"""
 
-	achievement_rules: _AchievementRulesRoot  # 对应 C# 的 AchievementRules
+	achievement_rules: AchievementRulesRoot  # 对应 C# 的 AchievementRules
 
 
-class AchievementsParser(BaseParser[_AchievementsData]):
+class AchievementsParser(BaseParser[AchievementsConfig]):
 	"""成就系统配置解析器"""
 
 	@classmethod
@@ -153,9 +153,9 @@ class AchievementsParser(BaseParser[_AchievementsData]):
 
 		return AchievementTypeItem(branches=branches_items, desc=desc, id=id)
 
-	def parse(self, data: bytes) -> _AchievementsData:
+	def parse(self, data: bytes) -> AchievementsConfig:
 		reader = BytesReader(data)
-		result: _AchievementsData = {'achievement_rules': {'type': []}}
+		result: AchievementsConfig = {'achievement_rules': {'type': []}}
 
 		# 检查header - 根据IRootInterface.Parse逻辑
 		if not reader.ReadBoolean():

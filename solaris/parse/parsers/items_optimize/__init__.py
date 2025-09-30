@@ -10,6 +10,16 @@ itemsOptimizeCat 相关解析器模块
 
 from .items_optimize_cat import ItemsOptimizeCatParser
 from .parsers_0_to_9 import (
+	Item0,
+	Item1,
+	Item2,
+	Item3,
+	Item4,
+	Item5,
+	Item6,
+	Item7,
+	Item8,
+	Item9,
 	ItemsOptimizeCatItems0Parser,
 	ItemsOptimizeCatItems1Parser,
 	ItemsOptimizeCatItems2Parser,
@@ -22,6 +32,16 @@ from .parsers_0_to_9 import (
 	ItemsOptimizeCatItems9Parser,
 )
 from .parsers_10_to_19 import (
+	Item10,
+	Item11,
+	Item12,
+	Item13,
+	Item14,
+	Item15,
+	Item16,
+	Item17,
+	Item18,
+	Item19,
 	ItemsOptimizeCatItems10Parser,
 	ItemsOptimizeCatItems11Parser,
 	ItemsOptimizeCatItems12Parser,
@@ -34,6 +54,13 @@ from .parsers_10_to_19 import (
 	ItemsOptimizeCatItems19Parser,
 )
 from .parsers_21_to_26 import (
+	Item20,
+	Item21,
+	Item22,
+	Item23,
+	Item24,
+	Item25,
+	Item26,
 	ItemsOptimizeCatItems20Parser,
 	ItemsOptimizeCatItems21Parser,
 	ItemsOptimizeCatItems22Parser,
@@ -44,6 +71,37 @@ from .parsers_21_to_26 import (
 )
 
 __all__ = [
+	# 道具类别0-9
+	'Item0',
+	'Item1',
+	'Item2',
+	'Item3',
+	'Item4',
+	'Item5',
+	'Item6',
+	'Item7',
+	'Item8',
+	'Item9',
+	# 道具类别10-19
+	'Item10',
+	'Item11',
+	'Item12',
+	'Item13',
+	'Item14',
+	'Item15',
+	'Item16',
+	'Item17',
+	'Item18',
+	'Item19',
+	# 道具类别20-26
+	'Item20',
+	'Item21',
+	'Item22',
+	'Item23',
+	'Item24',
+	'Item25',
+	'Item26',
+	# 道具类别解析器
 	'ItemsOptimizeCatItems0Parser',
 	'ItemsOptimizeCatItems1Parser',
 	'ItemsOptimizeCatItems2Parser',

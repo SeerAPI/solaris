@@ -20,13 +20,13 @@ class _PeakCrusadeLevelRoot(TypedDict):
 	item: list[PeakCrusadeLevelRuleItem]
 
 
-class _PeakCrusadeLevelData(TypedDict):
+class PeakCrusadeLevelRulesConfig(TypedDict):
 	"""巅峰十字军等级规则顶层数据"""
 
 	root: _PeakCrusadeLevelRoot
 
 
-class PeakCrusadeLevelRulesParser(BaseParser[_PeakCrusadeLevelData]):
+class PeakCrusadeLevelRulesParser(BaseParser[PeakCrusadeLevelRulesConfig]):
 	"""巅峰十字军等级规则配置解析器"""
 
 	@classmethod
@@ -37,9 +37,9 @@ class PeakCrusadeLevelRulesParser(BaseParser[_PeakCrusadeLevelData]):
 	def parsed_config_filename(cls) -> str:
 		return 'peakCrusadeLevelRules.json'
 
-	def parse(self, data: bytes) -> _PeakCrusadeLevelData:
+	def parse(self, data: bytes) -> PeakCrusadeLevelRulesConfig:
 		reader = BytesReader(data)
-		result: _PeakCrusadeLevelData = {'root': {'item': []}}
+		result: PeakCrusadeLevelRulesConfig = {'root': {'item': []}}
 
 		# 检查header - 根据IRootInterface.Parse逻辑
 		if not reader.ReadBoolean():

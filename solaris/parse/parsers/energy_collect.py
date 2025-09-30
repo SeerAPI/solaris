@@ -21,13 +21,13 @@ class _Root(TypedDict):
 	energy: list[EnergyItem]
 
 
-class _Data(TypedDict):
+class EnergyCollectConfig(TypedDict):
 	"""顶层数据结构"""
 
 	root: _Root
 
 
-class EnergyCollectParser(BaseParser[_Data]):
+class EnergyCollectParser(BaseParser[EnergyCollectConfig]):
 	"""能量收集解析器"""
 
 	@classmethod
@@ -38,9 +38,9 @@ class EnergyCollectParser(BaseParser[_Data]):
 	def parsed_config_filename(cls) -> str:
 		return 'energyCollect.json'
 
-	def parse(self, data: bytes) -> _Data:
+	def parse(self, data: bytes) -> EnergyCollectConfig:
 		reader = BytesReader(data)
-		result: _Data = {'root': {'energy': []}}
+		result: EnergyCollectConfig = {'root': {'energy': []}}
 
 		# 检查根数据是否存在
 		if not reader.ReadBoolean():

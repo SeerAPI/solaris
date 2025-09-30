@@ -21,13 +21,13 @@ class _ProductDiamondRoot(TypedDict):
 	item: list[ProductDiamondItem]
 
 
-class _ProductDiamondData(TypedDict):
+class ProductDiamondConfig(TypedDict):
 	"""钻石产品顶层数据"""
 
 	root: _ProductDiamondRoot
 
 
-class ProductDiamondParser(BaseParser[_ProductDiamondData]):
+class ProductDiamondParser(BaseParser[ProductDiamondConfig]):
 	"""钻石产品配置解析器"""
 
 	@classmethod
@@ -38,9 +38,9 @@ class ProductDiamondParser(BaseParser[_ProductDiamondData]):
 	def parsed_config_filename(cls) -> str:
 		return 'productDiamond.json'
 
-	def parse(self, data: bytes) -> _ProductDiamondData:
+	def parse(self, data: bytes) -> ProductDiamondConfig:
 		reader = BytesReader(data)
-		result: _ProductDiamondData = {'root': {'item': []}}
+		result: ProductDiamondConfig = {'root': {'item': []}}
 
 		# 检查header - 根据IRootInterface.Parse逻辑
 		if not reader.ReadBoolean():

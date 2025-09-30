@@ -21,13 +21,13 @@ class _ProductMoneyRoot(TypedDict):
 	item: list[ProductMoneyItem]
 
 
-class _ProductMoneyData(TypedDict):
+class ProductMoneyConfig(TypedDict):
 	"""金币产品顶层数据"""
 
 	root: _ProductMoneyRoot
 
 
-class ProductMoneyParser(BaseParser[_ProductMoneyData]):
+class ProductMoneyParser(BaseParser[ProductMoneyConfig]):
 	"""金币产品配置解析器"""
 
 	@classmethod
@@ -38,9 +38,9 @@ class ProductMoneyParser(BaseParser[_ProductMoneyData]):
 	def parsed_config_filename(cls) -> str:
 		return 'productMoney.json'
 
-	def parse(self, data: bytes) -> _ProductMoneyData:
+	def parse(self, data: bytes) -> ProductMoneyConfig:
 		reader = BytesReader(data)
-		result: _ProductMoneyData = {'root': {'item': []}}
+		result: ProductMoneyConfig = {'root': {'item': []}}
 
 		# 检查header - 根据IRootInterface.Parse逻辑
 		if not reader.ReadBoolean():

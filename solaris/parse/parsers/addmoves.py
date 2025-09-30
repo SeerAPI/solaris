@@ -20,11 +20,11 @@ class _Moves(TypedDict):
 	move: list[_MoveItem]
 
 
-class _Data(TypedDict):
+class AddMovesConfig(TypedDict):
 	moves: _Moves
 
 
-class AddMovesParser(BaseParser[_Data]):
+class AddMovesParser(BaseParser[AddMovesConfig]):
 	@classmethod
 	def source_config_filename(cls) -> str:
 		return 'addmoves.bytes'
@@ -33,9 +33,9 @@ class AddMovesParser(BaseParser[_Data]):
 	def parsed_config_filename(cls) -> str:
 		return 'addMoves.json'
 
-	def parse(self, data: bytes) -> _Data:
+	def parse(self, data: bytes) -> AddMovesConfig:
 		reader = BytesReader(data)
-		result: _Data = {'moves': {'move': []}}
+		result: AddMovesConfig = {'moves': {'move': []}}
 
 		# root presence
 		if not reader.read_bool():

@@ -32,13 +32,13 @@ class _Config(TypedDict):
 
 
 # 顶层数据结构
-class _Data(TypedDict):
+class SpHideMovesConfig(TypedDict):
 	"""特殊隐藏技能配置数据"""
 
 	config: _Config
 
 
-class SpHideMovesParser(BaseParser[_Data]):
+class SpHideMovesParser(BaseParser[SpHideMovesConfig]):
 	"""特殊隐藏技能配置解析器"""
 
 	@classmethod
@@ -49,9 +49,9 @@ class SpHideMovesParser(BaseParser[_Data]):
 	def parsed_config_filename(cls) -> str:
 		return 'spHideMoves.json'
 
-	def parse(self, data: bytes) -> _Data:
+	def parse(self, data: bytes) -> SpHideMovesConfig:
 		reader = BytesReader(data)
-		result: _Data = {'config': {'show_moves': [], 'sp_moves': []}}
+		result: SpHideMovesConfig = {'config': {'show_moves': [], 'sp_moves': []}}
 
 		# 检查是否有数据
 		if not reader.ReadBoolean():

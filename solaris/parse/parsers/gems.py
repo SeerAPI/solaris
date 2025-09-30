@@ -29,11 +29,11 @@ class _Gems(TypedDict):
 	gem: list[_GemItem]
 
 
-class _Data(TypedDict):
+class GemsConfig(TypedDict):
 	gems: _Gems
 
 
-class GemsParser(BaseParser[_Data]):
+class GemsParser(BaseParser[GemsConfig]):
 	@classmethod
 	def source_config_filename(cls) -> str:
 		return 'gems.bytes'
@@ -42,9 +42,9 @@ class GemsParser(BaseParser[_Data]):
 	def parsed_config_filename(cls) -> str:
 		return 'gems.json'
 
-	def parse(self, data: bytes) -> _Data:
+	def parse(self, data: bytes) -> GemsConfig:
 		reader = BytesReader(data)
-		result: _Data = {'gems': {'gem': []}}
+		result: GemsConfig = {'gems': {'gem': []}}
 
 		if not (reader.read_bool() and reader.read_bool()):
 			return result

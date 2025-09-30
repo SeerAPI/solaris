@@ -22,13 +22,13 @@ class _VipMonthMonsterRoot(TypedDict):
 	item: list[VipMonthMonsterItem]  # 对应 C# 的 Item 数组
 
 
-class _VipMonthMonsterData(TypedDict):
+class VipMonthMonsterConfig(TypedDict):
 	"""VIP月度精灵顶层数据"""
 
 	root: _VipMonthMonsterRoot
 
 
-class VipMonthMonsterParser(BaseParser[_VipMonthMonsterData]):
+class VipMonthMonsterParser(BaseParser[VipMonthMonsterConfig]):
 	"""VIP月度精灵配置解析器"""
 
 	@classmethod
@@ -39,9 +39,9 @@ class VipMonthMonsterParser(BaseParser[_VipMonthMonsterData]):
 	def parsed_config_filename(cls) -> str:
 		return 'vipMonthMonster.json'
 
-	def parse(self, data: bytes) -> _VipMonthMonsterData:
+	def parse(self, data: bytes) -> VipMonthMonsterConfig:
 		reader = BytesReader(data)
-		result: _VipMonthMonsterData = {'root': {'item': []}}
+		result: VipMonthMonsterConfig = {'root': {'item': []}}
 
 		# 检查header - 根据IRootInterface.Parse逻辑
 		if not reader.ReadBoolean():

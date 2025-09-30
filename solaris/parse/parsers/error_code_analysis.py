@@ -19,13 +19,13 @@ class _Root(TypedDict):
 	errorpost: list[ErrorpostItem]
 
 
-class _Data(TypedDict):
+class ErrorCodeAnalysisConfig(TypedDict):
 	"""顶层数据结构"""
 
 	root: _Root
 
 
-class ErrorCodeAnalysisParser(BaseParser[_Data]):
+class ErrorCodeAnalysisParser(BaseParser[ErrorCodeAnalysisConfig]):
 	"""错误代码分析解析器"""
 
 	@classmethod
@@ -36,9 +36,9 @@ class ErrorCodeAnalysisParser(BaseParser[_Data]):
 	def parsed_config_filename(cls) -> str:
 		return 'error_code_analysis.json'
 
-	def parse(self, data: bytes) -> _Data:
+	def parse(self, data: bytes) -> ErrorCodeAnalysisConfig:
 		reader = BytesReader(data)
-		result: _Data = {'root': {'errorpost': []}}
+		result: ErrorCodeAnalysisConfig = {'root': {'errorpost': []}}
 
 		# 注意：这个解析器的逻辑与其他不同，先读取布尔值再检查
 		has_root = reader.ReadBoolean()

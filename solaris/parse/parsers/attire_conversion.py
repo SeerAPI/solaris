@@ -22,13 +22,13 @@ class _Attireconversions(TypedDict):
 	attireconversion: list[AttireconversionItem]
 
 
-class _Data(TypedDict):
+class AttireconversionConfig(TypedDict):
 	"""顶层数据结构"""
 
 	attireconversions: _Attireconversions
 
 
-class AttireconversionParser(BaseParser[_Data]):
+class AttireconversionParser(BaseParser[AttireconversionConfig]):
 	"""套装转换解析器"""
 
 	@classmethod
@@ -39,9 +39,9 @@ class AttireconversionParser(BaseParser[_Data]):
 	def parsed_config_filename(cls) -> str:
 		return 'Attireconversion.json'
 
-	def parse(self, data: bytes) -> _Data:
+	def parse(self, data: bytes) -> AttireconversionConfig:
 		reader = BytesReader(data)
-		result: _Data = {'attireconversions': {'attireconversion': []}}
+		result: AttireconversionConfig = {'attireconversions': {'attireconversion': []}}
 
 		# 检查套装转换集合是否存在
 		if not reader.ReadBoolean():

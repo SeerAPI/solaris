@@ -77,13 +77,13 @@ class _Root(TypedDict):
 
 
 # 顶层数据结构
-class _Data(TypedDict):
+class ItemFilterConfig(TypedDict):
 	"""物品过滤器配置数据"""
 
 	root: _Root
 
 
-class ItemFilterParser(BaseParser[_Data]):
+class ItemFilterParser(BaseParser[ItemFilterConfig]):
 	"""物品过滤器配置解析器"""
 
 	@classmethod
@@ -190,9 +190,9 @@ class ItemFilterParser(BaseParser[_Data]):
 
 		return {'text': text, 'des': des, 'item': item, 'sp': sp, 'super_id': super_id}
 
-	def parse(self, data: bytes) -> _Data:
+	def parse(self, data: bytes) -> ItemFilterConfig:
 		reader = BytesReader(data)
-		result: _Data = {'root': {'blood': None, 'catch': None}}
+		result: ItemFilterConfig = {'root': {'blood': None, 'catch': None}}
 
 		# 检查是否有数据
 		if not reader.ReadBoolean():

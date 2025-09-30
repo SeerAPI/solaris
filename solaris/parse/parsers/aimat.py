@@ -16,13 +16,13 @@ class _Root(TypedDict):
 	item: list[ItemItem]
 
 
-class _Data(TypedDict):
+class AimatConfig(TypedDict):
 	"""顶层数据结构"""
 
 	root: _Root
 
 
-class AimatParser(BaseParser[_Data]):
+class AimatParser(BaseParser[AimatConfig]):
 	@classmethod
 	def source_config_filename(cls) -> str:
 		return 'aimat.bytes'
@@ -31,9 +31,9 @@ class AimatParser(BaseParser[_Data]):
 	def parsed_config_filename(cls) -> str:
 		return 'aimat.json'
 
-	def parse(self, data: bytes) -> _Data:
+	def parse(self, data: bytes) -> AimatConfig:
 		reader = BytesReader(data)
-		result: _Data = {'root': {'item': []}}
+		result: AimatConfig = {'root': {'item': []}}
 
 		# 检查根数据是否存在
 		if not reader.ReadBoolean():

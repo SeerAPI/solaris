@@ -26,13 +26,13 @@ class SkinShopSkins(TypedDict):
 	skin: list[SkinShopItem]  # 对应 C# 的 Skin 数组
 
 
-class _SkinShopData(TypedDict):
+class SkinShopConfig(TypedDict):
 	"""皮肤商店顶层数据"""
 
 	skins: SkinShopSkins | None  # 对应 C# 的 Skins
 
 
-class SkinShopParser(BaseParser[_SkinShopData]):
+class SkinShopParser(BaseParser[SkinShopConfig]):
 	"""皮肤商店配置解析器"""
 
 	@classmethod
@@ -43,9 +43,9 @@ class SkinShopParser(BaseParser[_SkinShopData]):
 	def parsed_config_filename(cls) -> str:
 		return 'skinShop.json'
 
-	def parse(self, data: bytes) -> _SkinShopData:
+	def parse(self, data: bytes) -> SkinShopConfig:
 		reader = BytesReader(data)
-		result: _SkinShopData = {'skins': None}
+		result: SkinShopConfig = {'skins': None}
 
 		# 检查header - 根据IRootInterface.Parse逻辑
 		if not reader.ReadBoolean():

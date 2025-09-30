@@ -17,13 +17,13 @@ class _ServerNameRoot(TypedDict):
 	list: list[ServerNameItem]  # 对应 C# 的 list 字段
 
 
-class _ServerNameData(TypedDict):
+class ServernameConfig(TypedDict):
 	"""服务器名称顶层数据"""
 
 	root: _ServerNameRoot
 
 
-class ServernameParser(BaseParser[_ServerNameData]):
+class ServernameParser(BaseParser[ServernameConfig]):
 	"""服务器名称配置解析器"""
 
 	@classmethod
@@ -34,9 +34,9 @@ class ServernameParser(BaseParser[_ServerNameData]):
 	def parsed_config_filename(cls) -> str:
 		return 'servername.json'
 
-	def parse(self, data: bytes) -> _ServerNameData:
+	def parse(self, data: bytes) -> ServernameConfig:
 		reader = BytesReader(data)
-		result: _ServerNameData = {'root': {'list': []}}
+		result: ServernameConfig = {'root': {'list': []}}
 
 		# 检查header - 根据IRootInterface.Parse逻辑
 		if not reader.ReadBoolean():

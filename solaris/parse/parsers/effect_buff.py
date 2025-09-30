@@ -20,12 +20,12 @@ class _Root(TypedDict):
 
 
 # 顶层数据结构
-class _Data(TypedDict):
+class EffectBuffConfig(TypedDict):
 	root: _Root
 
 
 # 效果增益Parser实现
-class EffectBuffParser(BaseParser[_Data]):
+class EffectBuffParser(BaseParser[EffectBuffConfig]):
 	"""解析效果增益配置数据"""
 
 	@classmethod
@@ -36,9 +36,9 @@ class EffectBuffParser(BaseParser[_Data]):
 	def parsed_config_filename(cls) -> str:
 		return 'effectBuff.json'
 
-	def parse(self, data: bytes) -> _Data:
+	def parse(self, data: bytes) -> EffectBuffConfig:
 		reader = BytesReader(data)
-		result: _Data = {'root': {'buff': []}}
+		result: EffectBuffConfig = {'root': {'buff': []}}
 
 		# 检查根布尔标志
 		if not reader.read_bool():

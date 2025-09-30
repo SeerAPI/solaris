@@ -122,13 +122,13 @@ class _Root(TypedDict):
 
 
 # 顶层数据结构
-class _Data(TypedDict):
+class NewSuperDesignConfig(TypedDict):
 	"""因子关卡配置数据"""
 
 	root: _Root
 
 
-class NewSuperDesignParser(BaseParser[_Data]):
+class NewSuperDesignParser(BaseParser[NewSuperDesignConfig]):
 	"""因子关卡配置解析器"""
 
 	@classmethod
@@ -255,9 +255,9 @@ class NewSuperDesignParser(BaseParser[_Data]):
 
 		return {'product_id': product_id}
 
-	def parse(self, data: bytes) -> _Data:
+	def parse(self, data: bytes) -> NewSuperDesignConfig:
 		reader = BytesReader(data)
-		result: _Data = {'root': {'design': []}}
+		result: NewSuperDesignConfig = {'root': {'design': []}}
 
 		# 检查是否有数据
 		if not reader.ReadBoolean():

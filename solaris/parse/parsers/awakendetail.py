@@ -56,13 +56,13 @@ class _Root(TypedDict):
 	task: list[TaskItem]
 
 
-class _Data(TypedDict):
+class AwakenDetailConfig(TypedDict):
 	"""顶层数据结构"""
 
 	root: _Root
 
 
-class AwakenDetailParser(BaseParser[_Data]):
+class AwakenDetailParser(BaseParser[AwakenDetailConfig]):
 	"""觉醒详情解析器"""
 
 	@classmethod
@@ -73,9 +73,9 @@ class AwakenDetailParser(BaseParser[_Data]):
 	def parsed_config_filename(cls) -> str:
 		return 'awakenDetail.json'
 
-	def parse(self, data: bytes) -> _Data:
+	def parse(self, data: bytes) -> AwakenDetailConfig:
 		reader = BytesReader(data)
-		result: _Data = {'root': {'task': []}}
+		result: AwakenDetailConfig = {'root': {'task': []}}
 
 		# 检查根数据是否存在
 		if not reader.ReadBoolean():

@@ -24,13 +24,13 @@ class _Root(TypedDict):
 	elements: _Elements
 
 
-class _Data(TypedDict):
+class EmailConfig(TypedDict):
 	"""顶层数据结构"""
 
 	root: _Root
 
 
-class EmailParser(BaseParser[_Data]):
+class EmailParser(BaseParser[EmailConfig]):
 	"""邮件配置解析器"""
 
 	@classmethod
@@ -41,9 +41,9 @@ class EmailParser(BaseParser[_Data]):
 	def parsed_config_filename(cls) -> str:
 		return 'email.json'
 
-	def parse(self, data: bytes) -> _Data:
+	def parse(self, data: bytes) -> EmailConfig:
 		reader = BytesReader(data)
-		result: _Data = {'root': {'elements': {'element': []}}}
+		result: EmailConfig = {'root': {'elements': {'element': []}}}
 
 		# 检查根数据是否存在
 		if not reader.ReadBoolean():

@@ -50,13 +50,13 @@ class _MintMarks(TypedDict):
 
 
 # 顶层数据结构
-class _Data(TypedDict):
+class MintmarkConfig(TypedDict):
 	"""刻印配置数据"""
 
 	mint_marks: _MintMarks
 
 
-class MintmarkParser(BaseParser[_Data]):
+class MintmarkParser(BaseParser[MintmarkConfig]):
 	"""刻印配置解析器"""
 
 	@classmethod
@@ -67,9 +67,9 @@ class MintmarkParser(BaseParser[_Data]):
 	def parsed_config_filename(cls) -> str:
 		return 'mintmark.json'
 
-	def parse(self, data: bytes) -> _Data:
+	def parse(self, data: bytes) -> MintmarkConfig:
 		reader = BytesReader(data)
-		result: _Data = {'mint_marks': {'mint_mark': [], 'mintmark_class': []}}
+		result: MintmarkConfig = {'mint_marks': {'mint_mark': [], 'mintmark_class': []}}
 
 		# 检查是否有刻印数据
 		if not reader.ReadBoolean():

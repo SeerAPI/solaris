@@ -61,13 +61,13 @@ class _Root(TypedDict):
 	swaps: _Swaps | None
 
 
-class _Data(TypedDict):
+class ElvenKingTrialExchangeConfig(TypedDict):
 	"""顶层数据结构"""
 
 	root: _Root | None
 
 
-class ElvenKingTrialExchangeParser(BaseParser[_Data]):
+class ElvenKingTrialExchangeParser(BaseParser[ElvenKingTrialExchangeConfig]):
 	"""精灵王试炼兑换解析器"""
 
 	@classmethod
@@ -78,9 +78,9 @@ class ElvenKingTrialExchangeParser(BaseParser[_Data]):
 	def parsed_config_filename(cls) -> str:
 		return 'elvenKingTrialExchange.json'
 
-	def parse(self, data: bytes) -> _Data:
+	def parse(self, data: bytes) -> ElvenKingTrialExchangeConfig:
 		reader = BytesReader(data)
-		result: _Data = {'root': None}
+		result: ElvenKingTrialExchangeConfig = {'root': None}
 
 		# 检查根数据是否存在
 		has_root = reader.ReadBoolean()

@@ -18,13 +18,13 @@ class _Config(TypedDict):
 	item: list[ItemItem]
 
 
-class _Data(TypedDict):
+class ActivityTimeControlConfig(TypedDict):
 	"""顶层数据结构"""
 
 	config: _Config
 
 
-class ActivityTimeControlParser(BaseParser[_Data]):
+class ActivityTimeControlParser(BaseParser[ActivityTimeControlConfig]):
 	"""活动时间控制解析器"""
 
 	@classmethod
@@ -35,9 +35,9 @@ class ActivityTimeControlParser(BaseParser[_Data]):
 	def parsed_config_filename(cls) -> str:
 		return 'activityTimeControl.json'
 
-	def parse(self, data: bytes) -> _Data:
+	def parse(self, data: bytes) -> ActivityTimeControlConfig:
 		reader = BytesReader(data)
-		result: _Data = {'config': {'item': []}}
+		result: ActivityTimeControlConfig = {'config': {'item': []}}
 
 		# 检查配置数据是否存在
 		if not reader.ReadBoolean():

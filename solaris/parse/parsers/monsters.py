@@ -80,13 +80,13 @@ class _Monsters(TypedDict):
 
 
 # 顶层数据结构
-class _Data(TypedDict):
+class MonstersConfig(TypedDict):
 	"""精灵配置数据"""
 
 	monsters: _Monsters
 
 
-class MonstersParser(BaseParser[_Data]):
+class MonstersParser(BaseParser[MonstersConfig]):
 	"""精灵配置解析器"""
 
 	@classmethod
@@ -150,9 +150,9 @@ class MonstersParser(BaseParser[_Data]):
 			'tag': reader.ReadSignedInt(),
 		}
 
-	def parse(self, data: bytes) -> _Data:
+	def parse(self, data: bytes) -> MonstersConfig:
 		reader = BytesReader(data)
-		result: _Data = {'monsters': {'monster': []}}
+		result: MonstersConfig = {'monsters': {'monster': []}}
 
 		# 检查是否有精灵数据
 		if not reader.ReadBoolean():

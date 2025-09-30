@@ -26,13 +26,13 @@ class _Root(TypedDict):
 
 
 # 顶层数据结构
-class _Data(TypedDict):
+class ItemUserInfoConfig(TypedDict):
 	"""物品用户信息配置数据"""
 
 	root: _Root
 
 
-class ItemUserInfoParser(BaseParser[_Data]):
+class ItemUserInfoParser(BaseParser[ItemUserInfoConfig]):
 	"""物品用户信息配置解析器"""
 
 	@classmethod
@@ -43,9 +43,9 @@ class ItemUserInfoParser(BaseParser[_Data]):
 	def parsed_config_filename(cls) -> str:
 		return 'itemUserInfo.json'
 
-	def parse(self, data: bytes) -> _Data:
+	def parse(self, data: bytes) -> ItemUserInfoConfig:
 		reader = BytesReader(data)
-		result: _Data = {'root': {'item': []}}
+		result: ItemUserInfoConfig = {'root': {'item': []}}
 
 		# 检查是否有数据
 		if not reader.ReadBoolean():

@@ -22,11 +22,11 @@ class _NewSe(TypedDict):
 	NewSeIdx: list[NewSeItem]
 
 
-class _Data(TypedDict):
+class NewSeConfig(TypedDict):
 	NewSe: _NewSe
 
 
-class NewSeParser(BaseParser[_Data]):
+class NewSeParser(BaseParser[NewSeConfig]):
 	@classmethod
 	def source_config_filename(cls) -> str:
 		return 'new_se.bytes'
@@ -35,8 +35,8 @@ class NewSeParser(BaseParser[_Data]):
 	def parsed_config_filename(cls) -> str:
 		return 'new_se.json'
 
-	def parse(self, data: bytes) -> _Data:
-		result: _Data = {'NewSe': {'NewSeIdx': []}}
+	def parse(self, data: bytes) -> NewSeConfig:
+		result: NewSeConfig = {'NewSe': {'NewSeIdx': []}}
 		reader = BytesReader(data)
 		if not (reader.ReadBoolean() and reader.ReadBoolean()):
 			return result

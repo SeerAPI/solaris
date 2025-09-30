@@ -15,11 +15,11 @@ class _Root(TypedDict):
 	item: list[_HideMoveItem]
 
 
-class _Data(TypedDict):
+class HideMovesConfig(TypedDict):
 	root: _Root
 
 
-class HideMovesParser(BaseParser[_Data]):
+class HideMovesParser(BaseParser[HideMovesConfig]):
 	@classmethod
 	def source_config_filename(cls) -> str:
 		return 'hide_moves.bytes'
@@ -28,9 +28,9 @@ class HideMovesParser(BaseParser[_Data]):
 	def parsed_config_filename(cls) -> str:
 		return 'hideMoves.json'
 
-	def parse(self, data: bytes) -> _Data:
+	def parse(self, data: bytes) -> HideMovesConfig:
 		reader = BytesReader(data)
-		result: _Data = {'root': {'item': []}}
+		result: HideMovesConfig = {'root': {'item': []}}
 
 		if not (reader.read_bool() and reader.read_bool()):
 			return result

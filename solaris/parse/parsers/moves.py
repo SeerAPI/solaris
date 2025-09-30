@@ -37,7 +37,7 @@ class _MovesTbl(TypedDict):
 
 
 # 招式数据根结构
-class MovesData(TypedDict):
+class MovesConfig(TypedDict):
 	root: _MovesTbl | None
 
 
@@ -53,11 +53,11 @@ class _FgtvDesRoot(TypedDict):
 
 
 # 招式描述数据结构
-class MoveFgtvDesData(TypedDict):
+class MoveFgtvDesConfig(TypedDict):
 	root: _FgtvDesRoot | None
 
 
-class MovesParser(BaseParser[MovesData]):
+class MovesParser(BaseParser[MovesConfig]):
 	"""基础招式解析器"""
 
 	@classmethod
@@ -68,9 +68,9 @@ class MovesParser(BaseParser[MovesData]):
 	def parsed_config_filename(cls) -> str:
 		return 'moves.json'
 
-	def parse(self, data: bytes) -> MovesData:
+	def parse(self, data: bytes) -> MovesConfig:
 		reader = BytesReader(data)
-		result: MovesData = {'root': None}
+		result: MovesConfig = {'root': None}
 
 		# 检查是否有MovesTbl数据
 		if reader.ReadBoolean():
@@ -160,7 +160,7 @@ class MovesParser(BaseParser[MovesData]):
 		return result
 
 
-class MoveFgtvDesParser(BaseParser[MoveFgtvDesData]):
+class MoveFgtvDesParser(BaseParser[MoveFgtvDesConfig]):
 	"""招式描述解析器"""
 
 	@classmethod
@@ -171,9 +171,9 @@ class MoveFgtvDesParser(BaseParser[MoveFgtvDesData]):
 	def parsed_config_filename(cls) -> str:
 		return 'moveFgtvDes.json'
 
-	def parse(self, data: bytes) -> MoveFgtvDesData:
+	def parse(self, data: bytes) -> MoveFgtvDesConfig:
 		reader = BytesReader(data)
-		result: MoveFgtvDesData = {'root': None}
+		result: MoveFgtvDesConfig = {'root': None}
 
 		# 检查是否有root数据
 		if reader.ReadBoolean():
@@ -211,11 +211,11 @@ class _Move(TypedDict):
 
 
 # 技能变更数据根结构
-class MoveChangeData(TypedDict):
+class MoveChangeConfig(TypedDict):
 	root: _Move | None
 
 
-class MoveChangeParser(BaseParser[MoveChangeData]):
+class MoveChangeParser(BaseParser[MoveChangeConfig]):
 	"""技能变更解析器"""
 
 	@classmethod
@@ -226,9 +226,9 @@ class MoveChangeParser(BaseParser[MoveChangeData]):
 	def parsed_config_filename(cls) -> str:
 		return 'moveChange.json'
 
-	def parse(self, data: bytes) -> MoveChangeData:
+	def parse(self, data: bytes) -> MoveChangeConfig:
 		reader = BytesReader(data)
-		result: MoveChangeData = {'root': None}
+		result: MoveChangeConfig = {'root': None}
 
 		# 检查是否有Move数据
 		if reader.ReadBoolean():

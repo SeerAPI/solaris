@@ -19,13 +19,13 @@ class _Attirerecycles(TypedDict):
 	attirerecycle: list[AttirerecycleItem]
 
 
-class _Data(TypedDict):
+class AttirerecycleConfig(TypedDict):
 	"""顶层数据结构"""
 
 	attirerecycles: _Attirerecycles
 
 
-class AttirerecycleParser(BaseParser[_Data]):
+class AttirerecycleParser(BaseParser[AttirerecycleConfig]):
 	"""套装回收解析器"""
 
 	@classmethod
@@ -36,9 +36,9 @@ class AttirerecycleParser(BaseParser[_Data]):
 	def parsed_config_filename(cls) -> str:
 		return 'Attirerecycle.json'
 
-	def parse(self, data: bytes) -> _Data:
+	def parse(self, data: bytes) -> AttirerecycleConfig:
 		reader = BytesReader(data)
-		result: _Data = {'attirerecycles': {'attirerecycle': []}}
+		result: AttirerecycleConfig = {'attirerecycles': {'attirerecycle': []}}
 
 		# 检查套装回收集合是否存在
 		if not reader.ReadBoolean():

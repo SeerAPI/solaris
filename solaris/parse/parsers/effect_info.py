@@ -29,12 +29,12 @@ class _Root(TypedDict):
 
 
 # 顶层数据结构
-class _Data(TypedDict):
+class EffectInfoConfig(TypedDict):
 	root: _Root
 
 
 # 效果信息Parser实现
-class EffectInfoParser(BaseParser[_Data]):
+class EffectInfoParser(BaseParser[EffectInfoConfig]):
 	"""解析效果信息配置数据"""
 
 	@classmethod
@@ -45,9 +45,9 @@ class EffectInfoParser(BaseParser[_Data]):
 	def parsed_config_filename(cls) -> str:
 		return 'effectInfo.json'
 
-	def parse(self, data: bytes) -> _Data:
+	def parse(self, data: bytes) -> EffectInfoConfig:
 		reader = BytesReader(data)
-		result: _Data = {'root': {'effect': [], 'param_type': []}}
+		result: EffectInfoConfig = {'root': {'effect': [], 'param_type': []}}
 
 		# 检查根布尔标志
 		if not reader.read_bool():

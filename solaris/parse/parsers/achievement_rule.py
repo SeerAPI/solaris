@@ -11,19 +11,19 @@ class AchievementRuleBranchItem(TypedDict):
 	is_single: int  # 对应 C# 的 IsSingle
 
 
-class _AchievementRulesRoot(TypedDict):
+class AchievementRulesRoot(TypedDict):
 	"""成就规则根节点"""
 
 	branch: list[AchievementRuleBranchItem]  # 对应 C# 的 Branch 数组
 
 
-class _AchievementRuleData(TypedDict):
+class AchievementRuleConfig(TypedDict):
 	"""成就规则顶层数据"""
 
-	achievement_rules: _AchievementRulesRoot  # 对应 C# 的 AchievementRules
+	achievement_rules: AchievementRulesRoot  # 对应 C# 的 AchievementRules
 
 
-class AchievementRuleParser(BaseParser[_AchievementRuleData]):
+class AchievementRuleParser(BaseParser[AchievementRuleConfig]):
 	"""成就规则配置解析器"""
 
 	@classmethod
@@ -34,9 +34,9 @@ class AchievementRuleParser(BaseParser[_AchievementRuleData]):
 	def parsed_config_filename(cls) -> str:
 		return 'achievementRule.json'
 
-	def parse(self, data: bytes) -> _AchievementRuleData:
+	def parse(self, data: bytes) -> AchievementRuleConfig:
 		reader = BytesReader(data)
-		result: _AchievementRuleData = {'achievement_rules': {'branch': []}}
+		result: AchievementRuleConfig = {'achievement_rules': {'branch': []}}
 
 		# 检查header - 根据IRootInterface.Parse逻辑
 		if not reader.ReadBoolean():

@@ -19,13 +19,13 @@ class _ResistanceRoot(TypedDict):
 	resistance: list[HurtItem]  # 抗性数组
 
 
-class _ResistanceData(TypedDict):
+class ResistanceConfig(TypedDict):
 	"""抗性顶层数据"""
 
 	root: _ResistanceRoot
 
 
-class ResistanceParser(BaseParser[_ResistanceData]):
+class ResistanceParser(BaseParser[ResistanceConfig]):
 	"""抗性配置解析器"""
 
 	@classmethod
@@ -36,9 +36,9 @@ class ResistanceParser(BaseParser[_ResistanceData]):
 	def parsed_config_filename(cls) -> str:
 		return 'resistance.json'
 
-	def parse(self, data: bytes) -> _ResistanceData:
+	def parse(self, data: bytes) -> ResistanceConfig:
 		reader = BytesReader(data)
-		result: _ResistanceData = {'root': {'hurt': [], 'resistance': []}}
+		result: ResistanceConfig = {'root': {'hurt': [], 'resistance': []}}
 
 		# 检查header - 根据IRootInterface.Parse逻辑
 		if not reader.ReadBoolean():

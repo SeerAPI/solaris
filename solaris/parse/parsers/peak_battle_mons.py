@@ -23,13 +23,13 @@ class PeakBattleVirtualBattle(TypedDict):
 	peak_bt_global_rule: PeakBattleGlobalRule | None  # 对应 C# 的 PeakBtGlobalRule
 
 
-class _PeakBattleMonsData(TypedDict):
+class PeakBattleMonsConfig(TypedDict):
 	"""巅峰战斗精灵顶层数据"""
 
 	virtual_battle: PeakBattleVirtualBattle  # 对应 C# 的 VirtualBattle
 
 
-class PeakBattleMonsParser(BaseParser[_PeakBattleMonsData]):
+class PeakBattleMonsParser(BaseParser[PeakBattleMonsConfig]):
 	"""巅峰战斗精灵配置解析器"""
 
 	@classmethod
@@ -40,9 +40,9 @@ class PeakBattleMonsParser(BaseParser[_PeakBattleMonsData]):
 	def parsed_config_filename(cls) -> str:
 		return 'peakBattleMons.json'
 
-	def parse(self, data: bytes) -> _PeakBattleMonsData:
+	def parse(self, data: bytes) -> PeakBattleMonsConfig:
 		reader = BytesReader(data)
-		result: _PeakBattleMonsData = {'virtual_battle': {'peak_bt_global_rule': None}}
+		result: PeakBattleMonsConfig = {'virtual_battle': {'peak_bt_global_rule': None}}
 
 		# 检查header - 根据IRootInterface.Parse逻辑
 		if not reader.ReadBoolean():

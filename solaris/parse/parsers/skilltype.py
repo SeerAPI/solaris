@@ -17,11 +17,11 @@ class _Root(TypedDict):
 	item: list[SkillType]
 
 
-class _Data(TypedDict):
+class SkillTypeConfig(TypedDict):
 	root: _Root
 
 
-class SkillTypeParser(BaseParser[_Data]):
+class SkillTypeParser(BaseParser[SkillTypeConfig]):
 	@classmethod
 	def source_config_filename(cls) -> str:
 		return 'skillTypes.bytes'
@@ -30,9 +30,9 @@ class SkillTypeParser(BaseParser[_Data]):
 	def parsed_config_filename(cls) -> str:
 		return 'skillType.json'
 
-	def parse(self, data: bytes) -> _Data:
+	def parse(self, data: bytes) -> SkillTypeConfig:
 		reader = BytesReader(data)
-		result: _Data = {'root': {'item': []}}
+		result: SkillTypeConfig = {'root': {'item': []}}
 		if not (reader.ReadBoolean() and reader.ReadBoolean()):
 			return result
 
