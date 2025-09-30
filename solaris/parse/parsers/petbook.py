@@ -74,11 +74,11 @@ class ArchivesStoryInfo(TypedDict):
 	txt: str
 
 
-class ArchivesStoryData(TypedDict):
+class ArchivesStoryConfig(TypedDict):
 	data: list[ArchivesStoryInfo]
 
 
-class ArchivesStoryInfoParser(BaseParser[ArchivesStoryData]):
+class ArchivesStoryParser(BaseParser[ArchivesStoryConfig]):
 	@classmethod
 	def source_config_filename(cls) -> str:
 		return 'archivesStory.bytes'
@@ -87,8 +87,8 @@ class ArchivesStoryInfoParser(BaseParser[ArchivesStoryData]):
 	def parsed_config_filename(cls) -> str:
 		return 'archivesStory.json'
 
-	def parse(self, data: bytes) -> ArchivesStoryData:
-		result = ArchivesStoryData(data=[])
+	def parse(self, data: bytes) -> ArchivesStoryConfig:
+		result = ArchivesStoryConfig(data=[])
 		reader = BytesReader(data)
 		if not reader.read_bool():
 			return result
