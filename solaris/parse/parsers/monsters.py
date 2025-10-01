@@ -37,40 +37,39 @@ class LearnableMoves(TypedDict):
 	move: list[MoveItem]
 	sp_move: list[SpMoveItem]
 
-
-# 精灵项数据结构
-class MonsterItem(TypedDict):
-	"""精灵项"""
-
-	def_name: str
-	extra_moves: LearnableMoves | None
-	learnable_moves: LearnableMoves | None
-	move: MoveItem | None
-	show_extra_moves: LearnableMoves | None
-	sp_extra_moves: LearnableMoves | None
-	atk: int
-	character_attr_param: int
-	combo: int
-	def_: int  # 避免与 Python 关键字冲突
-	evolv_flag: int
-	evolves_to: int
-	evolving_lv: int
-	free_forbidden: int
-	gender: int
-	hp: int
-	id: int
-	is_fly_pet: int
-	is_ride_pet: int
-	pet_class: int
-	real_id: int
-	sp_atk: int
-	sp_def: int
-	spd: int
-	support: int
-	transform: int
-	type: int
-	vip: int
-
+MonsterItem = TypedDict(  # noqa: UP013
+	'MonsterItem',
+	{
+		'def_name': str,
+		'extra_moves': LearnableMoves | None,
+		'learnable_moves': LearnableMoves | None,
+		'move': MoveItem | None,
+		'show_extra_moves': LearnableMoves | None,
+		'sp_extra_moves': LearnableMoves | None,
+		'atk': int,
+		'character_attr_param': int,
+		'combo': int,
+		'def': int,
+		'evolv_flag': int,
+		'evolves_to': int,
+		'evolving_lv': int,
+		'free_forbidden': int,
+		'gender': int,
+		'hp': int,
+		'id': int,
+		'is_fly_pet': int,
+		'is_ride_pet': int,
+		'pet_class': int,
+		'real_id': int,
+		'sp_atk': int,
+		'sp_def': int,
+		'spd': int,
+		'support': int,
+		'transform': int,
+		'type': int,
+		'vip': int,
+	}
+)
 
 # 精灵容器结构
 class _Monsters(TypedDict):
@@ -226,7 +225,7 @@ class MonstersParser(BaseParser[MonstersConfig]):
 					'atk': atk,
 					'character_attr_param': character_attr_param,
 					'combo': combo,
-					'def_': def_,
+					'def': def_,
 					'evolv_flag': evolv_flag,
 					'evolves_to': evolves_to,
 					'evolving_lv': evolving_lv,
