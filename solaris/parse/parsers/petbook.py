@@ -125,7 +125,6 @@ class _PbPlaceItem(TypedDict):
 	id: int
 	image_id: int
 	label: int
-	mom_id: int
 	mon_id: int
 	type: int
 
@@ -158,7 +157,6 @@ class _PbPetDataItem(TypedDict):
 class _PbItem(TypedDict):
 	"""热点信息条目"""
 
-	_text: list[str]
 	intro: str
 	place: list[_PbPlaceItem]
 
@@ -254,20 +252,14 @@ class PetBookParser(BaseParser[PetBookConfig]):
 		# Hotspot（可选）
 		if reader.read_bool():
 			item_obj: _PbItem | None = None
-			text: list[str] = []
 			if reader.read_bool():
-				if reader.read_bool():
-					text = [
-						reader.ReadUTFBytesWithLength()
-						for _ in range(reader.read_i32())
-					]
 				intro = reader.ReadUTFBytesWithLength()
 				places = []
 				if reader.read_bool():
 					pcnt = reader.read_i32()
 					for _ in range(pcnt):
 						places.append(self._read_place_pb(reader))
-				item_obj = {'intro': intro, 'place': places, '_text': text}
+				item_obj = {'intro': intro, 'place': places}
 			result['root']['hotspot'] = {'item': item_obj}
 
 		# Monster（可选数组）
@@ -324,9 +316,8 @@ class PetBookParser(BaseParser[PetBookConfig]):
 			m = reader.read_i32()
 			mintmark = [reader.read_i32() for _ in range(m)]
 		redirect = reader.ReadUTFBytesWithLength()
-		mom_id = reader.read_i32()
 		mon_id = reader.read_i32()
-		type_val = 0
+		type_val = reader.read_i32()
 		return {
 			'desc': desc,
 			'go': go,
@@ -335,7 +326,6 @@ class PetBookParser(BaseParser[PetBookConfig]):
 			'id': pid,
 			'image_id': image_id,
 			'label': label,
-			'mom_id': mom_id,
 			'mon_id': mon_id,
 			'type': type_val,
 		}

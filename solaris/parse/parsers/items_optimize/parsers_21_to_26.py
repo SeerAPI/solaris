@@ -225,6 +225,7 @@ class Item26(BaseItemData):
 	"""道具类别26项"""
 
 	sort: int
+	rarity: int
 	use_max: int
 	purpose: int
 	wd: int
@@ -246,6 +247,7 @@ class ItemsOptimizeCatItems26Parser(BaseItemParser[Item26]):
 			id=reader.ReadSignedInt(),
 			max=reader.ReadSignedInt(),
 			name=reader.ReadUTFBytesWithLength(),
+			rarity=reader.ReadSignedInt(),
 			sort=reader.ReadSignedInt(),
 			use_max=reader.ReadSignedInt(),
 			cat_id=reader.ReadSignedInt(),
