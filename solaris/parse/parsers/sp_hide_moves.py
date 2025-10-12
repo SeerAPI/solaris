@@ -71,7 +71,7 @@ class SpHideMovesParser(BaseParser[SpHideMovesConfig]):
 				movesname = reader.ReadUTFBytesWithLength()
 				movetype = reader.ReadSignedInt()
 
-				sp_moves_item: SpMovesItem = {
+				show_moves_item: SpMovesItem = {
 					'itemname': itemname,
 					'movesname': movesname,
 					'id': item_id,
@@ -81,7 +81,7 @@ class SpHideMovesParser(BaseParser[SpHideMovesConfig]):
 					'moves': moves,
 					'movetype': movetype,
 				}
-				result['config']['show_moves'].append(sp_moves_item)
+				result['config']['show_moves'].append(show_moves_item)
 
 		# 解析 SpMoves 数组
 		if reader.ReadBoolean():

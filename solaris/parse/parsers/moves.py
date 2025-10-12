@@ -5,7 +5,7 @@ from ..bytes_reader import BytesReader
 
 
 # 基础招式项结构
-class MoveItem(TypedDict):
+class UnityMoveItem(TypedDict):
 	atk_num: int
 	atk_type: int
 	category: int
@@ -27,7 +27,7 @@ class MoveItem(TypedDict):
 
 # 招式集合内部结构
 class _Moves(TypedDict):
-	move: list[MoveItem]
+	move: list[UnityMoveItem]
 	text: str
 
 
@@ -86,7 +86,7 @@ class MovesParser(BaseParser[MovesConfig]):
 
 					# 循环读取每个MoveItem
 					for _ in range(move_count):
-						move_item: MoveItem = {
+						move_item: UnityMoveItem = {
 							'atk_num': reader.ReadSignedInt(),
 							'atk_type': reader.ReadSignedInt(),
 							'category': reader.ReadSignedInt(),
@@ -197,7 +197,7 @@ class MoveFgtvDesParser(BaseParser[MoveFgtvDesConfig]):
 
 
 # 技能变更项结构
-class MovesItem(TypedDict):
+class MoveChangeItem(TypedDict):
 	move_id: int
 	new_name: str
 	skin_id: int
@@ -206,13 +206,13 @@ class MovesItem(TypedDict):
 
 
 # 技能变更内部结构
-class _Move(TypedDict):
-	moves: list[MovesItem]
+class _MoveChange(TypedDict):
+	moves: list[MoveChangeItem]
 
 
 # 技能变更数据根结构
 class MoveChangeConfig(TypedDict):
-	root: _Move | None
+	root: _MoveChange | None
 
 
 class MoveChangeParser(BaseParser[MoveChangeConfig]):
@@ -230,17 +230,17 @@ class MoveChangeParser(BaseParser[MoveChangeConfig]):
 		reader = BytesReader(data)
 		result: MoveChangeConfig = {'root': None}
 
-		# 检查是否有Move数据
+		# 检查是否有MoveChange数据
 		if reader.ReadBoolean():
-			move: _Move = {'moves': []}
+			move: _MoveChange = {'moves': []}
 
-			# 检查是否有Moves数组数据
+			# 检查是否有MoveChange数组数据
 			if reader.ReadBoolean():
 				moves_count = reader.ReadSignedInt()
 
-				# 循环读取每个MovesItem
+				# 循环读取每个MoveChangeItem
 				for _ in range(moves_count):
-					moves_item: MovesItem = {
+					moves_item: MoveChangeItem = {
 						'move_id': reader.ReadSignedInt(),
 						'new_name': reader.ReadUTFBytesWithLength(),
 						'skin_id': reader.ReadSignedInt(),

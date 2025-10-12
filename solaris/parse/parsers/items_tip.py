@@ -10,7 +10,7 @@ from ..bytes_reader import BytesReader
 
 
 # 物品提示项数据结构
-class ItemItem(TypedDict):
+class ItemTipItem(TypedDict):
 	"""物品提示项"""
 
 	des: str
@@ -21,7 +21,7 @@ class ItemItem(TypedDict):
 class _Root(TypedDict):
 	"""根容器"""
 
-	item: list[ItemItem]
+	item: list[ItemTipItem]
 
 
 # 顶层数据结构
@@ -55,7 +55,7 @@ class ItemsTipParser(BaseParser[ItemsTipConfig]):
 			item_count = reader.ReadSignedInt()
 			for _ in range(item_count):
 				# 严格按照 C# Parse 方法的顺序读取
-				item: ItemItem = {
+				item: ItemTipItem = {
 					'des': reader.ReadUTFBytesWithLength(),
 					'id': reader.ReadSignedInt(),
 				}

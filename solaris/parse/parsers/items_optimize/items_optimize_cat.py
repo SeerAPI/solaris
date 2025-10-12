@@ -20,13 +20,13 @@ class _Root(TypedDict):
 	cats: list[CatItem]
 
 
-class _Data(TypedDict):
+class ItemsOptimizeCatConfig(TypedDict):
 	"""顶层数据结构"""
 
 	root: _Root
 
 
-class ItemsOptimizeCatParser(BaseParser[_Data]):
+class ItemsOptimizeCatParser(BaseParser[ItemsOptimizeCatConfig]):
 	"""道具优化类别配置解析器"""
 
 	@classmethod
@@ -37,9 +37,9 @@ class ItemsOptimizeCatParser(BaseParser[_Data]):
 	def parsed_config_filename(cls) -> str:
 		return 'itemsOptimizeCat.json'
 
-	def parse(self, data: bytes) -> _Data:
+	def parse(self, data: bytes) -> ItemsOptimizeCatConfig:
 		reader = BytesReader(data)
-		result: _Data = {'root': {'cats': []}}
+		result: ItemsOptimizeCatConfig = {'root': {'cats': []}}
 
 		# 检查头部标志
 		if reader.ReadBoolean():

@@ -13,7 +13,7 @@ class _SkillEffectsItem(TypedDict):
 	effect: _Effect | None
 
 
-class _GemItem(TypedDict):
+class GemItem(TypedDict):
 	category: int
 	decompose_prob: int
 	des: str
@@ -26,7 +26,7 @@ class _GemItem(TypedDict):
 
 
 class _Gems(TypedDict):
-	gem: list[_GemItem]
+	gem: list[GemItem]
 
 
 class GemsConfig(TypedDict):
@@ -77,7 +77,7 @@ class GemsParser(BaseParser[GemsConfig]):
 
 			upgrade_gem_id = reader.read_i32()
 
-			gem_item: _GemItem = {
+			gem_item: GemItem = {
 				'category': category,
 				'decompose_prob': decompose_prob,
 				'des': des,
