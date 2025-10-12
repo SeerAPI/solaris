@@ -57,7 +57,7 @@ class PetSkinCategoryBase(BaseResModel):
 	id: int = Field(primary_key=True, description='系列ID')
 	name: str = Field(
 		description='系列名称'
-	)  # TODO: 该字段可能在数据中不存在，暂时忽略，等待csv补充
+	)  # TODO: 该字段可能在数据中不存在，暂时忽略，等待游戏内数据或打补丁补充
 
 	@classmethod
 	def resource_name(cls) -> str:
@@ -87,35 +87,29 @@ class PetSkinCategoryORM(PetSkinCategoryBase, table=True):
 class PetSkinAnalyzer(BasePetAnalyzer):
 	def analyze(self) -> tuple[AnalyzeResult, ...]:
 		pet_skin_data = self.pet_skin_data
-		real_id_data = {
-			pet['ID']: pet['RealId']
-			for pet in self._get_data('html5', 'xml/monsters.json')['Monsters'][
-				'Monster'
-			]
-			if pet['ID'] >= 1400000 and 'RealId' in pet
+		real_id_data: dict[int, int] = {
+			id_: pet['real_id']
+			for id_, pet in self.pet_origin_data.items()
+			if id_ >= 1400000 and pet['real_id'] != 0
 		}
 		pet_skin_map: dict[int, PetSkin] = {}
 		pet_skin_category_map: CategoryMap[
 			int, PetSkinCategory, ResourceRef[PetSkin]
 		] = CategoryMap(category_key='skins')
+
 		for skin_id, pet_skin in pet_skin_data.items():
-			pet_id = pet_skin['MonID']
-			category_id = pet_skin.get('Type', 0)
+			pet_id = pet_skin['mon_id']
+			category_id = pet_skin.get('type', 0)
 			resource_id = 1400000 + skin_id
 			if resource_id in real_id_data:
 				resource_id = real_id_data[resource_id]
+
 			pet_skin = PetSkin(
 				id=skin_id,
-				name=pet_skin['Name'],
+				name=pet_skin['name'],
 				resource_id=resource_id,
-				pet=ResourceRef(
-					id=pet_id,
-					resource_name='pet',
-				),
-				category=ResourceRef(
-					id=category_id,
-					resource_name='pet_skin_category',
-				),
+				pet=ResourceRef(id=pet_id, resource_name='pet'),
+				category=ResourceRef.from_model(id=category_id, model=PetSkinCategory),
 			)
 			pet_skin_map[skin_id] = pet_skin
 			if category_id not in pet_skin_category_map:
@@ -125,16 +119,10 @@ class PetSkinAnalyzer(BasePetAnalyzer):
 				)
 			pet_skin_category_map.add_element(
 				category_id,
-				ResourceRef.from_model(pet_skin),
+				ResourceRef.from_model(pet_skin)
 			)
 
 		return (
-			AnalyzeResult(
-				model=PetSkin,
-				data=pet_skin_map,
-			),
-			AnalyzeResult(
-				model=PetSkinCategory,
-				data=pet_skin_category_map,
-			),
+			AnalyzeResult(model=PetSkin, data=pet_skin_map),
+			AnalyzeResult(model=PetSkinCategory, data=pet_skin_category_map),
 		)

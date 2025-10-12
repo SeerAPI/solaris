@@ -7,10 +7,11 @@ from typing import Any, ClassVar, cast
 from typing_extensions import Self
 
 from pydantic import model_validator
+import xmltodict
 
 from solaris.settings import ENV_PREFIX, SETTINGS_CONFIG, BaseSettings
 from solaris.typing import JSON, Paths
-from solaris.utils import get_nested_value
+from solaris.utils import convert_to_number, get_nested_value
 
 from .typing_ import (
 	AnalyzeData,
@@ -36,6 +37,13 @@ class DataSourceDirSettings(BaseSettings):
 		self.UNITY_DIR = self.UNITY_DIR
 		self.FLASH_DIR = self.FLASH_DIR
 		return self
+
+
+def _convert_xml_attr_to_number(path, key, value):
+	try:
+		return key, convert_to_number(value)
+	except:  # noqa: E722
+		return key, value
 
 
 @dataclass
@@ -66,6 +74,8 @@ class DataImportConfig:
 		return tuple(base_dir.joinpath(path) for path in paths)
 
 	def __add__(self, other: 'DataImportConfig') -> 'DataImportConfig':
+		if not isinstance(other, DataImportConfig):
+			raise ValueError(f'other must be DataImportConfig, but got {type(other)}')
 		obj = DataImportConfig()
 		obj.patch_paths = self.patch_paths + other.patch_paths
 		obj.html5_paths = self.html5_paths + other.html5_paths
@@ -89,14 +99,14 @@ class DataLoader(ABC):
 			'html5': self._load_data_by_category(
 				import_config.html5_paths, base_dirs.HTML5_DIR, self._load_data
 			),
-			'patch': self._load_data_by_category(
-				import_config.patch_paths, base_dirs.PATCH_DIR, self._load_patch
-			),
 			'unity': self._load_data_by_category(
 				import_config.unity_paths, base_dirs.UNITY_DIR, self._load_data
 			),
 			'flash': self._load_data_by_category(
-				import_config.flash_paths, base_dirs.FLASH_DIR, self._load_data
+				import_config.flash_paths, base_dirs.FLASH_DIR, self._load_xml_data
+			),
+			'patch': self._load_data_by_category(
+				import_config.patch_paths, base_dirs.PATCH_DIR, self._load_patch
 			),
 		}
 
@@ -141,6 +151,15 @@ class DataLoader(ABC):
 	@classmethod
 	def _load_patch(cls, path: str | Path) -> Patch:
 		return cast(Patch, cls._load_data(path))
+
+	@classmethod
+	def _load_xml_data(cls, path: str | Path) -> JSONObject:
+		return xmltodict.parse(
+			Path(path).read_text(),
+			encoding='utf-8',
+			attr_prefix='',
+			postprocessor=_convert_xml_attr_to_number,
+		)
 
 	@classmethod
 	def _load_data(cls, path: str | Path) -> JSONObject:

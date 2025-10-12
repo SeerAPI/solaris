@@ -1,5 +1,5 @@
 from functools import cached_property
-from typing import Any, Optional, cast
+from typing import TYPE_CHECKING, Optional, cast
 
 from sqlmodel import Field, Relationship, SQLModel
 
@@ -16,6 +16,9 @@ from solaris.analyze.model import (
 from solaris.analyze.typing_ import AnalyzeResult
 from solaris.analyze.utils import CategoryMap
 from solaris.utils import split_string_arg
+
+if TYPE_CHECKING:
+	from solaris.parse.parsers.gems import GemItem as UnityGemItem
 
 
 class GemEffectLink(SQLModel, table=True):
@@ -283,24 +286,52 @@ def _get_generation_id_from_category(category_id: int) -> int:
 		raise ValueError(f'Invalid category id: {category_id}')
 
 
+if TYPE_CHECKING:
+	class GemItem(UnityGemItem):
+		fail_compensate_start: int
+		fail_compensate_end: int
+		equit_lv1_cnt1: int
+		inlay_prob: int
+
+
 class GemAnalyzer(BaseSkillEffectAnalyzer):
 	"""刻印宝石数据解析器"""
 
 	@classmethod
 	def get_data_import_config(cls) -> DataImportConfig:
 		return super().get_data_import_config() + DataImportConfig(
-			html5_paths=('xml/gems.json',)
+			unity_paths=('gems.json',),
+			flash_paths=('config.xml.GemsXMLInfo.xml',)
 		)
 
 	@cached_property
-	def gem_data(self) -> list[dict[str, Any]]:
-		return self._get_data('html5', 'xml/gems.json')['Gems']['Gem']
+	def gem_data(self) -> dict[int, 'GemItem']:
+		unity_data: list['UnityGemItem'] = self._get_data(
+			'unity', 'gems.json'
+		)['gems']['gem']
+		flash_data = self._get_data(
+			'flash', 'config.xml.GemsXMLInfo.xml'
+		)['Gems']['Gem']
+		flash_data_map = {i['ID']: i for i in flash_data}
+		result = {}
+		for gem in unity_data:
+			id_ = gem['id']
 
-	def _create_gem_effect(self, data: dict[str, Any]) -> list[SkillEffectInUse]:
-		effect = data['SkillEffects'][0]['Effect']
-		id_ = effect['EffectId']
-		param = effect.get('Param')
-		args = split_string_arg(param) if param else []
+			result[id_] = {
+				**gem,
+				'fail_compensate_start': flash_data_map[id_]['FailCompensateStart'],
+				'fail_compensate_end': flash_data_map[id_]['FailCompensateEnd'],
+				'equit_lv1_cnt1': flash_data_map[id_]['EquitLv1Cnt1'],
+				'inlay_prob': flash_data_map[id_]['InlayProb'],
+			}
+		return result
+
+	def _create_gem_effect(self, data: 'GemItem') -> list[SkillEffectInUse]:
+		effect = data['skill_effects'][0]['effect']
+		if not effect:
+			return []
+		id_ = effect['effect_id']
+		args = effect['param']
 		effect_in_use_list = self.create_skill_effect(type_ids=[id_], args=args)
 		if not effect_in_use_list:
 			raise ValueError(f'宝石效果创建失败: {id_} {args}')
@@ -316,8 +347,8 @@ class GemAnalyzer(BaseSkillEffectAnalyzer):
 		gem_gen_category_map: CategoryMap[int, GemGenCategory, ResourceRef] = (
 			CategoryMap('gem_category')
 		)
-		for gem_data in self.gem_data:
-			category_id = gem_data['Category']
+		for gem_id, gem_data in self.gem_data.items():
+			category_id = gem_data['category']
 			if category_id in gem_category_map:
 				continue
 
@@ -325,7 +356,7 @@ class GemAnalyzer(BaseSkillEffectAnalyzer):
 			name_slice = -3 if generation_id == 1 else -1
 			category = GemCategory(
 				id=category_id,
-				name=gem_data['Name'][:name_slice],
+				name=gem_data['name'][:name_slice],
 				generation_id=generation_id,
 			)
 			gem_category_map[category_id] = category
@@ -336,9 +367,8 @@ class GemAnalyzer(BaseSkillEffectAnalyzer):
 				id=generation_id,
 			)
 
-		origin_gem_map: dict[int, dict[str, Any]] = {i['ID']: i for i in self.gem_data}
-		for gem_id, gem_data in origin_gem_map.items():
-			category_id = gem_data['Category']
+		for gem_id, gem_data in self.gem_data.items():
+			category_id = gem_data['category']
 			category_ref = ResourceRef.from_model(gem_category_map[category_id])
 
 			generation_id = _get_generation_id_from_category(category_id)
@@ -347,20 +377,20 @@ class GemAnalyzer(BaseSkillEffectAnalyzer):
 			equivalent_level1_count = None
 			if generation_id == 1:
 				fail_compensate_range = (
-					gem_data['FailCompensateStart'],
-					gem_data['FailCompensateEnd'],
+					gem_data['fail_compensate_start'],
+					gem_data['fail_compensate_end'],
 				)
-				equivalent_level1_count = gem_data['EquitLv1Cnt1']
+				equivalent_level1_count = gem_data['equit_lv1_cnt1']
 			else:
-				upgrade_cost = gem_data['EquitLv1Cnt1']
+				upgrade_cost = gem_data['equit_lv1_cnt1']
 
 			gem_obj = Gem(
 				id=gem_id,
-				name=gem_data['Name'],
-				level=gem_data['Lv'],
+				name=gem_data['name'],
+				level=gem_data['lv'],
 				generation_id=generation_id,
 				category=category_ref,
-				inlay_rate=gem_data['InlayProb'] / 100,
+				inlay_rate=gem_data['inlay_prob'] / 100,
 				equivalent_level1_count=equivalent_level1_count,
 				effect=self._create_gem_effect(gem_data),
 				upgrade_cost=upgrade_cost,
@@ -372,21 +402,15 @@ class GemAnalyzer(BaseSkillEffectAnalyzer):
 			gem_category_map.add_element(category_id, gem_ref)
 			gem_gen_category_map.add_element(generation_id, gem_ref)
 
-		for gem in origin_gem_map.values():
-			id_ = gem['ID']
-			if upgrade_gem_id := gem.get('UpgradeGemId'):
+		for gem_id, gem_data in self.gem_data.items():
+			if upgrade_gem_id := gem_data.get('upgrade_gem_id'):
 				gem_map[upgrade_gem_id].next_level_gem = ResourceRef.from_model(
-					gem_map[id_],
+					gem_map[gem_id],
 				)
 
 		return (
-			AnalyzeResult(
-				model=Gem,
-				data=gem_map,
-			),
-			AnalyzeResult(
-				model=GemCategory,
-				data=gem_category_map,
+			AnalyzeResult(model=Gem, data=gem_map),
+			AnalyzeResult(model=GemCategory, data=gem_category_map,
 			),
 			AnalyzeResult(
 				model=GemGenCategory,

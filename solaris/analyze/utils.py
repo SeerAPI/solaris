@@ -1,8 +1,6 @@
 from collections.abc import Hashable
 from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
-from solaris.analyze.base import DataImportConfig
-
 if TYPE_CHECKING:
 	from solaris.analyze.model import BaseCategoryModel
 	from solaris.analyze.typing_ import CsvTable
@@ -41,10 +39,10 @@ def create_category_map(
 
 	Args:
 		csv_table: CSV表格数据，键为ID，值为数据字典
-		model_cls: 用于实例化的模型类（某行数据为空字典时，仍会实例化对应模型，
-		仅包含 kwargs 与空的 array_key）
-		array_key: 数组字段键名，必须存在于模型类的字段中；该字段将被强制
-			初始化为一个空列表（即使 CSV 或 kwargs 提供了该字段值也会被覆盖）
+		model_cls: 用于实例化的模型类
+		（某行数据为空字典时，仍会实例化对应模型，仅包含 kwargs 与空的 array_key）
+		array_key: 数组字段键名，必须存在于模型类的字段中；
+		该字段将被强制初始化为一个空列表（即使 CSV 或 kwargs 提供了该字段值也会被覆盖）
 		**kwargs: 额外的字段参数，将传递给模型构造函数，若与 CSV 行存在同名字段，
 		则覆盖 CSV 中的值
 
@@ -96,6 +94,11 @@ def create_category_map(
 
 	return result
 
+T = TypeVar('T', bound=Hashable)
 
-def merge_import_config(*configs: DataImportConfig) -> DataImportConfig:
-	return sum(configs, DataImportConfig())
+def merge_dict_item(target: dict[T, Any], source: dict[T, Any], key: T) -> None:
+	"""将 source 字典中的key对应的值合并到 target 中，
+	若 source 中不存在key，则不进行合并
+	"""
+	if source.get(key) is not None:
+		target[key] = source[key]

@@ -36,11 +36,10 @@ if TYPE_CHECKING:
 	from .soulmark import Soulmark, SoulmarkORM
 
 
-ATTR_KEYS = ('Atk', 'Def', 'SpAtk', 'SpDef', 'Spd', 'HP')
-
-
 def _handle_yielding_ev(value: str | int) -> SixAttributes:
 	if isinstance(value, str):
+		if len(value) <= 6:
+			value = ' '.join(s for s in value)
 		return SixAttributes.from_string(value, hp_first=True)
 	return SixAttributes.from_list(
 		[
@@ -501,9 +500,7 @@ class PetMountTypeORM(PetMountTypeBase, table=True):
 
 class PetAnalyzer(BasePetAnalyzer):
 	def get_skill_activation_item(
-		self,
-		skill_id: int,
-		pet_id: int,
+		self, skill_id: int, pet_id: int
 	) -> ResourceRef['SkillActivationItem'] | None:
 		if skill_id in self.skill_activation_data:
 			data = self.skill_activation_data[skill_id]
@@ -534,23 +531,17 @@ class PetAnalyzer(BasePetAnalyzer):
 		result: list[SkillInPet] = []
 		skill_id_set: set[int] = set()
 		for skill_data in skills_data:
-			skill_id = skill_data['ID']
-			learning_level = skill_data.get('LearningLv')
+			skill_id = skill_data['id']
+			learning_level = skill_data.get('learning_lv')
 			data = SkillInPet(
 				id=skill_id,
 				pet_id=pet_id,
-				skill=ResourceRef(
-					id=skill_id,
-					resource_name='skill',
-				),
+				skill=ResourceRef(id=skill_id, resource_name='skill'),
 				learning_level=learning_level,
 				is_special=is_special,
 				is_advanced=is_advanced,
 				is_fifth=is_fifth,
-				skill_activation_item=self.get_skill_activation_item(
-					skill_id,
-					pet_id,
-				),
+				skill_activation_item=self.get_skill_activation_item(skill_id, pet_id),
 			)
 			if data.id in skill_id_set:
 				continue
@@ -561,13 +552,9 @@ class PetAnalyzer(BasePetAnalyzer):
 		return result
 
 	def analyze(self) -> tuple[AnalyzeResult, ...]:
-		pet_origin_data = self._get_data('html5', 'xml/monsters.json')
 		pet_gender_csv: CsvTable = self._get_data('patch', 'pet_gender.json')
 		mount_type_csv: CsvTable = self._get_data('patch', 'pet_mount_type.json')
 
-		pet_origin_data = list(
-			filter(lambda x: x['ID'] <= 9999, pet_origin_data['Monsters']['Monster'])
-		)
 		# 记录 PetClass，key为PetClass的ID，value为PetClass对象
 		pet_class_map: dict[int, PetClass] = {}
 		# 记录性别，key为性别id
@@ -586,30 +573,25 @@ class PetAnalyzer(BasePetAnalyzer):
 		)
 
 		pet_map = {}
-		for pet_dict in pet_origin_data:
-			pet_id = pet_dict['ID']
-			pet_name = pet_dict.pop('DefName')
-			pet_ref = ResourceRef.from_model(
-				Pet,
-				id=pet_id,
-			)
-			pet_type = ResourceRef(
-				id=pet_dict['Type'],
-				resource_name='element-type',
-			)
-			pet_gender_id = pet_dict.get('Gender', 0)
+		for pet_id, pet_dict in self.pet_origin_data.items():
+			if pet_id > 9999:
+				break
+			pet_name = pet_dict['def_name']
+			pet_ref = ResourceRef.from_model(Pet, id=pet_id)
+			pet_type = ResourceRef(id=pet_dict['type'], resource_name='element-type')
+			pet_gender_id = pet_dict.get('gender', 0)
 			if pet_gender_id > 2:
 				pet_gender_id = 0
 			pet_gender_ref = ResourceRef.from_model(pet_gender_map[pet_gender_id])
-			releaseable = not bool(pet_dict.pop('FreeForbidden', 0))
+			releaseable = not bool(pet_dict.get('free_forbidden', 0))
 			# 处理精灵类别
 			cls_info = {
-				'is_rare_pet': bool(pet_dict.pop('IsRareMon', False)),
-				'is_variant_pet': bool(pet_dict.pop('IsAbilityMon', False)),
-				'is_breeding_pet': bool(pet_dict.pop('BreedingMon', False)),
-				'is_fusion_pet': bool(pet_dict.pop('IsFuseMon', False)),
+				'is_rare_pet': bool(pet_dict.get('IsRareMon', False)),
+				'is_variant_pet': bool(pet_dict.get('IsAbilityMon', False)),
+				'is_breeding_pet': bool(pet_dict.get('BreedingMon', False)),
+				'is_fusion_pet': bool(pet_dict.get('IsFuseMon', False)),
 			}
-			if vipbuff_id := pet_dict.pop('VipBtlAdj', 0):
+			if vipbuff_id := int(pet_dict.get('VipBtlAdj', 0)):
 				if vipbuff_id == 1:
 					cls_info['is_shine_pet'] = True
 				elif vipbuff_id == 2:
@@ -619,7 +601,7 @@ class PetAnalyzer(BasePetAnalyzer):
 
 			pet_cls_ref = None
 			evolution_chain_index = 0
-			if pet_cls_id := pet_dict.get('PetClass'):
+			if pet_cls_id := pet_dict.get('pet_class'):
 				if pet_cls := pet_class_map.get(pet_cls_id):
 					pet_cls.evolution_chain.append(pet_ref)
 				else:
@@ -633,16 +615,22 @@ class PetAnalyzer(BasePetAnalyzer):
 				evolution_chain_index = len(pet_cls.evolution_chain) - 1
 
 			# 转换种族值对象
-			base_stats = SixAttributes.from_list(
-				[pet_dict.pop(key) for key in ATTR_KEYS]
+			base_stats = SixAttributes(
+				hp=pet_dict['hp'],
+				atk=pet_dict['atk'],
+				def_=pet_dict['def'],
+				sp_atk=pet_dict['sp_atk'],
+				sp_def=pet_dict['sp_def'],
+				spd=pet_dict['spd'],
 			)
 
 			# 转换YieldingEV
-			yielding_ev = _handle_yielding_ev(pet_dict.pop('YieldingEV', None))
+			yielding_ev = _handle_yielding_ev(pet_dict['YieldingEV'])
 
 			diy_stats: DiyStats | None = None
-			if (diy_min := pet_dict.get('DiyRaceMin')) and (
-				diy_max := pet_dict.get('DiyRaceMax')
+			if (
+				(diy_min := pet_dict.get('DiyRaceMin'))
+				and (diy_max := pet_dict.get('DiyRaceMax'))
 			):
 				diy_stats = DiyStats(
 					min=SixAttributes.from_string(diy_min, hp_first=True),
@@ -650,63 +638,65 @@ class PetAnalyzer(BasePetAnalyzer):
 				)
 			# 处理坐骑类型
 			mount_type = 0
-			if pet_dict.get('isRidePet', False):
+			if pet_dict.get('is_ride_pet', False):
 				mount_type = 1
-			elif pet_dict.get('isFlyPet', False):
+			elif pet_dict.get('is_fly_pet', False):
 				mount_type = 2
 			mount_type_ref = None
 			if mount_type:
 				mount_type_ref = ResourceRef.from_model(pet_mount_type_map[mount_type])
 
-			pet_normal_skills = pet_dict.get('LearnableMoves', {})
 			# 准备处理技能相关
 			pet_skill_resources: list[SkillInPet] = []
+			pet_normal_skills = pet_dict.get('learnable_moves') or pet_dict.get('move')
+			if pet_normal_skills:
+				# 获取普通技能
+				normal_moves = pet_normal_skills.get('move', [])
+				pet_skill_resources.extend(
+					self.extract_skills_from_list(pet_id, normal_moves)
+				)
 
-			# 获取普通技能
-			normal_moves = pet_normal_skills.get('Move', [])
-			pet_skill_resources.extend(
-				self.extract_skills_from_list(pet_id, normal_moves)
-			)
+				# 获取特训技能
+				moves = pet_normal_skills.get('sp_move', [])
+				pet_skill_resources.extend(
+					self.extract_skills_from_list(pet_id, moves, is_special=True)
+				)
 
-			# 获取特训技能
-			moves = pet_normal_skills.get('SpMove', [])
-			pet_skill_resources.extend(
-				self.extract_skills_from_list(pet_id, moves, is_special=True)
-			)
-
-			# 获取觉醒技能
-			moves = pet_normal_skills.get('AdvMove', [])
-			pet_skill_resources.extend(
-				self.extract_skills_from_list(pet_id, moves, is_advanced=True)
-			)
+				# 获取觉醒技能
+				moves = pet_normal_skills.get('adv_move', [])
+				pet_skill_resources.extend(
+					self.extract_skills_from_list(pet_id, moves, is_advanced=True)
+				)
 
 			# 获取第五技能
-			if fifth_skill := get_nested_value(pet_dict, 'ExtraMoves.Move'):
+			if fifth_skill := get_nested_value(pet_dict, 'extra_moves.move'):
 				pet_skill_resources.extend(
-					self.extract_skills_from_list(pet_id, fifth_skill, is_fifth=True)
+					self.extract_skills_from_list(
+						pet_id,
+						fifth_skill,
+						is_fifth=True,
+						is_special=True,
+					)
 				)
 
-			# 获取特训第五技能
-			moves = pet_normal_skills.get('SpExtraMoves.Move', [])
-			pet_skill_resources.extend(
-				self.extract_skills_from_list(
-					pet_id, moves, is_special=True, is_fifth=True
+			# 获取特训/觉醒第五技能（U端特训/觉醒第五在同一个字段中，需要单独分辨）
+			moves = get_nested_value(pet_dict, 'sp_extra_moves.move') or []
+			for move in moves:
+				if move['id'] in self.pet_advanced_skill_data:
+					kw = {'is_advanced': True}
+				else:
+					kw = {'is_special': True}
+				pet_skill_resources.extend(
+					self.extract_skills_from_list(pet_id, move, is_fifth=True, **kw)
 				)
-			)
 
-			# 获取觉醒第五技能
-			moves = pet_normal_skills.get('ShowExtraMoves.Move', [])
-			pet_skill_resources.extend(
-				self.extract_skills_from_list(
-					pet_id, moves, is_advanced=True, is_fifth=True
-				)
-			)
 			encyclopedia_entry = None
 			if pet_id in self.pet_encyclopedia_data:
 				encyclopedia_entry = ResourceRef(
 					id=pet_id,
 					resource_name='pet_encyclopedia_entry',
 				)
+
 			archive_story_entry = None
 			if pet_id in self.pet_archive_story_book_data:
 				archive_story_entry = ResourceRef(
@@ -720,10 +710,10 @@ class PetAnalyzer(BasePetAnalyzer):
 				type=pet_type,
 				gender=pet_gender_ref,
 				base_stats=base_stats,
-				evolving_lv=pet_dict.get('EvolvingLv'),
+				evolving_lv=pet_dict.get('evolving_lv'),
 				pet_class=pet_cls_ref,
 				evolution_chain_index=evolution_chain_index,
-				yielding_exp=pet_dict.get('YieldingExp', 0),
+				yielding_exp=pet_dict['YieldingExp'],
 				yielding_ev=yielding_ev,
 				catch_rate=pet_dict['CatchRate'],
 				vipbuff=ResourceRef.from_model(pet_vipbuff_map[vipbuff_id])
@@ -736,7 +726,7 @@ class PetAnalyzer(BasePetAnalyzer):
 				fusion_sub=pet_dict.get('FuseSub', False),
 				has_resistance=bool(pet_dict.get('Resist', 0)),
 				skill=pet_skill_resources,
-				resource_id=pet_dict.get('RealId', pet_id),
+				resource_id=pet_dict.get('real_id') or pet_id,
 				encyclopedia_entry=encyclopedia_entry,
 				archive_story_entry=archive_story_entry,
 			)

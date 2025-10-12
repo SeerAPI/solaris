@@ -32,10 +32,14 @@ if TYPE_CHECKING:
 	from solaris.analyze.analyzers.effect import PetEffectORM, VariationEffectORM
 	from solaris.analyze.analyzers.equip import EquipBonusORM, SuitBonusORM
 	from solaris.analyze.analyzers.items.enegry_bead import EnergyBeadORM
-	from solaris.analyze.analyzers.items.skill_stone import SkillStoneCategoryORM
+	from solaris.analyze.analyzers.items.skill_stone import SkillStoneEffectORM
 	from solaris.analyze.analyzers.mintmark_gem import GemORM
 	from solaris.analyze.analyzers.pet.soulmark import SoulmarkORM
-	from solaris.analyze.analyzers.skill import SkillEffectTypeORM, SkillORM
+	from solaris.analyze.analyzers.skill import (
+		SkillEffectType,
+		SkillEffectTypeORM,
+		SkillORM,
+	)
 
 TModel = TypeVar('TModel', bound=SQLModel)
 
@@ -493,7 +497,7 @@ class SkillEffectInUseBase(BaseResModelWithOptionalId):
 class SkillEffectInUse(
 	SkillEffectInUseBase, BaseGeneralModel, ConvertToORM['SkillEffectInUseORM']
 ):
-	effect: 'ResourceRef'
+	effect: 'ResourceRef[SkillEffectType]'
 
 	@classmethod
 	def schema_path(cls) -> str:
@@ -525,9 +529,10 @@ class SkillEffectInUseORM(SkillEffectInUseBase, table=True):
 			'secondary': 'gemeffectlink',
 		},
 	)
-	skill_stone_category: list['SkillStoneCategoryORM'] = Relationship(
-		back_populates='hide_effect',
+	skill_stone_effect: list['SkillStoneEffectORM'] = Relationship(
+		back_populates='effect',
 		sa_relationship_kwargs={
 			'secondary': 'skillstoneeffectlink',
 		},
 	)
+

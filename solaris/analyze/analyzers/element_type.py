@@ -9,6 +9,8 @@ from solaris.analyze.typing_ import AnalyzeResult
 from solaris.utils import split_string_arg
 
 if TYPE_CHECKING:
+	from solaris.parse.parsers.skilltype import SkillType
+
 	from .items.skill_stone import SkillStoneCategoryORM
 	from .pet.pet import PetORM
 	from .skill import SkillORM
@@ -124,28 +126,28 @@ class ElementTypeAnalyzer(BaseDataSourceAnalyzer):
 	@classmethod
 	def get_data_import_config(cls) -> DataImportConfig:
 		return DataImportConfig(
-			html5_paths=('xml/skillTypes.json',),
+			unity_paths=('skillType.json',),
 		)
 
 	def analyze(self) -> tuple[AnalyzeResult, ...]:
-		data = self._get_data('html5', 'xml/skillTypes.json')
-		element_type_data: dict[int, dict] = {
+		data = self._get_data('unity', 'skillType.json')
+		element_type_data: dict[int, SkillType] = {
 			item['id']: item for item in data['root']['item']
 		}
 
 		element_type_map: dict[int, ElementType] = {}
 		combination_map: dict[int, TypeCombination] = {}
 		for id_, item in element_type_data.items():
-			if not item.get('is_dou'):
+			if item['is_dou'] == 0:
 				element_type = ElementType(
 					id=item['id'],
 					name=item['cn'],
-					name_en=item['en'],
+					name_en=item['en'][0],
 				)
 				element_type_map[id_] = element_type
 
 		for id_, item in element_type_data.items():
-			if item.get('is_dou'):
+			if item['is_dou'] == 1:
 				comp1, comp2 = split_string_arg(item['att'])
 			else:
 				comp1 = id_
@@ -153,7 +155,7 @@ class ElementTypeAnalyzer(BaseDataSourceAnalyzer):
 			combination = TypeCombination(
 				id=id_,
 				name=item['cn'],
-				name_en=item['en'],
+				name_en='_'.join(item['en']),
 				primary=ResourceRef.from_model(
 					ElementType,
 					id=comp1,

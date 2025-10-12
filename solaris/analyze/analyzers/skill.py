@@ -16,12 +16,14 @@ from solaris.analyze.model import (
 )
 from solaris.analyze.typing_ import AnalyzeResult
 from solaris.analyze.utils import CategoryMap, create_category_map
-from solaris.utils import split_string_arg
 
 from .mintmark import SkillMintmark
 from .pet.pet import SkillInPetORM
 
 if TYPE_CHECKING:
+	from solaris.parse.parsers.effect_info import EffectInfoItem, ParamTypeItem
+	from solaris.parse.parsers.moves import UnityMoveItem
+
 	from .element_type import TypeCombination, TypeCombinationORM
 	from .mintmark import MintmarkORM
 
@@ -190,6 +192,7 @@ class SkillEffectType(SkillEffectTypeBase, ConvertToORM['SkillEffectTypeORM']):
 	# gem: list[ResourceRef] = Field(
 	# default_factory=list, description="使用该效果的宝石列表"
 	# )
+	# TODO: 添加宝石效果
 
 	@classmethod
 	def get_orm_model(cls) -> type['SkillEffectTypeORM']:
@@ -273,7 +276,9 @@ class SkillBase(BaseResModel):
 	power: int = Field(description='技能威力')
 	max_pp: int = Field(description='技能最大PP')
 	accuracy: int = Field(description='技能命中率')
-	crit_rate: int = Field(description='技能暴击率')
+	crit_rate: float | None = Field(
+		description='技能暴击率, 该技能无法暴击时为null（例如属性技能）'
+	)
 	priority: int = Field(description='技能优先级')
 	must_hit: bool = Field(description='技能是否必定命中')
 	info: str | None = Field(default=None, description='技能描述')
@@ -350,17 +355,16 @@ class SkillORM(SkillBase, table=True):
 		back_populates='skill',
 	)
 
-
 class BaseSkillEffectAnalyzer(BaseDataSourceAnalyzer):
 	@classmethod
 	def get_data_import_config(cls) -> DataImportConfig:
-		return DataImportConfig(html5_paths=('xml/effectInfo.json',))
+		return DataImportConfig(unity_paths=('effectInfo.json',))
 
 	@cached_property
 	def effect_param_map(self) -> dict[int, SkillEffectParam]:
-		effect_param_data: list[dict] = self._get_data('html5', 'xml/effectInfo.json')[
-			'root'
-		]['ParamType']
+		effect_param_data: list["ParamTypeItem"] = self._get_data(
+			'unity', 'effectInfo.json'
+		)['root']['param_type']
 
 		effect_param_map: dict[int, SkillEffectParam] = {}
 		for effect_param in effect_param_data:
@@ -377,9 +381,9 @@ class BaseSkillEffectAnalyzer(BaseDataSourceAnalyzer):
 
 	@cached_property
 	def effect_type_map(self) -> dict[int, SkillEffectType]:
-		effect_type_data: list[dict] = self._get_data('html5', 'xml/effectInfo.json')[
-			'root'
-		]['Effect']
+		effect_type_data: list["EffectInfoItem"] = self._get_data(
+			'unity', 'effectInfo.json'
+		)['root']['effect']
 
 		effect_type_map: dict[int, SkillEffectType] = {}
 		for effect_type in effect_type_data:
@@ -387,20 +391,19 @@ class BaseSkillEffectAnalyzer(BaseDataSourceAnalyzer):
 				continue
 			id_ = effect_type['id']
 			params: list[SkillEffectParamInType] | None = None
-			if param_list := effect_type.get('param'):
-				param_list = param_list.split('|')
+			if param_list := effect_type['param']:
 				params = [
 					SkillEffectParamInType(
 						position=start_index,
 						param=ResourceRef.from_model(self.effect_param_map[id_]),
 					)
 					for id_, start_index, _ in [
-						tuple(int(i) for i in param.split(',')) for param in param_list
+						param_list[i:i+3] for i in range(0, len(param_list), 3)
 					]
 				]
 			effect_type_map[id_] = SkillEffectType(
 				id=id_,
-				args_num=effect_type['argsNum'],
+				args_num=effect_type['args_num'],
 				param=params,
 				info=info,
 				skill=[],
@@ -410,14 +413,14 @@ class BaseSkillEffectAnalyzer(BaseDataSourceAnalyzer):
 	def create_skill_effect(
 		self, type_ids: list[int], args: list[int]
 	) -> list[SkillEffectInUse]:
-		"""根据效果类型ID和参数列表，创建技能效果对象元组。
+		"""根据效果类型ID和参数列表，创建技能效果对象列表。
 
 		Args:
 			type_ids: 技能效果的类型ID列表。
 			args: 所有技能效果的参数列表。
 
 		Returns:
-			一个包含SkillEffect对象的列表。如果出现未知效果类型或参数错误，则返回空元组。
+			一个包含SkillEffectInUse对象的列表。如果出现未知效果类型或参数错误，则返回空元组。
 		"""
 		args_nums = []
 		# 遍历每个效果类型ID，从effect_type_map中获取所需参数数量
@@ -429,13 +432,10 @@ class BaseSkillEffectAnalyzer(BaseDataSourceAnalyzer):
 
 		# 使用_slice_args辅助函数，根据每个效果所需的参数数量，将扁平的args列表
 		# 切分为嵌套列表
-		sliced_args: list[list[int]] = _slice_args(
-			args_nums,
-			list(args),
-		)
+		sliced_args: list[list[int]] = _slice_args(args_nums, list(args))
 		results = []
-		# 遍历切分后的参数和对应的效果类型ID
 		format_mode_map = {16: 'none', 24: '-'}
+		# 遍历切分后的参数和对应的效果类型ID
 		for type_id, effect_args in zip(type_ids, sliced_args):
 			type_ = self.effect_type_map[type_id]
 			# info_args用于格式化效果描述字符串，初始值为效果参数的副本
@@ -445,18 +445,22 @@ class BaseSkillEffectAnalyzer(BaseDataSourceAnalyzer):
 				param_index = p.position
 				param_ref = p.param
 				param = self.effect_param_map[param_ref.id]
-				# param_id为0, 16, 24表示这是一个StatChange（状态变化）参数
-				if (param_id := param.id) in (0, 16, 24):
+				# param_id为16, 24表示这是一个StatChange（状态变化）参数
+				if (param_id := param.id) in (0, 16, 24) and len(info_args) > 6:
 					# 将6个参数合并为一个StatChange对象
 					slice_ = slice(param_index, param_index + 6)
-
 					kwargs = {}
 					if mode := format_mode_map.get(param_id):
 						kwargs['format_mode'] = mode
-
-					info_args[slice_] = [StatChange(*effect_args[slice_], **kwargs)] + [
-						None
-					] * 5  # 由于状态变化占用6个参数位置，所以填充5个None
+					info_args[slice_] = (
+						[StatChange(*effect_args[slice_], **kwargs)]
+						+ [None] * 5
+					)
+					# 由于状态变化占用6个参数位置，所以填充5个None
+					continue
+				# 特别处理id为14的参数
+				if param_id == 14:
+					info_args[param_index] = f'{effect_args[param_index]:+d}'
 					continue
 				# 如果参数有预定义的描述信息(param.infos)
 				if isinstance(param_infos := param.infos, list):
@@ -466,10 +470,6 @@ class BaseSkillEffectAnalyzer(BaseDataSourceAnalyzer):
 						info_args[param_index] = param_infos[pos]
 					except IndexError:
 						return []
-				# 额外处理id为14的参数
-				elif param_id == 14:
-					info_args[param_index] = f'{effect_args[param_index]:+d}'
-					continue
 
 			results.append(
 				SkillEffectInUse(
@@ -482,23 +482,56 @@ class BaseSkillEffectAnalyzer(BaseDataSourceAnalyzer):
 		return results
 
 
+def clac_crit_rate(crit_rate: int) -> float:
+	if crit_rate == 0:
+		return 0
+	return crit_rate / 16
+
+
+if TYPE_CHECKING:
+	class MoveItem(UnityMoveItem):
+		accuracy: int
+		crit_rate: int | None
+
+
 class SkillAnalyzer(BaseSkillEffectAnalyzer):
 	@classmethod
 	def get_data_import_config(cls) -> DataImportConfig:
 		super_config = super().get_data_import_config()
 		config = DataImportConfig(
-			html5_paths=(
-				'xml/moves.json',
-				'xml/side_effect.json',
-				'xml/effectInfo.json',
-			),
+			unity_paths=('moves.json',),
+			flash_paths=('config.xml.SkillXMLInfo.xml',),
 			patch_paths=(
-				'effectInfo.json',
 				'skill_hide_effect.json',
 				'skill_category.json',
+				'moves.json',
 			),
 		)
 		return super_config + config
+
+	@cached_property
+	def moves_data(self) -> dict[int, "MoveItem"]:
+		unity_data: list["UnityMoveItem"] = self._get_data(
+			'unity', 'moves.json'
+		)['root']['moves']['move']
+		flash_data = self._get_data(
+			'flash', 'config.xml.SkillXMLInfo.xml'
+		)['root']['item']
+		flash_data_map = {i['ID']: i for i in flash_data}
+
+		result = {}
+		for move in unity_data:
+			move_id = move['id']
+			crit_rate = None
+			if move['category'] != 4:
+				crit_rate = clac_crit_rate(flash_data_map[move_id].get('CritRate', 1))
+			result[move_id] = {
+				**move,
+				'accuracy': flash_data_map[move_id]['Accuracy'],
+				'crit_rate': crit_rate,
+			}
+
+		return result
 
 	def analyze(self) -> tuple[AnalyzeResult, ...]:
 		SkillEffectInUse.model_rebuild(
@@ -510,9 +543,7 @@ class SkillAnalyzer(BaseSkillEffectAnalyzer):
 		hide_effect_csv = self._get_data('patch', 'skill_hide_effect.json')
 		category_csv = self._get_data('patch', 'skill_category.json')
 
-		skill_data: list[dict] = self._get_data('html5', 'xml/moves.json')['MovesTbl'][
-			'Moves'
-		]['Move']
+		skill_data = self.moves_data
 		category_map: CategoryMap[int, SkillCategory, ResourceRef] = (
 			create_category_map(
 				category_csv,
@@ -528,21 +559,20 @@ class SkillAnalyzer(BaseSkillEffectAnalyzer):
 			)
 		)
 		skill_map: dict[int, Skill] = {}
-		for skill in skill_data:
-			skill_id = skill['ID']
-			skill_name = str(skill.get('Name', ''))  # 不知为何，有些技能的名称是int类型
+		for skill_id, skill in skill_data.items():
+			skill_name = skill['name']
 			skill_type = ResourceRef(
-				id=skill['Type'],
+				id=skill['type'],
 				resource_name='element_type_combination',
 			)
-			skill_category = ResourceRef.from_model(category_map[skill['Category']])
+			skill_category = ResourceRef.from_model(category_map[skill['category']])
 			skill_side_effect = self.create_skill_effect(
-				split_string_arg(skill.get('SideEffect', 0)),
-				split_string_arg(skill.get('SideEffectArg', 0)),
+				skill['side_effect'],
+				skill['side_effect_arg'],
 			)
 			skill_friend_side_effect = self.create_skill_effect(
-				split_string_arg(skill.get('FriendSideEffect', 0)),
-				split_string_arg(skill.get('FriendSideEffectArg', 0)),
+				skill['friend_side_effect'],
+				skill['friend_side_effect_arg'],
 			)
 
 			skill_model = Skill(
@@ -553,13 +583,13 @@ class SkillAnalyzer(BaseSkillEffectAnalyzer):
 				skill_effect=skill_side_effect,
 				friend_skill_effect=skill_friend_side_effect,
 				hide_effect=None,
-				power=skill.get('Power', 0),
-				max_pp=skill.get('MaxPP', 0),
-				accuracy=skill.get('Accuracy', 0),
-				crit_rate=skill.get('CritRate', 0),
-				priority=skill.get('Priority', 0),
-				must_hit=bool(skill.get('MustHit', False)),
-				info=skill.get('info'),
+				power=skill['power'],
+				max_pp=skill['max_pp'],
+				accuracy=skill['accuracy'],
+				crit_rate=skill['crit_rate'],
+				priority=skill['priority'],
+				must_hit=bool(skill['must_hit']),
+				info=skill['info'] or None,
 			)
 			skill_map[skill_id] = skill_model
 			skill_ref = ResourceRef.from_model(skill_model)

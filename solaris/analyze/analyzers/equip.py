@@ -1,11 +1,12 @@
 from functools import cached_property
-from typing import TYPE_CHECKING, Any, Optional, cast
+from typing import TYPE_CHECKING, Any, Optional, TypedDict
 from typing_extensions import Self
 
 from pydantic import BaseModel
 from sqlmodel import Field, Relationship, SQLModel
 
-from solaris.analyze.base import BaseDataSourceAnalyzer, DataImportConfig
+from solaris.analyze.analyzers.items._general import BaseItemAnalyzer
+from solaris.analyze.base import DataImportConfig
 from solaris.analyze.model import (
 	BaseCategoryModel,
 	BaseResModel,
@@ -20,22 +21,44 @@ from solaris.analyze.model import (
 )
 from solaris.analyze.typing_ import AnalyzeResult
 from solaris.analyze.utils import create_category_map
-from solaris.utils import get_nested_value, split_string_arg
+from solaris.utils import split_string_arg
 
 if TYPE_CHECKING:
+	from solaris.parse.parsers.equip import EquipItem as UnityEquipItem
+	from solaris.parse.parsers.items_optimize import (
+		Item1,
+		Item13,
+	)
+	from solaris.parse.parsers.suit import SuitConfig
+
 	from .pet.pet import Pet, PetORM
 
+def _create_suit_attribute(
+	suit_effect_id: int | None,
+	suit_effect_args: list[int],
+	add_args_string: str | None,
+) -> SixAttributes | None:
+	"""
+	创建套装属性加成
 
-def _create_pk_attribute(equip: dict[str, Any]) -> 'PkAttribute | None':
-	pk_hp = equip.pop('PkHp', 0)
-	pk_atk = equip.pop('PkAtk', 0)
-	pk_fire_range = equip.pop('PkFireRange', 0)
-	if pk_hp or pk_atk or pk_fire_range:
-		return PkAttribute(
-			pk_hp=pk_hp,
-			pk_atk=pk_atk,
-			pk_fire_range=pk_fire_range,
-		)
+	浴火之前的套装使用EffectID+EffectArgs来表示属性加成，
+	从浴火开始使用独立的AddArgs字段，
+	该字段第一个参数表示是否为百分比加成
+	"""
+	if suit_effect_id == 630:
+		return SixAttributes.from_list(suit_effect_args, percent=True)
+	elif suit_effect_id == 631:
+		return SixAttributes.from_list(suit_effect_args, percent=False)
+	elif add_args_string:
+		add_args = split_string_arg(add_args_string)
+		if not add_args:
+			return None
+
+		percent = bool(add_args.pop(0))
+		if not any(add_args):
+			return None
+
+		return SixAttributes.from_list(add_args, percent=percent)
 
 	return None
 
@@ -89,18 +112,14 @@ class PetSuitLink(SQLModel, table=True):
 	)
 
 
-class EquipEffectBase(BaseResModelWithOptionalId):
-	newse_id: int = Field()
-
-	@classmethod
-	def resource_name(cls) -> str:
-		return 'equip_effect'
-
-
-class EquipEffect(EquipEffectBase):
+class EquipEffect(SQLModel):
+	newse_id: int | None = Field(
+		default=None,
+		description='部件特性ID，一部分套装使用该字段来表示效果',
+	)
 	eid_effect: EidEffectInUse | None = Field(
 		default=None,
-		description='部件效果，不是所有的部件都使用EID+EffectArgs来表示效果',
+		description='部件效果，一部分套装使用该字段来表示效果',
 	)
 
 
@@ -112,15 +131,12 @@ class EquipBonusBase(BaseResModelWithOptionalId):
 		return 'equip_bonus'
 
 
-class EquipBonus(EquipBonusBase, ConvertToORM['EquipBonusORM']):
+class EquipBonus(EquipBonusBase, EquipEffect, ConvertToORM['EquipBonusORM']):
 	attribute: SixAttributes | None = Field(
 		default=None, description='属性加成，仅在部件有属性加成时有效'
 	)
 	other_attribute: OtherAttribute | None = Field(
 		default=None, description='其他属性加成，仅在部件有命中/闪避/暴击加成时有效'
-	)
-	effect: EquipEffect | None = Field(
-		default=None, description='部件效果，仅当该部件为能力加成部件时有效'
 	)
 
 	@classmethod
@@ -132,14 +148,14 @@ class EquipBonus(EquipBonusBase, ConvertToORM['EquipBonusORM']):
 			self.other_attribute.model_dump() if self.other_attribute else {}
 		)
 		effect_in_use_orm = None
-		if self.effect and self.effect.eid_effect:
-			effect_in_use_orm = self.effect.eid_effect.to_orm()
+		if self.eid_effect:
+			effect_in_use_orm = self.eid_effect.to_orm()
 
 		return EquipBonusORM(
 			id=self.id,
 			desc=self.desc,
-			newse_id=self.effect.newse_id if self.effect else None,
 			effect_in_use=effect_in_use_orm,
+			newse_id=self.newse_id,
 			attribute=EquipBonusAttrORM(**self.attribute.model_dump())
 			if self.attribute
 			else None,
@@ -152,11 +168,11 @@ class EquipBonusORM(EquipBonusBase, table=True):
 		back_populates='bonus',
 	)
 
-	newse_id: int | None = Field(default=None)
 	effect_in_use_id: int | None = Field(foreign_key='eid_effect_in_use.id')
 	effect_in_use: Optional['EidEffectInUseORM'] = Relationship(
 		back_populates='equip_bonus',
 	)
+	newse_id: int | None = Field(default=None)
 	attribute_id: int | None = Field(default=None, foreign_key='equip_bonus_attr.id')
 	attribute: Optional['EquipBonusAttrORM'] = Relationship(
 		back_populates='equip_bonus',
@@ -175,8 +191,7 @@ class SuitBonusBase(BaseResModelWithOptionalId):
 		return 'suit_bonus'
 
 
-class SuitBonus(SuitBonusBase, ConvertToORM['SuitBonusORM']):
-	effect: EquipEffect = Field(description='套装效果')
+class SuitBonus(SuitBonusBase, EquipEffect, ConvertToORM['SuitBonusORM']):
 	effective_pets: list[ResourceRef['Pet']] | None = Field(
 		default=None,
 		description='表示套装效果仅在这些精灵上生效，null表示对所有精灵都生效',
@@ -191,13 +206,13 @@ class SuitBonus(SuitBonusBase, ConvertToORM['SuitBonusORM']):
 
 	def to_orm(self) -> 'SuitBonusORM':
 		effect_in_use_orm = None
-		if self.effect and self.effect.eid_effect:
-			effect_in_use_orm = self.effect.eid_effect.to_orm()
+		if self.eid_effect:
+			effect_in_use_orm = self.eid_effect.to_orm()
 
 		return SuitBonusORM(
 			id=self.id,
 			desc=self.desc,
-			newse_id=self.effect.newse_id,
+			newse_id=self.newse_id,
 			effect_in_use=effect_in_use_orm,
 			attribute=SuitBonusAttrORM(**self.attribute.model_dump())
 			if self.attribute
@@ -397,114 +412,221 @@ class EquipEffectiveOccasion(
 
 
 class EquipEffectiveOccasionORM(EquipEffectiveOccasionBase, table=True):
-	equip: list['EquipORM'] = Relationship(
-		back_populates='occasion',
-	)
+	equip: list['EquipORM'] = Relationship(back_populates='occasion')
 
 
-class EquipAnalyzer(BaseDataSourceAnalyzer):
+class SuitBonusItem(TypedDict):
+	desc: str
+	mon_id: list[int]
+	effect_id: int | None
+	effect_args: list[int]
+	newse_id: int | None
+	add_attr: SixAttributes | None
+
+
+class EquipBonusItem(TypedDict):
+	desc: str
+	attribute: SixAttributes | None
+	other_attribute: OtherAttribute | None
+	effect_id: int | None
+	effect_args: list[int]
+	newse_id: int | None
+
+
+if TYPE_CHECKING:
+	class EquipItem(UnityEquipItem):
+		occasion: int
+		equip_bonus: EquipBonusItem | None
+		suit_bonus: SuitBonusItem | None
+
+
+EMPTY_EQUIP_BONUS_ITEM = {
+	'Lv': 1,
+	'Attribute': "0 0 0 0 0 0",
+	'AddWay': 1,
+	'BattleLv': "0 0 0 0 0 0",
+	'OtherAttribute': "0 0 0",
+	'EffectID': "",
+	'EffectArgs': "",
+	'Desc': "",
+}
+
+
+class EquipAnalyzer(BaseItemAnalyzer):
 	"""装备数据解析器"""
 
 	@classmethod
 	def get_data_import_config(cls) -> DataImportConfig:
 		return DataImportConfig(
-			html5_paths=('xml/items.json', 'xml/suit.json', 'xml/equip.json'),
+			flash_paths=('config.xml.ItemSeXMLInfo.xml', 'config.xml.ItemXMLInfo.xml'),
+			unity_paths=('suit.json', 'equip.json'),
 			patch_paths=('equip_effective_occasion.json', 'equip_type.json'),
+		) + super().get_data_import_config()
+
+	def _create_equip_bonus_item(
+		self,
+		flash_equip: dict[str, Any]) -> EquipBonusItem | None:
+		rank_data = flash_equip['Rank']
+		if isinstance(rank_data, dict):
+			equip_bonus_data = rank_data
+		elif isinstance(rank_data, list):
+			equip_bonus_data = rank_data[-1]
+		else:
+			raise ValueError(f'Invalid rank data: {rank_data}')
+
+		if equip_bonus_data == EMPTY_EQUIP_BONUS_ITEM:
+			return None
+
+		add_way = bool(equip_bonus_data['AddWay'])
+		other_attr_args = split_string_arg(equip_bonus_data['OtherAttribute'])
+		other_attr = (
+			OtherAttribute.from_list(other_attr_args)
+			if any(other_attr_args)
+			else None
+		)
+		attr_args = split_string_arg(equip_bonus_data['Attribute'])
+		equip_attr = SixAttributes.from_list(attr_args, percent=add_way)
+		return EquipBonusItem(
+			desc=equip_bonus_data['Desc'],
+			attribute=equip_attr,
+			other_attribute=other_attr,
+			effect_id=equip_bonus_data['EffectID'],
+			effect_args=split_string_arg(equip_bonus_data['EffectArgs']),
+			newse_id=equip_bonus_data.get('EquipNewseId'),
+		)
+
+	def _create_suit_bonus_item(
+		self, flash_equip: dict[str, Any]
+	) -> SuitBonusItem | None:
+		suit_effect_id = flash_equip.get('SuitEffectID')
+		suit_effect_args = split_string_arg(flash_equip.get('SuitEffectArgs', ''))
+		suit_newse_id = flash_equip.get('SuitNewseId')
+		if not any((suit_effect_id, suit_effect_args, suit_newse_id)):
+			return None
+
+		suit_attr = _create_suit_attribute(
+			suit_effect_id,
+			suit_effect_args,
+			flash_equip.get('AddArgs'),
+		)
+		mon_id = (
+			args if any(args := split_string_arg(flash_equip['MonID'])) else []
+		)
+		return SuitBonusItem(
+			desc=flash_equip['Desc'],
+			mon_id=mon_id,
+			effect_id=suit_effect_id,
+			effect_args=suit_effect_args,
+			newse_id=suit_newse_id,
+			add_attr=suit_attr,
 		)
 
 	@cached_property
-	def _ability_equip_map(self) -> dict[int, dict[str, Any]]:
-		return {
-			equip['ItemID']: equip
-			for equip in self._get_data('html5', 'xml/equip.json')['Equips']['Equip']
-		}
+	def ability_equip_map(self) -> dict[int, "EquipItem"]:
+		unity_data: list["UnityEquipItem"] = self._get_data(
+			'unity', 'equip.json'
+		)['equips']['equip']
+		flash_data = self._get_data(
+			'flash', 'config.xml.ItemSeXMLInfo.xml'
+		)['Equips']['Equip']
+		flash_data_map = {i['ItemID']: i for i in flash_data}
 
-	def _get_equip_to_suit_map(self, suit_data: dict) -> dict[int, Suit]:
+		result: dict[int, "EquipItem"] = {}
+		for equip in unity_data:
+			flash_equip = flash_data_map[equip['item_id']]
+			item_id = equip['item_id']
+			equip_item: "EquipItem" = {
+				**equip,
+				'occasion': flash_equip['Occasion'],
+				'equip_bonus': self._create_equip_bonus_item(flash_equip),
+				'suit_bonus': self._create_suit_bonus_item(flash_equip),
+			}
+			result[item_id] = equip_item
+		return result
+
+	def _get_equip_to_suit_map(self, suit_data: "SuitConfig") -> dict[int, Suit]:
 		"""
 		获取装备到套装的映射关系
 		"""
 		suit_map: dict[int, Suit] = {}
 		for suit in suit_data['root']['item']:
-			suit: dict
 			suit_id = suit['id']
 			suit_bonus: SuitBonus | None = None
-			equip_ids = split_string_arg(suit['cloths'])
-			if part_dict := self._ability_equip_map.get(equip_ids[0]):
-				effect_id = part_dict.get('SuitEffectID')
-				newse_id = part_dict.get('SuitNewseId')
-				if effect_id or newse_id:
-					effect_args = None
-					if effect_id:
-						effect_args = split_string_arg(part_dict.get('SuitEffectArgs'))
+			equip_ids = suit['cloths']
+			if (
+				(part_dict := self.ability_equip_map.get(equip_ids[0]))
+				and (suit_bonus_dict := part_dict['suit_bonus'])
+			):
+				eid_effect_id = suit_bonus_dict['effect_id']
+				eid_effect_args = suit_bonus_dict['effect_args']
 
-					attr: SixAttributes | None = None
-					# 浴火之前的套装使用EffectID+EffectArgs来表示属性加成，
-					# 从浴火开始使用独立的AddArgs字段，
-					# 该字段第一个参数表示是否为百分比加成
-					if effect_args:
-						if effect_id == 630:
-							attr = SixAttributes.from_list(effect_args, percent=True)
-						elif effect_id == 631:
-							attr = SixAttributes.from_list(effect_args, percent=False)
-						elif add_args_string := part_dict.get('AddArgs'):
-							add_args = split_string_arg(add_args_string)
-							percent = bool(add_args.pop(0))
-							attr = SixAttributes.from_list(add_args, percent=percent)
-
-					equip_effect = EquipEffect(
-						newse_id=cast(int, newse_id),
-						eid_effect=EidEffectInUse(
-							effect=ResourceRef.from_model(EidEffect, id=effect_id),
-							effect_args=effect_args,
-						)
-						if effect_id
-						else None,
+				eid_effect = None
+				if eid_effect_id and eid_effect_args:
+					eid_effect = EidEffectInUse(
+						effect=ResourceRef.from_model(EidEffect, id=eid_effect_id),
+						effect_args=eid_effect_args,
 					)
-					effective_pets = None
-					pet_ids = split_string_arg(part_dict.pop('MonID', []))
-					if any(pet_ids):
-						effective_pets = [
-							ResourceRef(
-								id=pet_id,
-								resource_name='pet',
-							)
-							for pet_id in pet_ids
-						]
-					suit_bonus = SuitBonus(
-						effective_pets=effective_pets,
-						desc=get_nested_value(suit, 'describe._cdata') or '',
-						attribute=attr,
-						effect=equip_effect,
-					)
-
+				suit_bonus = SuitBonus(
+					desc=suit_bonus_dict['desc'],
+					attribute=suit_bonus_dict['add_attr'],
+					eid_effect=eid_effect,
+					newse_id=suit_bonus_dict.get('newse_id'),
+				)
 			suit_obj = Suit(
 				id=suit_id,
 				name=suit['name'],
 				suit_desc=suit['suitdes'],
 				equips=[
-					ResourceRef.from_model(Equip, id=equip_id) for equip_id in equip_ids
+					ResourceRef.from_model(Equip, id=equip_id)
+					for equip_id in equip_ids
 				],
 				transform=bool(suit.get('transform')),
-				tran_speed=suit.get('tranSpeed'),
+				tran_speed=suit.get('tran_speed'),
 				bonus=suit_bonus,
 			)
 			suit_map[suit_id] = suit_obj
 
 		return suit_map
 
-	def analyze(self) -> tuple[AnalyzeResult, ...]:
-		items_data: dict = self._get_data('html5', 'xml/items.json')
-		suit_data: dict = self._get_data('html5', 'xml/suit.json')
-
-		part_type_csv = self._get_data('patch', 'equip_type.json')
-		occasion_csv = self._get_data('patch', 'equip_effective_occasion.json')
-
-		origin_equip_map: dict[int, dict[str, Any]] = {
+	@cached_property
+	def flash_equip_items_data(self) -> dict[int, dict[str, Any]]:
+		flash_data = self._get_data(
+			'flash', 'config.xml.ItemXMLInfo.xml'
+		)['root']['items']
+		return {
 			item['ID']: item
-			for category in items_data['Items']['Cat']
+			for category in flash_data
 			if category['Name'] == '个人装扮'
-			for item in category['Item']
+			for item in category['item']
 		}
+
+
+	def _create_pk_attribute(self, equip_id: int) -> 'PkAttribute | None':
+		equip = self.flash_equip_items_data[equip_id]
+		pk_hp = equip.pop('PkHp', 0)
+		pk_atk = equip.pop('PkAtk', 0)
+		pk_fire_range = equip.pop('PkFireRange', 0)
+		if pk_hp or pk_atk or pk_fire_range:
+			return PkAttribute(
+				pk_hp=pk_hp,
+				pk_atk=pk_atk,
+				pk_fire_range=pk_fire_range,
+			)
+
+		return None
+
+	def _get_equip_items_data(self) -> "dict[int, Item1 | Item13]":
+		items_data_part1: list["Item1"] = self.get_category(1)['root']['items']
+		items_data_part2: list["Item13"] = self.get_category(13)['root']['items']
+		return {item['id']: item for item in items_data_part1 + items_data_part2}
+
+	def analyze(self) -> tuple[AnalyzeResult, ...]:
+		suit_data: "SuitConfig" = self._get_data('unity', 'suit.json')
+
+		part_type_patch = self._get_data('patch', 'equip_type.json')
+		occasion_patch = self._get_data('patch', 'equip_effective_occasion.json')
+
+		equip_items_map = self._get_equip_items_data()
 		suit_map = self._get_equip_to_suit_map(suit_data)
 		equip_to_suit_map = {
 			equip_ref.id: suit_obj
@@ -513,69 +635,52 @@ class EquipAnalyzer(BaseDataSourceAnalyzer):
 		}
 
 		# 处理部件
-		part_type_map_for_name = {row['name']: row for row in part_type_csv.values()}
+		part_type_map_for_name = {row['name']: row for row in part_type_patch.values()}
 		part_type_map = create_category_map(
-			part_type_csv,
+			part_type_patch,
 			model_cls=EquipType,
 			array_key='equip',
 		)
 		occasion_map = create_category_map(
-			occasion_csv,
+			occasion_patch,
 			model_cls=EquipEffectiveOccasion,
 			array_key='equip',
 		)
 		equip_map: dict[int, Equip] = {}
-		for equip_id, equip_dict in origin_equip_map.items():
-			equip_name = equip_dict['Name']
+		for equip_id, equip_dict in equip_items_map.items():
+			equip_name = equip_dict['name']
 			equip_ref = ResourceRef.from_model(Equip, id=equip_id)
 			equip_bonus = None
 			occasion = None
 
 			# 处理部件加成
-			if ability_equip := self._ability_equip_map.get(equip_id):
+			if (
+				(ability_equip := self.ability_equip_map.get(equip_id))
+				and (bonus_dict := ability_equip['equip_bonus'])
+			):
 				occasion = ResourceRef.from_model(
-					occasion_map[ability_equip['Occasion']]
+					occasion_map[ability_equip['occasion']]
 				)
-				# 获取部件加成数据
-				bonus: dict[str, Any] = ability_equip['Rank'][-1]
-				if desc := bonus.get('Desc'):
-					attr_args = split_string_arg(bonus.get('Attribute'))
-					attr = None
-					if any(attr_args):
-						attr = SixAttributes.from_list(
-							attr_args, hp_first=True, percent=bool(bonus['AddWay'])
-						)
-					other_attr_args = split_string_arg(bonus.get('OtherAttribute'))
-					other_attr = (
-						OtherAttribute.from_list(other_attr_args)
-						if any(other_attr_args)
-						else None
+				eid_effect_id = bonus_dict['effect_id']
+				eid_effect_args = bonus_dict['effect_args']
+				eid_effect = None
+				if eid_effect_id and eid_effect_args:
+					eid_effect = EidEffectInUse(
+						effect=ResourceRef.from_model(EidEffect, id=eid_effect_id),
+						effect_args=eid_effect_args,
 					)
-					equip_effect = None
-					if effect_id := bonus.get('EffectID'):
-						effect_args = split_string_arg(bonus['EffectArgs'])
-						equip_effect = EquipEffect(
-							eid_effect=EidEffectInUse(
-								effect=ResourceRef.from_model(EidEffect, id=effect_id),
-								effect_args=effect_args,
-							)
-							if effect_id
-							else None,
-							newse_id=bonus['EquipNewseId'],
-						)
-					equip_bonus = EquipBonus(
-						attribute=attr,
-						other_attribute=other_attr,
-						desc=desc,
-						effect=equip_effect,
-					)
+				equip_bonus = EquipBonus(
+					desc=bonus_dict['desc'],
+					attribute=bonus_dict['attribute'],
+					other_attribute=bonus_dict['other_attribute'],
+					eid_effect=eid_effect,
+					newse_id=bonus_dict.get('newse_id'),
+				)
 				occasion_map.add_element(occasion.id, equip_ref)
 
 			suit_ref = None
 			if suit_obj := equip_to_suit_map.get(equip_id):
-				suit_ref = ResourceRef.from_model(
-					suit_obj,
-				)
+				suit_ref = ResourceRef.from_model(suit_obj)
 
 			part_type_name = equip_dict.get('type')
 			part_type_id = part_type_map_for_name[part_type_name]['id']
@@ -587,7 +692,7 @@ class EquipAnalyzer(BaseDataSourceAnalyzer):
 				name=equip_name,
 				part_type=part_type_ref,
 				speed=speed,
-				pk_attribute=_create_pk_attribute(equip_dict),
+				pk_attribute=self._create_pk_attribute(equip_id),
 				suit=suit_ref,
 				bonus=equip_bonus,
 				occasion=occasion,

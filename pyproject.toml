@@ -15,6 +15,7 @@ dependencies = [
     "pydantic-settings>=2.10.1",
     "sqlmodel>=0.0.24",
     "tqdm>=4.67.1",
+    "xmltodict>=1.0.2",
 ]
 
 [project.scripts]
@@ -25,7 +26,7 @@ module-root = ""
 module-name = "solaris"
 
 [tool.pyright]
-pythonVersion = "3.12"
+pythonVersion = "3.10"
 pythonPlatform = "All"
 typeCheckingMode = "standard"
 reportShadowedImports = false

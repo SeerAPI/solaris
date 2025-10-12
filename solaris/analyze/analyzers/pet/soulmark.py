@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 from sqlmodel import Field, Relationship, SQLModel
 
@@ -13,9 +13,12 @@ from solaris.analyze.model import (
 	ResourceRef,
 )
 from solaris.analyze.typing_ import AnalyzeResult
+from solaris.analyze.utils import CategoryMap, create_category_map
 from solaris.utils import split_string_arg
 
 if TYPE_CHECKING:
+	from solaris.parse.parsers.effect_tag import EffectTagItem
+
 	from .pet import PetORM
 
 
@@ -143,43 +146,40 @@ class SoulmarkAnalyzer(BaseDataSourceAnalyzer):
 	@classmethod
 	def get_data_import_config(cls) -> DataImportConfig:
 		return DataImportConfig(
-			html5_paths=('xml/effectIcon.json',),
-			patch_paths=('soulmark_tag.json',),
+			unity_paths=('effectag.json', 'effectIcon.json'),
 		)
 
 	def analyze(self) -> tuple[AnalyzeResult, ...]:
-		soulmark_data = self._get_data('html5', 'xml/effectIcon.json')['root']['effect']
-		tag_csv = self._get_data('patch', 'soulmark_tag.json')
+		soulmark_data = self._get_data('unity', 'effectIcon.json')['root']['effect']
+		tag_data: list[EffectTagItem] = self._get_data('unity', 'effectag.json')['data']
 
 		soulmark_map: dict[int, Soulmark] = {}
-		tag_map: dict[int, SoulmarkTagCategory] = {
-			tag_id: SoulmarkTagCategory(
-				id=tag_id,
-				name=tag_data['name'],
-			)
-			for tag_id, tag_data in tag_csv.items()
-		}
-		for soulmark_dict in soulmark_data:
-			if not (pet_id_raw := soulmark_dict.get('petId')):
-				continue
+		tag_map: CategoryMap[
+			int,
+			SoulmarkTagCategory,
+			ResourceRef['Soulmark']
+		] = create_category_map(
+			{data['id']: {'id': data['id'], 'name': data['tag']} for data in tag_data},
+			model_cls=SoulmarkTagCategory,
+			array_key='soulmark',
+		)
 
-			if soulmark_dict['Id'] == 261:
-				# 对'/'分割的id去重，并排序
-				unique_ids = sorted(set(pet_id_raw.split('/')))
-				pet_id_raw = '/'.join(unique_ids)
+		for soulmark_dict in soulmark_data:
+			if not (pet_ids := soulmark_dict.get('pet_id')):
+				continue
 
 			pet_refs = [
 				ResourceRef(
 					id=pet_id,
 					resource_name='pet',
 				)
-				for pet_id in split_string_arg(pet_id_raw, split_char='/')
+				for pet_id in pet_ids
 			]
 			tags = []
 			if tag_ids := soulmark_dict.get('kind'):
 				tags = [
-					ResourceRef.from_model(tag_map[tag_id])
-					for tag_id in split_string_arg(tag_ids)
+					ResourceRef.from_model(tag_map[tag_id + 1])
+					for tag_id in tag_ids
 				]
 			to_res = None
 			if to_id := soulmark_dict.get('to'):
@@ -195,7 +195,7 @@ class SoulmarkAnalyzer(BaseDataSourceAnalyzer):
 					id=from_id,
 				)
 			effect = None
-			if effect_id := soulmark_dict.get('effectId'):
+			if effect_id := soulmark_dict.get('effect_id'):
 				args_string = soulmark_dict.get('args')
 				effect = EidEffectInUse(
 					effect=ResourceRef.from_model(EidEffect, id=effect_id),
@@ -203,8 +203,9 @@ class SoulmarkAnalyzer(BaseDataSourceAnalyzer):
 						split_string_arg(args_string) if args_string else None
 					),
 				)
+
 			soulmark = Soulmark(
-				id=soulmark_dict['Id'],
+				id=soulmark_dict['id'],
 				desc=soulmark_dict['tips'],
 				pet=pet_refs,
 				effect=effect,
@@ -212,11 +213,11 @@ class SoulmarkAnalyzer(BaseDataSourceAnalyzer):
 				intensified_to=to_res,
 				from_=from_res,
 				intensified='from' in soulmark_dict,
-				is_adv='isAdv' in soulmark_dict,
+				is_adv='is_adv' in soulmark_dict,
 			)
 			soulmark_map[soulmark.id] = soulmark
 			for tag in tags:
-				tag_map[tag.id].soulmark.append(ResourceRef.from_model(soulmark))
+				tag_map.add_element(tag.id, ResourceRef.from_model(soulmark))
 
 		return (
 			AnalyzeResult(model=Soulmark, data=soulmark_map),

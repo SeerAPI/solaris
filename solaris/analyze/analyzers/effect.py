@@ -137,13 +137,14 @@ class NewSeAnalyzer(BaseDataSourceAnalyzer):
 	@classmethod
 	def get_data_import_config(cls) -> DataImportConfig:
 		return DataImportConfig(
-			html5_paths=('xml/new_se.json',),
+			unity_paths=('new_se.json',),
 		)
 
 	def analyze(self) -> tuple[AnalyzeResult, ...]:
-		effect_data: list[dict[str, Any]] = self._get_data('html5', 'xml/new_se.json')[
-			'NewSe'
-		]['NewSeIdx']
+		effect_data: list[dict[str, Any]] = self._get_data(
+			'unity',
+			'new_se.json'
+		)['NewSe']['NewSeIdx']
 		effect_map: dict[int, PetEffect] = {}
 		effect_group_map: dict[str, PetEffectGroup] = {}
 
@@ -154,51 +155,37 @@ class NewSeAnalyzer(BaseDataSourceAnalyzer):
 				effect=ResourceRef.from_model(EidEffect, id=effect['Eid']),
 				effect_args=split_string_arg(effect['Args']),
 			)
-			base_data = EffectSeData(
-				id=effect['Idx'],
-				name=effect.get('Desc', ''),
-				desc=effect.get('Intro') or effect.get('Des') or '',
-				effect=effect_obj,
-			)
+			base_data = {
+				'id': effect['Idx'],
+				'name': effect.get('Desc', ''),
+				'desc': effect.get('Intro') or effect.get('Des') or '',
+				'effect': effect_obj,
+			}
 			# 处理特性
 			if effect['Stat'] == 1:
-				name = effect['Desc']
+				name = base_data['name']
 				if name not in effect_group_map:
 					effect_group_map[name] = PetEffectGroup(
 						id=group_id, name=name, effect=[]
 					)
 					group_id += 1
 				pet_effect = PetEffect(
-					id=base_data.id,
-					name=base_data.name,
-					desc=base_data.desc,
-					effect=base_data.effect,
+					**base_data,
 					star_level=effect['StarLevel'],
 					effect_group=ResourceRef.from_model(effect_group_map[name]),
 				)
 				effect_map[pet_effect.id] = pet_effect
-				effect_group_map[name].effect.append(ResourceRef.from_model(base_data))
+				effect_group_map[name].effect.append(ResourceRef.from_model(pet_effect))
 			# 处理特质
 			elif effect['Stat'] == 4:
-				variation = VariationEffect(
-					id=base_data.id,
-					name=base_data.name,
-					desc=base_data.desc,
-					effect=base_data.effect,
-				)
-				variation_map[base_data.id] = variation
+				variation = VariationEffect(**base_data)
+				variation_map[variation.id] = variation
 
 		return (
-			AnalyzeResult(
-				model=PetEffect,
-				data=effect_map,
-			),
+			AnalyzeResult(model=PetEffect, data=effect_map),
 			AnalyzeResult(
 				model=PetEffectGroup,
-				data={group.id: group for group in effect_group_map.values()},
+				data={group.id: group for group in effect_group_map.values()}
 			),
-			AnalyzeResult(
-				model=VariationEffect,
-				data=variation_map,
-			),
+			AnalyzeResult(model=VariationEffect, data=variation_map),
 		)

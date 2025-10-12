@@ -19,6 +19,8 @@ from ..typing_ import AnalyzeResult
 from ..utils import CategoryMap, create_category_map
 
 if TYPE_CHECKING:
+	from solaris.parse.parsers.mintmark import MintmarkConfig, MintMarkItem
+
 	from .pet.pet import Pet, PetORM
 	from .skill import Skill, SkillORM
 
@@ -71,7 +73,6 @@ class PetMintmarkLink(SQLModel, table=True):
 
 
 class SkillMintmarkEffect(BaseModel):
-	skill: list[ResourceRef['Skill']] = Field(description='技能资源引用')
 	effect: int = Field(description='增幅效果ID')
 	arg: int | None = Field(description='增幅效果参数')
 
@@ -465,17 +466,17 @@ class MintmarkClassCategoryORM(MintmarkClassBase, table=True):
 	)
 
 
-def _create_attr_values(data: dict[str, Any]) -> dict[str, Any]:
-	if not data:
-		return {}
+def _create_attr_values(data: 'MintMarkItem') -> dict[str, Any]:
+	kwargs = {}
 	for k, name in [
-		('BaseAttriValue', 'base_attr_value'),
-		('MaxAttriValue', 'max_attr_value'),
-		('ExtraAttriValue', 'extra_attr_value'),
+		('base_attri_value', 'base_attr_value'),
+		('max_attri_value', 'max_attr_value'),
+		('extra_attri_value', 'extra_attr_value'),
 	]:
-		if value := data.get(k):
-			data[name] = SixAttributes.from_string(value)
-	return data
+		if value := data[k]:
+			kwargs[name] = SixAttributes.from_list(value)
+
+	return kwargs
 
 
 class MintmarkAnalyzer(BaseDataSourceAnalyzer):
@@ -484,25 +485,23 @@ class MintmarkAnalyzer(BaseDataSourceAnalyzer):
 	@classmethod
 	def get_data_import_config(cls) -> DataImportConfig:
 		return DataImportConfig(
-			html5_paths=('xml/mintmark.json',),
+			unity_paths=('mintmark.json',),
+			flash_paths=('config.xml.CountermarkXMLInfo.xml',),
 			patch_paths=('mintmark_type.json',),
 		)
 
 	def analyze(self) -> tuple[AnalyzeResult, ...]:
 		"""分析刻印数据并返回模式构建器列表"""
-		mintmark_data = self._get_data('html5', 'xml/mintmark.json')['MintMarks']
+		mintmark_data: MintmarkConfig = self._get_data('unity', 'mintmark.json')
 		mintmark_type_csv = self._get_data('patch', 'mintmark_type.json')
-		mintmark_list = mintmark_data['MintMark']
+		mintmark_list = mintmark_data['mint_marks']['mint_mark']
 		classes_map: CategoryMap[int, MintmarkClassCategory, ResourceRef] = CategoryMap(
 			'mintmark'
 		)
 		classes_map.update(
 			{
-				i['ID']: MintmarkClassCategory(
-					id=i['ID'],
-					name=i['ClassName'],
-				)
-				for i in mintmark_data['MintmarkClass']
+				i['id']: MintmarkClassCategory(id=i['id'], name=i['class_name'])
+				for i in mintmark_data['mint_marks']['mintmark_class']
 			}
 		)
 		type_map: CategoryMap[int, MintmarkTypeCategory, ResourceRef] = (
@@ -516,17 +515,24 @@ class MintmarkAnalyzer(BaseDataSourceAnalyzer):
 			'mintmark'
 		)
 		rarity_map.update({i: MintmarkRarityCategory(id=i) for i in range(1, 6)})
-
-		# 移除最后三个刻印（大，中，小碎片）
-		mintmark_list = mintmark_list[:-3]
+		effect_map: dict[int, int] = {
+			i['ID']: i['Effect']
+			for i in self._get_data(
+				'flash', 'config.xml.CountermarkXMLInfo.xml'
+			)['MintMarks']['MintMark']
+			if 'Effect' in i
+		}
 		mintmark_map: dict[int, Mintmark] = {}
 		ability_mintmark_map: dict[int, AbilityMintmark] = {}
 		skill_mintmark_map: dict[int, SkillMintmark] = {}
 		universal_mintmark_map: dict[int, UniversalMintmark] = {}
 		for mintmark in mintmark_list:
-			id_ = mintmark['ID']
-			name = mintmark['Des']
-			type_id = mintmark['Type']
+			id_ = mintmark['id']
+			# 跳过最后三个刻印（大，中，小碎片）
+			if id_ > 49999:
+				continue
+			name = mintmark['des']
+			type_id = mintmark['type']
 			mintmark_ref = ResourceRef.from_model(
 				Mintmark,
 				id=id_,
@@ -537,50 +543,38 @@ class MintmarkAnalyzer(BaseDataSourceAnalyzer):
 			)
 			rarity_ref = ResourceRef.from_model(
 				MintmarkRarityCategory,
-				id=(rarity_id := mintmark['Rare']),
+				id=(rarity_id := mintmark['rare']),
 			)
 			pet_refs = None
-			if pet_ids := mintmark.get('MonsterID'):
+			if pet_ids := mintmark['monster_id']:
 				pet_refs = [
-					ResourceRef(
-						id=id_,
-						resource_name='pet',
-					)
-					for id_ in split_string_arg(pet_ids)
+					ResourceRef(id=id_, resource_name='pet')
+					for id_ in pet_ids
 				]
 			skill_refs = None
-			if skill_ids := mintmark.get('MoveID'):
+			if skill_ids := mintmark['move_id']:
 				skill_refs = [
-					ResourceRef(
-						id=id_,
-						resource_name='skill',
-					)
-					for id_ in split_string_arg(skill_ids)
+					ResourceRef(id=id_, resource_name='skill')
+					for id_ in skill_ids
 				]
 			# 飓风利袭刻印的Arg字段是错误的，删除它
 			if id_ == 20187:
-				del mintmark['Arg']
+				mintmark['arg'].clear()
 
 			skill_effect = None
 			max_attr_value = None
 			attr_kwargs = _create_attr_values(mintmark)
 			if type_id == 0:
-				max_attr_value = SixAttributes.from_list(
-					split_string_arg(mintmark['Arg'])
-				)
+				max_attr_value = SixAttributes.from_list(mintmark['arg'])
 				attr_kwargs['max_attr_value'] = max_attr_value
 			elif type_id == 1:
 				skill_effect = SkillMintmarkEffect(
-					skill=[
-						ResourceRef(id=skill, resource_name='skill')
-						for skill in split_string_arg(mintmark.get('Effect'))
-					],
-					effect=mintmark.get('Effect'),
-					arg=mintmark.get('Arg'),
+					effect=effect_map[id_],
+					arg=mintmark['arg'][0] if mintmark['arg'] else None,
 				)
 
 			class_ref = None
-			if classes_id := mintmark.get('MintmarkClass'):
+			if classes_id := mintmark['mintmark_class']:
 				classes_map.add_element(classes_id, mintmark_ref)
 				class_ref = ResourceRef.from_model(
 					MintmarkClassCategory,
@@ -594,7 +588,7 @@ class MintmarkAnalyzer(BaseDataSourceAnalyzer):
 				rarity_id=rarity_id,
 				pet=pet_refs,
 				effect=skill_effect,
-				desc=mintmark['EffectDes'],
+				desc=mintmark['effect_des'],
 				mintmark_class=class_ref,
 				skill=skill_refs,
 				**attr_kwargs,

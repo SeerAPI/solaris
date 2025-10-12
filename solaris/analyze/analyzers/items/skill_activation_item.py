@@ -1,4 +1,4 @@
-from typing import Any
+from typing import TYPE_CHECKING
 
 from sqlmodel import Field, Relationship
 
@@ -10,6 +10,8 @@ from solaris.analyze.typing_ import AnalyzeResult
 from ..pet.pet import Pet, SkillInPetORM
 from ..skill import Skill
 
+if TYPE_CHECKING:
+	from solaris.parse.parsers.sp_hide_moves import SpMovesItem
 
 class SkillActivationItemBase(BaseResModel):
 	id: int = Field(
@@ -50,30 +52,21 @@ class SkillActivationItemORM(SkillActivationItemBase, table=True):
 class SkillActivationItemAnalyzer(BaseDataSourceAnalyzer):
 	@classmethod
 	def get_data_import_config(cls) -> DataImportConfig:
-		return DataImportConfig(html5_paths=('xml/sp_hide_moves.json',))
+		return DataImportConfig(unity_paths=('spHideMoves.json',))
 
 	def analyze(self) -> tuple[AnalyzeResult, ...]:
-		skill_activation_data: dict[int, dict[str, Any]] = {
+		skill_activation_data: dict[int, "SpMovesItem"] = {
 			data['item']: data
-			for data in self._get_data('html5', 'xml/sp_hide_moves.json')['config'][
-				'SpMoves'
-			]
+			for data in self._get_data(
+				'unity', 'spHideMoves.json'
+			)['config']['sp_moves']
 		}
 
 		skill_activation_map: dict[int, SkillActivationItem] = {}
 		for item_id, data in skill_activation_data.items():
-			skill_ref = ResourceRef.from_model(
-				Skill,
-				id=data['moves'],
-			)
-			pet_ref = ResourceRef.from_model(
-				Pet,
-				id=data['monster'],
-			)
-			item_ref = ResourceRef.from_model(
-				Item,
-				id=item_id,
-			)
+			skill_ref = ResourceRef.from_model(Skill, id=data['moves'])
+			pet_ref = ResourceRef.from_model(Pet, id=data['monster'])
+			item_ref = ResourceRef.from_model(Item, id=item_id)
 			skill_activation_map[item_id] = SkillActivationItem(
 				id=item_id,
 				name=data['itemname'],

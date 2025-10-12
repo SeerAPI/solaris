@@ -1,8 +1,9 @@
-from typing import Any, Optional, cast
+from functools import cached_property
+from typing import TYPE_CHECKING, Optional, cast
 
 from sqlmodel import Field, Relationship
 
-from solaris.analyze.base import BaseDataSourceAnalyzer, DataImportConfig
+from solaris.analyze.base import DataImportConfig
 from solaris.analyze.model import (
 	BaseResModel,
 	ConvertToORM,
@@ -16,15 +17,18 @@ from solaris.analyze.model import (
 from solaris.analyze.typing_ import AnalyzeResult
 from solaris.utils import split_string_arg
 
-from ._general import Item, ItemORM
+from ._general import BaseItemAnalyzer, Item, ItemORM
+
+if TYPE_CHECKING:
+	from solaris.parse.parsers.items_optimize import Item3
+	from solaris.parse.parsers.new_se import NewSeItem as UnityNewSeItem
 
 
 class EnergyBeadBase(BaseResModel):
 	id: int = Field(primary_key=True, foreign_key='item.id', description='能量珠ID')
+	name: str = Field(description='能量珠名称')
 	desc: str = Field(description='能量珠描述')
-	idx: int = Field(
-		description='能量珠效果索引'
-	)  # TODO ：暂时不知道有什么用，需要研究下封包
+	idx: int = Field(description='能量珠效果ID')
 	use_times: int = Field(description='使用次数')
 
 	@classmethod
@@ -46,6 +50,7 @@ class EnergyBead(EnergyBeadBase, ConvertToORM['EnergyBeadORM']):
 	def to_orm(self) -> 'EnergyBeadORM':
 		return EnergyBeadORM(
 			id=self.id,
+			name=self.name,
 			desc=self.desc,
 			idx=self.idx,
 			effect_in_use=self.effect.to_orm(),
@@ -121,28 +126,52 @@ def _convert_beads_arg(args: list[int], primary: bool = False) -> SixAttributes:
 	return SixAttributes.from_list(ability_args)
 
 
-class EnergyBeadAnalyzer(BaseDataSourceAnalyzer):
+if TYPE_CHECKING:
+	class NewSeItem(UnityNewSeItem):
+		AddType: int
+		Times: int
+
+
+class EnergyBeadAnalyzer(BaseItemAnalyzer):
 	@classmethod
 	def get_data_import_config(cls) -> DataImportConfig:
 		return DataImportConfig(
-			html5_paths=(
-				'xml/new_se.json',
-				'xml/items.json',
-				'xml/itemsTip.json',
+			unity_paths=(
+				'new_se.json',
+				'itemsTip.json',
 			),
-		)
+			flash_paths=('config.xml.PetEffectXMLInfo.xml',),
+		) + super().get_data_import_config()
 
-	def analyze(self) -> tuple[AnalyzeResult, ...]:
-		bead_map: dict[int, EnergyBead] = {}
-		bead_effect_data: dict[int, dict[str, Any]] = {
-			data['ItemId']: data
-			for data in self._get_data('html5', 'xml/new_se.json')['NewSe']['NewSeIdx']
+	@cached_property
+	def bead_effect_data(self) -> dict[int, "NewSeItem"]:
+		unity_data: list["UnityNewSeItem"] = self._get_data(
+			'unity', 'new_se.json'
+		)['NewSe']['NewSeIdx']
+		flash_data = self._get_data(
+			'flash', 'config.xml.PetEffectXMLInfo.xml'
+		)['NewSe']['NewSeIdx']
+		flash_data_map = {i['Idx']: i for i in flash_data}
+		return {
+			data['ItemId']: {
+				'AddType': flash_data_map[data['Idx']].get('AddType', 0),
+				'Times': flash_data_map[data['Idx']]['Times'],
+				**data,
+			}
+			for data in unity_data
 			if data['Stat'] == 2
 		}
 
+	def analyze(self) -> tuple[AnalyzeResult, ...]:
+		bead_map: dict[int, EnergyBead] = {}
+		bead_effect_data: dict[int, "NewSeItem"] = self.bead_effect_data
+		pet_item_data: dict[int, "Item3"] = {
+			data['id']: data
+			for data in self.get_category(3)['root']['items']
+		}
 		desc_data: dict[int, str] = {
 			data['id']: data['des']
-			for data in self._get_data('html5', 'xml/itemsTip.json')['root']['item']
+			for data in self._get_data('unity', 'itemsTip.json')['root']['item']
 		}
 
 		for item_id, effect in bead_effect_data.items():
@@ -153,7 +182,7 @@ class EnergyBeadAnalyzer(BaseDataSourceAnalyzer):
 
 			effect_args = cast(list[int], effect_obj.effect_args).copy()
 			ability_buff = None
-			if effect.get('AddType') == 1:
+			if effect['AddType'] == 1:
 				ability_buff = SixAttributes.from_list(effect_args, hp_first=True)
 			elif effect_obj.effect.id == 26:
 				ability_buff = _convert_beads_arg(
@@ -161,6 +190,7 @@ class EnergyBeadAnalyzer(BaseDataSourceAnalyzer):
 				)
 			bead = EnergyBead(
 				id=item_id,
+				name=pet_item_data[item_id]['name'],
 				desc=desc_data[item_id],
 				effect=effect_obj,
 				idx=effect['Idx'],
