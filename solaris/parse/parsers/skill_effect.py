@@ -6,7 +6,7 @@ from ..base import BaseParser
 from ..bytes_reader import BytesReader
 
 
-class SkillEffectInfo(TypedDict):
+class SkillEffectItem(TypedDict):
 	"""技能效果信息条目"""
 
 	Bosseffective: int
@@ -27,7 +27,7 @@ class SkillEffectInfo(TypedDict):
 class SkillEffectConfig(TypedDict):
 	"""技能效果配置数据"""
 
-	data: list[SkillEffectInfo]
+	data: list[SkillEffectItem]
 
 
 class SkillEffectParser(BaseParser[SkillEffectConfig]):
@@ -70,7 +70,7 @@ class SkillEffectParser(BaseParser[SkillEffectConfig]):
 			tag_cboss = reader.ReadSignedInt()
 
 			result['data'].append(
-				SkillEffectInfo(
+				SkillEffectItem(
 					Bosseffective=bosseffective,
 					argsNum=args_num,
 					formattingAdjustment=formatting_adjustment,
