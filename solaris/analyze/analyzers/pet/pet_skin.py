@@ -55,9 +55,9 @@ class PetSkinORM(PetSkinBase, table=True):
 
 class PetSkinCategoryBase(BaseResModel):
 	id: int = Field(primary_key=True, description='系列ID')
-	name: str = Field(
-		description='系列名称'
-	)  # TODO: 该字段可能在数据中不存在，暂时忽略，等待游戏内数据或打补丁补充
+	# name: str = Field(
+	# 	description='系列名称'
+	# ) TODO: 该字段可能在数据中不存在，暂时忽略，等待游戏内数据或打补丁补充
 
 	@classmethod
 	def resource_name(cls) -> str:
@@ -74,10 +74,7 @@ class PetSkinCategory(PetSkinCategoryBase, ConvertToORM['PetSkinCategoryORM']):
 		return PetSkinCategoryORM
 
 	def to_orm(self) -> 'PetSkinCategoryORM':
-		return PetSkinCategoryORM(
-			id=self.id,
-			name=self.name,
-		)
+		return PetSkinCategoryORM(id=self.id)
 
 
 class PetSkinCategoryORM(PetSkinCategoryBase, table=True):
@@ -115,7 +112,6 @@ class PetSkinAnalyzer(BasePetAnalyzer):
 			if category_id not in pet_skin_category_map:
 				pet_skin_category_map[category_id] = PetSkinCategory(
 					id=category_id,
-					name='',
 				)
 			pet_skin_category_map.add_element(
 				category_id,
