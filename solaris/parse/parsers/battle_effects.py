@@ -8,6 +8,7 @@ from ..bytes_reader import BytesReader
 class SubEffectItem(TypedDict):
 	"""子效果项数据结构"""
 
+	efftype: int
 	name: str
 	id: int
 
@@ -66,16 +67,15 @@ class BattleEffectsParser(BaseParser[BattleEffectsConfig]):
 				sub_count = reader.read_i32()
 				for _ in range(sub_count):
 					sub_item: SubEffectItem = {
-						'id': reader.read_i32(),  # ID
-						'name': reader.read_utf(
-							reader.read_u16()
-						),  # Name: 先读长度再读字符串
+						'efftype': reader.read_i32(),
+						'id': reader.read_i32(),
+						'name': reader.ReadUTFBytesWithLength(),
 					}
 					sub_effects.append(sub_item)
 
 			battle_item: BattleEffectItem = {
 				'sub_effect': sub_effects,
-				'type': reader.read_i32(),  # Type
+				'type': reader.read_i32(),
 			}
 			result['battle_effects']['battle_effect'].append(battle_item)
 
