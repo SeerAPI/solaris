@@ -197,6 +197,8 @@ def split_string_arg(
 		split_string_arg(42)  # [42]
 		```
 	"""
+	if value == '':
+		return []
 	if not isinstance(value, str):
 		return [convert_to_number(value)] if handle_float else [int(value)]
 	return [
@@ -248,7 +250,7 @@ def get_nested_value(
 		path = path.split('.')
 
 	for key in path:
-		if key not in data:
+		if data is None or key not in data:
 			return None
 		data = data.pop(key) if delete else data[key]
 	return data
