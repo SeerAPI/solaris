@@ -42,9 +42,7 @@ def _handle_yielding_ev(value: str | int) -> SixAttributes:
 			value = ' '.join(s for s in value)
 		return SixAttributes.from_string(value, hp_first=True)
 	return SixAttributes.from_list(
-		[
-			int(s) for s in str(value).ljust(6, '0')
-		],  # TODO: 需要游戏内测试以检查该处理是否正确
+		[int(s) for s in str(value).rjust(6, '0')],
 		hp_first=True,
 	)
 
