@@ -2,8 +2,6 @@ from typing import TYPE_CHECKING, TypedDict
 
 from sqlmodel import Field, Relationship, SQLModel
 
-from solaris.utils import get_nested_value
-
 from ..base import BaseDataSourceAnalyzer, DataImportConfig
 from ..model import BaseCategoryModel, BaseResModel, ConvertToORM, ResourceRef
 from ..typing_ import AnalyzeResult
