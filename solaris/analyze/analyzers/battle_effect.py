@@ -134,10 +134,7 @@ class BattleEffectAnalyzer(BaseDataSourceAnalyzer):
 		effect_map: dict[int, BattleEffect] = {}
 		for name, effect in effect_data.items():
 			id_: int = effect['id']
-			type_id = (
-				get_nested_value(effect_patch, [id_, 'type'])
-				or effect_descs.get(name, {}).get('tab')
-			)
+			type_id = effect['efftype']
 			if type_id is None:
 				continue
 
