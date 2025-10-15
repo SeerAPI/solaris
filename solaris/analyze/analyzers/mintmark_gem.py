@@ -15,7 +15,6 @@ from solaris.analyze.model import (
 )
 from solaris.analyze.typing_ import AnalyzeResult
 from solaris.analyze.utils import CategoryMap
-from solaris.utils import split_string_arg
 
 if TYPE_CHECKING:
 	from solaris.parse.parsers.gems import GemItem as UnityGemItem
@@ -404,18 +403,14 @@ class GemAnalyzer(BaseSkillEffectAnalyzer):
 
 		for gem_id, gem_data in self.gem_data.items():
 			if upgrade_gem_id := gem_data.get('upgrade_gem_id'):
-				gem_map[upgrade_gem_id].next_level_gem = ResourceRef.from_model(
-					gem_map[gem_id],
+				gem_map[gem_id].next_level_gem = ResourceRef.from_model(
+					gem_map[upgrade_gem_id],
 				)
 
 		return (
 			AnalyzeResult(model=Gem, data=gem_map),
-			AnalyzeResult(model=GemCategory, data=gem_category_map,
-			),
-			AnalyzeResult(
-				model=GemGenCategory,
-				data=gem_gen_category_map,
-			),
+			AnalyzeResult(model=GemCategory, data=gem_category_map),
+			AnalyzeResult(model=GemGenCategory, data=gem_gen_category_map),
 			AnalyzeResult(
 				model=GemGen1,
 				data={
