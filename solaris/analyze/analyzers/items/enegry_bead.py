@@ -80,9 +80,6 @@ class EnergyBeadORM(EnergyBeadBase, table=True):
 			'primaryjoin': 'EnergyBeadORM.id == EnergyBeadBuffAttrORM.id',
 		},
 	)
-	ability_buff_id: int | None = Field(
-		default=None, foreign_key='energy_bead_buff_attr.id'
-	)
 	item: 'ItemORM' = Relationship(back_populates='energy_bead')
 
 
