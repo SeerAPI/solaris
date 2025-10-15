@@ -39,9 +39,9 @@ class DataSourceDirSettings(BaseSettings):
 		return self
 
 
-def _convert_xml_attr_to_number(path, key, value):
+def _convert_xml_attr_to_number(_, key, value):
 	try:
-		return key, convert_to_number(value)
+		return key, round(convert_to_number(value), 3)
 	except:  # noqa: E722
 		return key, value
 
