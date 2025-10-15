@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Optional
 
 from sqlmodel import Field, Relationship, SQLModel
 
@@ -18,6 +18,7 @@ from solaris.utils import split_string_arg
 
 if TYPE_CHECKING:
 	from solaris.parse.parsers.effect_tag import EffectTagItem
+	from solaris.parse.parsers.pet_effect_icon import PetEffectIconInfo
 
 	from .pet import PetORM
 
@@ -40,6 +41,14 @@ class SoulmarkTagLink(SQLModel, table=True):
 
 class SoulmarkBase(BaseResModel):
 	desc: str = Field(description='魂印描述')
+	desc_formatting_adjustment: str | None = Field(
+		default=None,
+		description='魂印描述的"可格式化版本"，用于呈现Unity端中的描述排版形式'
+	)
+	pve_effective: bool | None = Field(
+		default=None,
+		description='该魂印是否PVE生效，如果为null则表示无法通过数据层面推断其是否生效',
+	)
 	intensified: bool = Field(description='是否是强化的魂印')
 	is_adv: bool = Field(description='是否是神谕觉醒魂印')
 
@@ -51,7 +60,9 @@ class SoulmarkBase(BaseResModel):
 class Soulmark(SoulmarkBase, ConvertToORM['SoulmarkORM']):
 	pet: list[ResourceRef] = Field(description='可持有该魂印的精灵ID')
 	effect: EidEffectInUse | None = Field(description='魂印效果')
-	tag: list[ResourceRef] = Field(description='魂印标签，例如强攻，断回合等')
+	tag: list[ResourceRef['SoulmarkTagCategory']] = Field(
+		description='魂印标签，例如强攻，断回合等'
+	)
 	intensified_to: ResourceRef['Soulmark'] | None = Field(
 		description='强化后的魂印资源，该字段仅在该魂印有强化版时有效，否则为null'
 	)
@@ -90,9 +101,6 @@ class SoulmarkORM(SoulmarkBase, table=True):
 		back_populates='soulmark',
 	)
 
-	# from_id: int | None = Field(
-	# default=None, foreign_key="soulmark.id", unique=True
-	# )
 	from_: Optional['SoulmarkORM'] = Relationship(
 		back_populates='intensified_to',
 		sa_relationship_kwargs={
@@ -146,13 +154,23 @@ class SoulmarkAnalyzer(BaseDataSourceAnalyzer):
 	@classmethod
 	def get_data_import_config(cls) -> DataImportConfig:
 		return DataImportConfig(
-			unity_paths=('effectag.json', 'effectIcon.json'),
+			unity_paths=('effectag.json', 'effectIcon.json', 'petEffectIcon.json'),
 		)
 
 	def analyze(self) -> tuple[AnalyzeResult, ...]:
-		soulmark_data = self._get_data('unity', 'effectIcon.json')['root']['effect']
-		tag_data: list[EffectTagItem] = self._get_data('unity', 'effectag.json')['data']
-
+		soulmark_data = self._get_data(
+			'unity', 'effectIcon.json'
+		)['root']['effect']
+		tag_data: list[EffectTagItem] = self._get_data(
+			'unity', 'effectag.json'
+		)['data']
+		pet_effect_icon_data: list["PetEffectIconInfo"] = self._get_data(
+			'unity', 'petEffectIcon.json'
+		)['data']
+		pet_effect_icon_map: dict[int, "PetEffectIconInfo"] = {
+			data['effecticonid']: data
+			for data in pet_effect_icon_data
+		}
 		soulmark_map: dict[int, Soulmark] = {}
 		tag_map: CategoryMap[
 			int,
@@ -165,35 +183,34 @@ class SoulmarkAnalyzer(BaseDataSourceAnalyzer):
 		)
 
 		for soulmark_dict in soulmark_data:
+			id_ = soulmark_dict['id']
 			if not (pet_ids := soulmark_dict.get('pet_id')):
 				continue
 
 			pet_refs = [
-				ResourceRef(
-					id=pet_id,
-					resource_name='pet',
-				)
+				ResourceRef(id=pet_id, resource_name='pet')
 				for pet_id in pet_ids
 			]
+
+			pve_effective = None
 			tags = []
 			if tag_ids := soulmark_dict.get('kind'):
+				pve_effective = 1 in tag_ids
 				tags = [
 					ResourceRef.from_model(tag_map[tag_id + 1])
 					for tag_id in tag_ids
 				]
+
 			to_res = None
 			if to_id := soulmark_dict.get('to'):
-				to_res = ResourceRef.from_model(
-					Soulmark,
-					id=to_id,
-				)
-
+				to_res = ResourceRef.from_model(Soulmark, id=to_id)
 			from_res = None
 			if from_id := soulmark_dict.get('from'):
 				from_res = ResourceRef.from_model(
 					Soulmark,
 					id=from_id,
 				)
+
 			effect = None
 			if effect_id := soulmark_dict.get('effect_id'):
 				args_string = soulmark_dict.get('args')
@@ -204,8 +221,13 @@ class SoulmarkAnalyzer(BaseDataSourceAnalyzer):
 					),
 				)
 
+			desc_formatting_adjustment = None
+			if pet_effect_icon := pet_effect_icon_map.get(id_):
+				desc_formatting_adjustment = pet_effect_icon['Desc']
+				pve_effective = bool(pet_effect_icon['affectedBoss'])
+
 			soulmark = Soulmark(
-				id=soulmark_dict['id'],
+				id=id_,
 				desc=soulmark_dict['tips'],
 				pet=pet_refs,
 				effect=effect,
@@ -214,6 +236,8 @@ class SoulmarkAnalyzer(BaseDataSourceAnalyzer):
 				from_=from_res,
 				intensified='from' in soulmark_dict,
 				is_adv='is_adv' in soulmark_dict,
+				desc_formatting_adjustment=desc_formatting_adjustment,
+				pve_effective=pve_effective,
 			)
 			soulmark_map[soulmark.id] = soulmark
 			for tag in tags:

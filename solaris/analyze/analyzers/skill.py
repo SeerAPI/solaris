@@ -17,12 +17,12 @@ from solaris.analyze.model import (
 from solaris.analyze.typing_ import AnalyzeResult
 from solaris.analyze.utils import CategoryMap, create_category_map
 
-from .mintmark import SkillMintmark
 from .pet.pet import SkillInPetORM
 
 if TYPE_CHECKING:
 	from solaris.parse.parsers.effect_info import EffectInfoItem, ParamTypeItem
 	from solaris.parse.parsers.moves import UnityMoveItem
+	from solaris.parse.parsers.skill_effect import SkillEffectItem
 
 	from .element_type import TypeCombination, TypeCombinationORM
 	from .mintmark import MintmarkORM
@@ -110,6 +110,15 @@ class EffectParamLink(SQLModel, table=True):
 	)
 
 
+class SkillEffectTypeTagLink(SQLModel, table=True):
+	effect_id: int | None = Field(
+		default=None, foreign_key='skill_effect_type.id', primary_key=True
+	)
+	tag_id: int | None = Field(
+		default=None, foreign_key='skill_effect_type_tag.id', primary_key=True
+	)
+
+
 class SkillEffectParam(BaseResModel, ConvertToORM['SkillEffectParamORM']):
 	infos: list[str] | None = Field(
 		default=None,
@@ -176,6 +185,11 @@ class SkillEffectTypeBase(BaseResModel):
 
 	args_num: int = Field(description='参数数量')
 	info: str = Field(description='效果描述')
+	info_formatting_adjustment: str | None = Field(
+		default=None,
+		description='效果描述的"可格式化版本"，用于呈现Unity端中的多行描述形式'
+	)
+	pve_effective: bool = Field(description='该效果是否PVE生效')
 
 	@classmethod
 	def resource_name(cls) -> str:
@@ -189,10 +203,9 @@ class SkillEffectType(SkillEffectTypeBase, ConvertToORM['SkillEffectTypeORM']):
 	skill: list[ResourceRef['Skill']] = Field(
 		default_factory=list, description='使用该效果的技能列表'
 	)
-	# gem: list[ResourceRef] = Field(
-	# default_factory=list, description="使用该效果的宝石列表"
-	# )
-	# TODO: 添加宝石效果
+	tag: list[ResourceRef['SkillEffectTypeTag']] = Field(
+		default_factory=list, description='标签列表'
+	)
 
 	@classmethod
 	def get_orm_model(cls) -> type['SkillEffectTypeORM']:
@@ -203,12 +216,17 @@ class SkillEffectType(SkillEffectTypeBase, ConvertToORM['SkillEffectTypeORM']):
 			id=self.id,
 			args_num=self.args_num,
 			info=self.info,
+			pve_effective=self.pve_effective,
+			info_formatting_adjustment=self.info_formatting_adjustment,
 		)
 
 
 class SkillEffectTypeORM(SkillEffectTypeBase, table=True):
 	param: list['SkillEffectParamInTypeORM'] = Relationship(
 		back_populates='effect', link_model=EffectParamLink
+	)
+	tag: list['SkillEffectTypeTagORM'] = Relationship(
+		back_populates='effect', link_model=SkillEffectTypeTagLink
 	)
 	in_use: list['SkillEffectInUseORM'] = Relationship(back_populates='effect')
 
@@ -271,6 +289,33 @@ class SkillHideEffectORM(SkillHideEffectBase, table=True):
 	skill: list['SkillORM'] = Relationship(back_populates='hide_effect')
 
 
+class SkillEffectTypeTagBase(BaseCategoryModel):
+	name: str = Field(description='标签名称')
+
+	@classmethod
+	def resource_name(cls) -> str:
+		return 'skill_effect_type_tag'
+
+
+class SkillEffectTypeTag(SkillEffectTypeTagBase, ConvertToORM['SkillEffectTypeTagORM']):
+	effect: list[ResourceRef['SkillEffectType']] = Field(
+		default_factory=list, description='技能效果类型列表'
+	)
+
+	@classmethod
+	def get_orm_model(cls) -> type['SkillEffectTypeTagORM']:
+		return SkillEffectTypeTagORM
+
+	def to_orm(self) -> 'SkillEffectTypeTagORM':
+		return SkillEffectTypeTagORM(id=self.id, name=self.name)
+
+
+class SkillEffectTypeTagORM(SkillEffectTypeTagBase, table=True):
+	effect: list['SkillEffectTypeORM'] = Relationship(
+		back_populates='tag', link_model=SkillEffectTypeTagLink
+	)
+
+
 class SkillBase(BaseResModel):
 	name: str = Field(description='技能名称')
 	power: int = Field(description='技能威力')
@@ -304,9 +349,9 @@ class Skill(SkillBase, ConvertToORM['SkillORM']):
 	hide_effect: ResourceRef[SkillHideEffect] | None = Field(
 		default=None, description='技能隐藏效果'
 	)
-	mintmark: list[ResourceRef['SkillMintmark']] = Field(
-		default_factory=list, description='技能刻印列表'
-	)
+	# mintmark: list[ResourceRef['SkillMintmark']] = Field(
+	# 	default_factory=list, description='技能刻印列表'
+	# )
 
 	@classmethod
 	def get_orm_model(cls) -> 'type[SkillORM]':
@@ -355,10 +400,61 @@ class SkillORM(SkillBase, table=True):
 		back_populates='skill',
 	)
 
+
+def add_condition_labels(
+	formatting_adjustment: str,
+	condition_strings: list[str]
+) -> str | None:
+	import re
+	if not formatting_adjustment:
+		return None
+
+	if not condition_strings:
+		return formatting_adjustment
+
+	result = formatting_adjustment
+	for condition in condition_strings:
+		# 为每个condition string添加标签包围
+		if not condition:
+			continue
+		pattern = re.escape(condition)
+		replacement = f"<condition>{condition}</condition>"
+		result = re.sub(pattern, replacement, result)
+
+	return result
+
+
 class BaseSkillEffectAnalyzer(BaseDataSourceAnalyzer):
 	@classmethod
 	def get_data_import_config(cls) -> DataImportConfig:
-		return DataImportConfig(unity_paths=('effectInfo.json',))
+		return DataImportConfig(
+			unity_paths=('effectInfo.json', 'skillEffect.json')
+		)
+
+	@cached_property
+	def other_effect_map(self) -> dict[int, "SkillEffectItem"]:
+		other_effect_data: list["SkillEffectItem"] = self._get_data(
+			'unity', 'skillEffect.json'
+		)['data']
+		return {item['id']: item for item in other_effect_data}
+
+	@cached_property
+	def effect_type_tag_map(self) -> dict[str, SkillEffectTypeTag]:
+		import anycrc
+		crc16 = anycrc.Model('CRC16')
+		tag_set = {
+			tag
+			for key in ('tagA', 'tagB', 'tagC')
+			for item in self.other_effect_map.values()
+			if (tag := item[key])
+		}
+		return {
+			tag_str: SkillEffectTypeTag(
+				id=crc16.calc(tag_str.encode('utf-8')),
+				name=tag_str
+			)
+			for tag_str in tag_set
+		}
 
 	@cached_property
 	def effect_param_map(self) -> dict[int, SkillEffectParam]:
@@ -401,13 +497,40 @@ class BaseSkillEffectAnalyzer(BaseDataSourceAnalyzer):
 						param_list[i:i+3] for i in range(0, len(param_list), 3)
 					]
 				]
-			effect_type_map[id_] = SkillEffectType(
+			other_effect_data = self.other_effect_map.get(id_)
+			other_data_kwargs = {
+				'tag': [],
+				'pve_effective': False,
+			}
+			tags = []
+			if other_effect_data:
+				info_formatting_adj = add_condition_labels(
+						other_effect_data['formattingAdjustment'],
+						other_effect_data['ifTextItalic'].split('|'),
+					)
+				tags = [
+					self.effect_type_tag_map[tag]
+					for index in ('tagA', 'tagB', 'tagC')
+					if (tag := other_effect_data[index])
+				]
+				other_data_kwargs = {
+					'info_formatting_adjustment': info_formatting_adj,
+					'tag': [ResourceRef.from_model(tag) for tag in tags],
+					'pve_effective': not bool(other_effect_data['Bosseffective']),
+				}
+			skill_effect_type = SkillEffectType(
 				id=id_,
 				args_num=effect_type['args_num'],
 				param=params,
 				info=info,
 				skill=[],
+				**other_data_kwargs,
 			)
+			for tag in tags:
+				tag.effect.append(ResourceRef.from_model(skill_effect_type))
+
+			effect_type_map[id_] = skill_effect_type
+
 		return effect_type_map
 
 	def create_skill_effect(
@@ -623,4 +746,8 @@ class SkillAnalyzer(BaseSkillEffectAnalyzer):
 			AnalyzeResult(model=SkillEffectParam, data=self.effect_param_map),
 			AnalyzeResult(model=SkillHideEffect, data=hide_effect_map),
 			AnalyzeResult(model=SkillCategory, data=category_map),
+			AnalyzeResult(model=SkillEffectTypeTag, data={
+				tag.id: tag
+				for tag in self.effect_type_tag_map.values()
+			}),
 		)
