@@ -26,6 +26,7 @@ general_import_config = DataImportConfig(
 	patch_paths=(
 		'pet_gender.json',
 		'pet_mount_type.json',
+		'pet_vipbuff.json',
 		'pet_archive_story_book.json',
 	),
 )

@@ -208,6 +208,12 @@ class PetBase(BaseResModel):
 	fusion_sub: bool = Field(description='精灵是否可作为融合精灵的副宠')
 	has_resistance: bool = Field(description='精灵是否可获得抗性')
 
+	resource_id: int = Field(description='精灵资源ID')
+	enemy_resource_id: int | None = Field(
+		default=None,
+		description='该精灵在对手侧时使用的资源的ID，仅少数精灵存在这种资源',
+	)
+
 	@classmethod
 	def resource_name(cls) -> str:
 		return 'pet'
@@ -241,12 +247,6 @@ class Pet(PetBase, ConvertToORM['PetORM']):
 	)
 	archive_story_entry: ResourceRef['PetArchiveStoryEntry'] | None = Field(
 		default=None, description='精灵故事条目'
-	)
-
-	resource_id: int = Field(description='精灵资源ID')
-	enemy_resource_id: int | None = Field(
-		default=None,
-		description='该精灵在对手侧时使用的资源的ID，仅少数精灵存在这种资源',
 	)
 
 	@classmethod
@@ -286,6 +286,8 @@ class Pet(PetBase, ConvertToORM['PetORM']):
 			mount_type_id=self.mount_type.id if self.mount_type else None,
 			diy_stats_id=diy_stats.id if diy_stats else None,
 			diy_stats=diy_stats,
+			resource_id=self.resource_id,
+			enemy_resource_id=self.enemy_resource_id,
 		)
 
 
@@ -550,23 +552,24 @@ class PetAnalyzer(BasePetAnalyzer):
 		return result
 
 	def analyze(self) -> tuple[AnalyzeResult, ...]:
-		pet_gender_csv: CsvTable = self._get_data('patch', 'pet_gender.json')
-		mount_type_csv: CsvTable = self._get_data('patch', 'pet_mount_type.json')
+		pet_gender_table: CsvTable = self._get_data('patch', 'pet_gender.json')
+		vipbuff_table: CsvTable = self._get_data('patch', 'pet_vipbuff.json')
+		mount_type_table: CsvTable = self._get_data('patch', 'pet_mount_type.json')
 
 		# 记录 PetClass，key为PetClass的ID，value为PetClass对象
 		pet_class_map: dict[int, PetClass] = {}
 		# 记录性别，key为性别id
 		pet_gender_map = create_category_map(
-			pet_gender_csv, model_cls=PetGenderCategory, array_key='pet'
+			pet_gender_table, model_cls=PetGenderCategory, array_key='pet'
 		)
 		# 记录VIP加成，key为buff id
 		pet_vipbuff_map = create_category_map(
-			pet_gender_csv, model_cls=PetVipBuffCategory, array_key='pet'
+			vipbuff_table, model_cls=PetVipBuffCategory, array_key='pet'
 		)
 		# 记录精灵骑乘模式
 		pet_mount_type_map: CategoryMap[int, PetMountTypeCategory, Any] = (
 			create_category_map(
-				mount_type_csv, model_cls=PetMountTypeCategory, array_key='pet'
+				mount_type_table, model_cls=PetMountTypeCategory, array_key='pet'
 			)
 		)
 
@@ -724,7 +727,7 @@ class PetAnalyzer(BasePetAnalyzer):
 				fusion_sub=pet_dict.get('FuseSub', False),
 				has_resistance=bool(pet_dict.get('Resist', 0)),
 				skill=pet_skill_resources,
-				resource_id=pet_dict.get('real_id') or pet_id,
+				resource_id=pet_dict.get('real_id') or pet_id, # TODO: 需要对手侧资源id
 				encyclopedia_entry=encyclopedia_entry,
 				archive_story_entry=archive_story_entry,
 			)
