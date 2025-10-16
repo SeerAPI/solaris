@@ -334,26 +334,17 @@ class MintmarkORM(MintmarkBase, table=True):
 	rarity: 'MintmarkRarityCategoryORM' = Relationship(
 		back_populates='mintmark',
 	)
-	ability_part_id: int | None = Field(
-		default=None, foreign_key='ability_mintmark_part.id'
-	)
 	ability_part: Optional['AbilityPartORM'] = Relationship(
 		back_populates='mintmark',
 		sa_relationship_kwargs={
 			'primaryjoin': 'MintmarkORM.id == AbilityPartORM.mintmark_id',
 		},
 	)
-	skill_part_id: int | None = Field(
-		default=None, foreign_key='skill_mintmark_part.id'
-	)
 	skill_part: Optional['SkillPartORM'] = Relationship(
 		back_populates='mintmark',
 		sa_relationship_kwargs={
 			'primaryjoin': 'MintmarkORM.id == SkillPartORM.mintmark_id',
 		},
-	)
-	universal_part_id: int | None = Field(
-		default=None, foreign_key='universal_mintmark_part.id'
 	)
 	universal_part: Optional['UniversalPartORM'] = Relationship(
 		back_populates='mintmark',
