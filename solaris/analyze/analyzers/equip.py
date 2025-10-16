@@ -183,7 +183,12 @@ class EquipBonusORM(EquipBonusBase, table=True):
 	crit_rate: int | None = Field(default=None)
 
 
-class SuitBonusBase(BaseResModelWithOptionalId):
+class SuitBonusBase(BaseResModel):
+	id: int = Field(
+		description='套装效果ID',
+		primary_key=True,
+		foreign_key='suit.id',
+	)
 	desc: str = Field(description='套装描述')
 
 	@classmethod
@@ -283,7 +288,6 @@ class SuitORM(SuitBase, table=True):
 	equips: list['EquipORM'] = Relationship(
 		back_populates='suit',
 	)
-	bonus_id: int | None = Field(default=None, foreign_key='suit_bonus.id')
 	bonus: Optional['SuitBonusORM'] = Relationship(
 		back_populates='suit',
 	)
@@ -510,7 +514,9 @@ class EquipAnalyzer(BaseItemAnalyzer):
 			flash_equip.get('AddArgs'),
 		)
 		mon_id = (
-			args if any(args := split_string_arg(flash_equip['MonID'])) else []
+			args
+			if any(args := split_string_arg(flash_equip['MonID']))
+			else []
 		)
 		return SuitBonusItem(
 			desc=flash_equip['Desc'],
@@ -567,10 +573,15 @@ class EquipAnalyzer(BaseItemAnalyzer):
 						effect_args=eid_effect_args,
 					)
 				suit_bonus = SuitBonus(
+					id=suit_id,
 					desc=suit_bonus_dict['desc'],
 					attribute=suit_bonus_dict['add_attr'],
 					eid_effect=eid_effect,
 					newse_id=suit_bonus_dict.get('newse_id'),
+					effective_pets=[
+						ResourceRef(id=mon_id, resource_name='pet')
+						for mon_id in suit_bonus_dict['mon_id']
+					],
 				)
 			suit_obj = Suit(
 				id=suit_id,
