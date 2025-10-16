@@ -82,8 +82,9 @@ class Soulmark(SoulmarkBase, ConvertToORM['SoulmarkORM']):
 			intensified=self.intensified,
 			is_adv=self.is_adv,
 			effect_in_use=self.effect.to_orm() if self.effect else None,
-			# from_id=self.from_.id if self.from_ else None,
 			intensified_to_id=self.intensified_to.id if self.intensified_to else None,
+			desc_formatting_adjustment=self.desc_formatting_adjustment,
+			pve_effective=self.pve_effective,
 		)
 
 
@@ -181,6 +182,7 @@ class SoulmarkAnalyzer(BaseDataSourceAnalyzer):
 			model_cls=SoulmarkTagCategory,
 			array_key='soulmark',
 		)
+		soulmark_intensify_map: dict[int, int] = {}
 
 		for soulmark_dict in soulmark_data:
 			id_ = soulmark_dict['id']
@@ -203,13 +205,12 @@ class SoulmarkAnalyzer(BaseDataSourceAnalyzer):
 
 			to_res = None
 			if to_id := soulmark_dict.get('to'):
+				soulmark_intensify_map[to_id] = id_
 				to_res = ResourceRef.from_model(Soulmark, id=to_id)
 			from_res = None
-			if from_id := soulmark_dict.get('from'):
-				from_res = ResourceRef.from_model(
-					Soulmark,
-					id=from_id,
-				)
+			if id_ in soulmark_intensify_map:
+				from_id = soulmark_intensify_map[id_]
+				from_res = ResourceRef.from_model(Soulmark, id=from_id)
 
 			effect = None
 			if effect_id := soulmark_dict.get('effect_id'):
@@ -234,8 +235,8 @@ class SoulmarkAnalyzer(BaseDataSourceAnalyzer):
 				tag=tags,
 				intensified_to=to_res,
 				from_=from_res,
-				intensified='from' in soulmark_dict,
-				is_adv='is_adv' in soulmark_dict,
+				intensified=bool(soulmark_dict['intensify']),
+				is_adv=bool(soulmark_dict['is_adv']),
 				desc_formatting_adjustment=desc_formatting_adjustment,
 				pve_effective=pve_effective,
 			)
