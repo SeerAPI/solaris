@@ -1,4 +1,5 @@
 from functools import cached_property
+from itertools import chain
 from typing import TYPE_CHECKING
 
 from sqlmodel import Field, Relationship, SQLModel
@@ -260,4 +261,13 @@ class SkillStoneAnalyzer(BaseSkillEffectAnalyzer, BaseItemAnalyzer):
 		return (
 			AnalyzeResult(model=SkillStone, data=skill_stone_map),
 			AnalyzeResult(model=SkillStoneCategory, data=skill_stone_category_map),
+			AnalyzeResult(
+				model=SkillStoneEffect,
+				data=dict(enumerate(chain(
+						effect
+						for stone in skill_stone_map.values()
+						for effect in stone.effect
+					))),
+				output_mode='db'
+			),
 		)
