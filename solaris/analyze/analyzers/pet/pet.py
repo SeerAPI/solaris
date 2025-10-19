@@ -609,7 +609,7 @@ class PetAnalyzer(BasePetAnalyzer):
 					pet_class_map[pet_cls_id] = PetClass(
 						id=pet_cls_id,
 						evolution_chain=[pet_ref],
-						**cls_info,
+						**cls_info # type: ignore[arg-type]
 					)
 				pet_cls = pet_class_map[pet_cls_id]
 				pet_cls_ref = ResourceRef.from_model(pet_cls)
@@ -727,6 +727,10 @@ class PetAnalyzer(BasePetAnalyzer):
 				fusion_sub=pet_dict.get('FuseSub', False),
 				has_resistance=bool(pet_dict.get('Resist', 0)),
 				skill=pet_skill_resources,
+				soulmark=[
+					ResourceRef(id=soulmark_id, resource_name='soulmark')
+					for soulmark_id in self.pet_soulmark_data.get(pet_id, [])
+				],
 				resource_id=pet_dict.get('real_id') or pet_id, # TODO: 需要对手侧资源id
 				encyclopedia_entry=encyclopedia_entry,
 				archive_story_entry=archive_story_entry,

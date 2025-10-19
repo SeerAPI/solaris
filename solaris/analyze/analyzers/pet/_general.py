@@ -1,3 +1,4 @@
+from collections import defaultdict
 from functools import cached_property
 from typing import TYPE_CHECKING, Any, cast
 
@@ -5,6 +6,7 @@ from solaris.analyze.base import BaseDataSourceAnalyzer, DataImportConfig
 from solaris.analyze.utils import merge_dict_item
 
 if TYPE_CHECKING:
+	from solaris.parse.parsers.effect_icon import EffectIconItem
 	from solaris.parse.parsers.monsters import MonsterItem
 	from solaris.parse.parsers.pet_skin import PetSkinConfig, _SkinItem
 	from solaris.parse.parsers.petbook import ArchivesStoryConfig, ArchivesStoryInfo
@@ -18,6 +20,7 @@ general_import_config = DataImportConfig(
 		'petbook.json',
 		'archivesStory.json',
 		'petSkin.json',
+		'effectIcon.json',
 	),
 	flash_paths=(
 		'config.xml.PetXMLInfo.xml',
@@ -114,3 +117,17 @@ class BasePetAnalyzer(BaseDataSourceAnalyzer):
 			book['id']: book
 			for book in data['data']
 		}
+
+	@cached_property
+	def pet_soulmark_data(self) -> dict[int, list[int]]:
+		soulmark_data: list["EffectIconItem"] = self._get_data(
+			'unity', 'effectIcon.json'
+		)['root']['effect']
+
+		result = defaultdict(list)
+		for data in soulmark_data:
+			pet_ids = data['pet_id']
+			for pet_id in pet_ids:
+				result[pet_id].append(data['id'])
+
+		return dict(result)
