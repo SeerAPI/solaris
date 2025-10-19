@@ -1,5 +1,8 @@
 from collections.abc import Hashable
+import functools
 from typing import TYPE_CHECKING, Any, Generic, TypeVar
+
+import pydantic_core
 
 if TYPE_CHECKING:
 	from solaris.analyze.model import BaseCategoryModel
@@ -102,3 +105,9 @@ def merge_dict_item(target: dict[T, Any], source: dict[T, Any], key: T) -> None:
 	"""
 	if source.get(key) is not None:
 		target[key] = source[key]
+
+to_json = functools.partial(
+	pydantic_core.to_json,
+	by_alias=True,
+	indent=2,
+)

@@ -1,10 +1,13 @@
 from abc import ABC, abstractmethod
+import json
 import os
-from typing import Generic, TypeVar
-
-from solaris.utils import to_json
+from typing import Any, Generic, TypeVar
 
 T = TypeVar('T')
+
+
+def _to_json(data: Any) -> str:
+	return json.dumps(data, indent=2, ensure_ascii=False)
 
 
 class BaseParser(ABC, Generic[T]):
@@ -25,8 +28,8 @@ class BaseParser(ABC, Generic[T]):
 	def save_parsed_config(self, data: T) -> None:
 		"""保存解析后的配置文件"""
 		filename = self.parsed_config_filename()
-		with open(filename, 'wb') as f:
-			f.write(to_json(data))
+		with open(filename, 'w', encoding='utf-8') as f:
+			f.write(_to_json(data))
 
 	@classmethod
 	@abstractmethod

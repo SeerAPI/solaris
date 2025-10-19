@@ -1,13 +1,10 @@
 from collections.abc import Generator, MutableSequence
 from contextlib import contextmanager
-import functools
 import importlib
 import inspect
 from pathlib import Path
 import pkgutil
 from typing import Any, Literal, TypeVar, get_origin, overload
-
-import pydantic_core
 
 T = TypeVar('T')
 
@@ -254,10 +251,3 @@ def get_nested_value(
 			return None
 		data = data.pop(key) if delete else data[key]
 	return data
-
-
-to_json = functools.partial(
-	pydantic_core.to_json,
-	indent=2,
-	by_alias=True,
-)
