@@ -269,9 +269,13 @@ class NamedResourceRef(ResourceRef):
 
 
 class ApiResourceList(BaseGeneralModel):
+	"""API资源列表，兼容RFC 5988的Link标准"""
+
 	count: int = Field(description='资源数量')
 	next: str | None = Field(default=None, description='下一页URL')
 	previous: str | None = Field(default=None, description='上一页URL')
+	first: str | None = Field(default=None, description='第一页URL')
+	last: str | None = Field(default=None, description='最后一页URL')
 	results: list[NamedResourceRef] = Field(description='资源列表')
 
 	@classmethod
