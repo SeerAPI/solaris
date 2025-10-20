@@ -119,7 +119,7 @@ class BattleEffectAnalyzer(BaseDataSourceAnalyzer):
 			for effect in self._get_data('unity', 'effectDes.json')['root']['item']
 		}
 		restricted_effect_id: set[int] = {
-			effect['id']
+			effect['icon']
 			for effect_name, effect in effect_descs.items()
 			if effect_name in effect_data and '限制类异常状态' in effect['desc']
 		}
