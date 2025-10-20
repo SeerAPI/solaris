@@ -30,13 +30,6 @@ class ShrinkOnlyNonRoot(JsonSchemaGenerator):
 		return json_schema
 
 
-class ShrinkAll(JsonSchemaGenerator):
-	def generate(self, schema, mode: JsonSchemaMode = 'serialization'):
-		# schema.pop(ROOT_MARK_KEY, None) # 删除根标记
-		json_schema = super().generate(schema, mode)
-		return json_schema
-
-
 model_json_schema = partial(
 	model_json_schema,
 	schema_generator=ShrinkOnlyNonRoot,

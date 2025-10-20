@@ -1,12 +1,13 @@
-from collections.abc import Sequence
+from collections.abc import Iterable, MutableMapping, Sequence
 from pathlib import Path
-from typing import Any
+from typing import Annotated, Any, TypeVar
 
-from pydantic import BaseModel, TypeAdapter, create_model
+from pydantic import BaseModel, Field, TypeAdapter, create_model
+from pydantic.fields import FieldInfo
 from pydantic.json_schema import GenerateJsonSchema
 from tqdm import tqdm
 
-from solaris.utils import import_all_classes, to_json
+from solaris.utils import import_all_classes
 
 from .base import BaseAnalyzer
 from .db import DBManager, write_result_to_db
@@ -17,18 +18,80 @@ from .model import (
 	NamedResourceRef,
 	ResourceRef,
 )
-from .schema_generate import ShrinkAll, ShrinkOnlyNonRoot, model_json_schema
+from .schema_generate import JsonSchemaGenerator, ShrinkOnlyNonRoot, model_json_schema
 from .typing_ import AnalyzeResult
+from .utils import to_json
 
 ANALYZER_DEFAULT_PACKAGE_NAME = 'solaris.analyze.analyzers'
+
+HASH_FIELD = FieldInfo(
+	annotation=str,
+	title='Hash',
+	description='数据哈希值，目前pydantic不支持对key进行排序，所以哈希值变化可能意味着数据结构变化而非数据值变化'
+)
+
+DEFAULT_FIELDS = (
+	('hash', HASH_FIELD),
+)
+
+
+def _calc_hash(data: str | bytes) -> str:
+	import anycrc
+	crc32 = anycrc.Model('CRC32')
+	if isinstance(data, str):
+		data = data.encode('utf-8')
+
+	hash_value = crc32.calc(data)
+	return format(hash_value, 'x')
+
+
+def _dump_data(data: Any, path: Path) -> None:
+	if isinstance(data, BaseModel):
+		data = data.model_dump(by_alias=True)
+	if not isinstance(data, MutableMapping):
+		raise ValueError(f'Invalid data type: {type(data)}')
+
+	data['hash'] = _calc_hash(to_json(data, indent=None))
+
+	path.parent.mkdir(parents=True, exist_ok=True)
+	path.write_bytes(to_json(data))
+
+
+T = TypeVar('T', bound=MutableMapping[str, Any])
+def _add_fields_to_schema(
+	schema: T,
+	fields: Iterable[tuple[str, FieldInfo]]
+) -> T:
+	"""向schema添加额外字段"""
+	if 'properties' not in schema:
+		return schema
+
+	for field_name, field_info in fields:
+		field_name = field_info.alias or field_name
+		adapter = TypeAdapter(Annotated[field_info.annotation, field_info])
+		schema['properties'][field_name] = adapter.json_schema(mode='serialization')
+		if field_info.is_required:
+			schema['required'].append(field_name)
+
+	return schema
+
+
+def _dump_schema(
+	schema: MutableMapping[str, Any],
+	path: Path,
+	*,
+	fields: tuple[tuple[str, FieldInfo], ...] = ()
+) -> None:
+	schema = _add_fields_to_schema(schema, fields)
+
+	path.parent.mkdir(parents=True, exist_ok=True)
+	path.write_bytes(to_json(schema))
 
 
 def _output_all_general_model_schema(output_dir: Path, *, base_url: str) -> None:
 	BaseGeneralModel.base_url = base_url
 	for path, model in BaseGeneralModel.__subclasses_dict__.items():
-		path = output_dir / path
-		schema = model_json_schema(model)
-		path.write_bytes(to_json(schema))
+		_dump_schema(model_json_schema(model), output_dir / path)
 
 
 def _generate_api_resource_list(result: AnalyzeResult) -> ApiResourceList:
@@ -44,8 +107,6 @@ def _generate_api_resource_list(result: AnalyzeResult) -> ApiResourceList:
 
 
 def _create_index_model(name: str, data: dict[str, Any]) -> type[BaseModel]:
-	from pydantic import Field
-
 	return create_model(
 		name,
 		**{
@@ -89,19 +150,27 @@ def analyze_result_to_json(
 	)
 
 	def output_json_and_schema(
-		*paths: Path | str,
+		path: Path | str,
+		*,
 		data: Any,
+		schema: Any | None = None,
 		schema_generator: type[GenerateJsonSchema] = ShrinkOnlyNonRoot,
+		post_add_fields: tuple[tuple[str, FieldInfo], ...] = DEFAULT_FIELDS,
 	) -> None:
-		if isinstance(data, TypeAdapter):
-			schema = data.json_schema(schema_generator=schema_generator)
-		elif isinstance(data, BaseModel):
-			schema = model_json_schema(type(data), schema_generator=schema_generator)
-		else:
-			schema = data
+		if schema is None:
+			if isinstance(data, TypeAdapter):
+				schema = data.json_schema(schema_generator=schema_generator)
+			elif isinstance(data, BaseModel):
+				schema = model_json_schema(
+					type(data),
+					schema_generator=schema_generator,
+				)
 
-		data_output_dir.joinpath(*paths).write_bytes(to_json(data))
-		schema_output_dir.joinpath(*paths).write_bytes(to_json(schema))
+		if not isinstance(schema, MutableMapping):
+			raise ValueError(f'Invalid schema: {schema}')
+
+		_dump_data(data, data_output_dir.joinpath(path))
+		_dump_schema(schema, schema_output_dir.joinpath(path), fields=post_add_fields)
 
 	index_data: dict[str, str] = {}
 	for result in (pbar_result := tqdm(results, leave=False)):
@@ -124,7 +193,12 @@ def analyze_result_to_json(
 
 		output_paths: dict[Path, Any] = {}
 		if merge_json_table:
-			output_json_and_schema(f'{resource_name}.json', data=data)
+			output_json_and_schema(
+				f'{resource_name}.json',
+				data=data,
+				schema=schema,
+				post_add_fields=(),  # 不添加额外字段
+			)
 		else:
 			for res_id, res_data in data.items():
 				res_path = data_output_dir.joinpath(
@@ -136,21 +210,18 @@ def analyze_result_to_json(
 				output_paths[res_path] = res_data
 
 			schema_path = schema_output_dir.joinpath(resource_name, '$id', 'index.json')
-			schema_path.parent.mkdir(parents=True, exist_ok=True)
-			schema_path.write_bytes(to_json(schema))
+			_dump_schema(schema, schema_path, fields=DEFAULT_FIELDS)
 
 			# 输出ApiResourceList
 			api_resource_list = _generate_api_resource_list(result)
 			output_json_and_schema(
-				resource_name,
-				'index.json',
+				Path(resource_name) / 'index.json',
 				data=api_resource_list,
-				schema_generator=ShrinkAll,
+				schema_generator=JsonSchemaGenerator,
 			)
 
 		for path, data in output_paths.items():
-			path.parent.mkdir(parents=True, exist_ok=True)
-			path.write_bytes(to_json(data))
+			_dump_data(data, path)
 
 		index_data[resource_name] = '/'.join([data_url, resource_name])
 
@@ -158,11 +229,12 @@ def analyze_result_to_json(
 	output_json_and_schema('metadata.json', data=metadata)
 
 	if not merge_json_table:  # 输出根目录 index.json
-		path = data_output_dir.joinpath('index.json')
-		path.write_bytes(to_json(index_data))
-		schema_path = schema_output_dir.joinpath('index.json')
 		index_model = _create_index_model('Index', index_data)
-		schema_path.write_bytes(to_json(model_json_schema(index_model)))
+		output_json_and_schema(
+			'index.json',
+			data=index_data,
+			schema=model_json_schema(index_model),
+		)
 
 
 def analyze_result_to_db(
