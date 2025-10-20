@@ -44,6 +44,17 @@ if TYPE_CHECKING:
 TModel = TypeVar('TModel', bound=SQLModel)
 
 
+class ResModelMixin(SQLModel, ABC):
+	@classmethod
+	@abstractmethod
+	def resource_name(cls) -> str:
+		pass
+
+	@declared_attr  # type: ignore
+	def __tablename__(cls) -> str:  # type: ignore
+		return cls.resource_name()
+
+
 class BaseMetadata(BaseModel):
 	api_url: str = Field(description='当前API的URL')
 	api_version: str = Field(description='API版本')
@@ -97,24 +108,13 @@ class ApiMetadataORM(BaseMetadata, SQLModel, table=True):
 	id: int | None = Field(default=None, description='ID', primary_key=True)
 
 
-class BaseModelMethods(ABC):
-	@classmethod
-	@abstractmethod
-	def resource_name(cls) -> str:
-		pass
-
-
-class BaseResModel(SQLModel, BaseModelMethods, ABC):
+class BaseResModel(ResModelMixin, ABC):
 	"""资源模型抽象基类"""
 
 	id: int = Field(description='资源ID', primary_key=True)
 
-	@declared_attr  # type: ignore
-	def __tablename__(cls) -> str:  # type: ignore
-		return cls.resource_name()
 
-
-class BaseResModelWithOptionalId(SQLModel, BaseModelMethods, ABC):
+class BaseResModelWithOptionalId(ResModelMixin, ABC):
 	"""资源模型抽象基类"""
 
 	id: int | None = Field(
@@ -122,10 +122,6 @@ class BaseResModelWithOptionalId(SQLModel, BaseModelMethods, ABC):
 		primary_key=True,
 		exclude=True,
 	)
-
-	@declared_attr  # type: ignore
-	def __tablename__(cls) -> str:  # type: ignore
-		return cls.resource_name()
 
 
 class ConvertToORM(ABC, Generic[TModel]):
