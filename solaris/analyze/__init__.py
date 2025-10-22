@@ -91,7 +91,7 @@ def _dump_schema(
 def _output_all_general_model_schema(output_dir: Path, *, base_url: str) -> None:
 	BaseGeneralModel.base_url = base_url
 	for path, model in BaseGeneralModel.__subclasses_dict__.items():
-		_dump_schema(model_json_schema(model), output_dir / path)
+		_dump_schema(model_json_schema(model), output_dir / path / 'index.json')
 
 
 def _generate_api_resource_list(result: AnalyzeResult) -> ApiResourceList:
@@ -116,32 +116,51 @@ def _create_index_model(name: str, data: dict[str, Any]) -> type[BaseModel]:
 	)
 
 
+def _join_url(base_url: str, *parts: str, end_slash: bool = False) -> str:
+	url = '/'.join(
+		str(i).strip('/')
+		for i in [base_url, *parts]
+		if i and i not in ('.', '/', './')
+	)
+	if end_slash:
+		url += '/'
+
+	return url
+
+
 def analyze_result_to_json(
 	results: Sequence[AnalyzeResult],
 	*,
 	metadata: ApiMetadata,
-	schema_output_dir: str | Path,
-	data_output_dir: str | Path,
 	base_output_dir: str | Path = '.',
+	schema_output_dir: str | Path,
+	base_schema_url: str | None = None,
+	data_output_dir: str | Path,
+	base_data_url: str | None = None,
 	merge_json_table: bool = False,
 ) -> None:
 	"""分析数据并输出到JSON文件"""
 	version = metadata.api_version
-	base_url = metadata.api_url.rstrip('/')
-	data_url = '/'.join(str(i) for i in [base_url, data_output_dir, version])
-	schema_url = '/'.join(str(i) for i in [base_url, schema_output_dir, version])
+	base_url = metadata.api_url
+	data_url = base_data_url or _join_url(
+		base_url, version, str(data_output_dir)
+	)
+	schema_url = base_schema_url or _join_url(
+		base_url, version, str(schema_output_dir)
+	)
+
 	ResourceRef.base_data_url = data_url
 
 	data_output_dir = Path().joinpath(
 		base_output_dir,
-		data_output_dir,
 		version,
+		data_output_dir,
 	)
 	data_output_dir.mkdir(parents=True, exist_ok=True)
 	schema_output_dir = Path().joinpath(
 		base_output_dir,
-		schema_output_dir,
 		version,
+		schema_output_dir,
 	)
 	schema_output_dir.mkdir(parents=True, exist_ok=True)
 	_output_all_general_model_schema(
@@ -223,7 +242,7 @@ def analyze_result_to_json(
 		for path, data in output_paths.items():
 			_dump_data(data, path)
 
-		index_data[resource_name] = '/'.join([data_url, resource_name])
+		index_data[resource_name] = _join_url(data_url, resource_name)
 
 	# 输出metadata
 	output_json_and_schema('metadata.json', data=metadata)

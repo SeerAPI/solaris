@@ -70,6 +70,22 @@ def create_settings(
 	help='JSON Schema 输出目录，仅在 --output-mode 为 json 或 all 时有效',
 )
 @click.option(
+	'--base-json-url',
+	type=str,
+	default=None,
+	help='JSON表基础URL，该参数在拼接时会覆盖 api_url 的值，'
+	'仅在 --output-mode 为 json 或 all 时有效',
+	show_default=True,
+)
+@click.option(
+	'--base-schema-url',
+	type=str,
+	default=None,
+	help='JSON Schema 基础URL，该参数在拼接时会覆盖 api_url 的值，'
+	'仅在 --output-mode 为 json 或 all 时有效',
+	show_default=True,
+)
+@click.option(
 	'-d',
 	'--db-url',
 	type=str,
@@ -113,6 +129,8 @@ def analyze(
 	output_mode: str,
 	json_output_dir: str,
 	schema_output_dir: str,
+	base_json_url: str | None,
+	base_schema_url: str | None,
 	db_url: str,
 	api_url: str | None,
 	api_version: str | None,
@@ -161,6 +179,8 @@ def analyze(
 			results,
 			schema_output_dir=schema_output_dir,
 			data_output_dir=json_output_dir,
+			base_data_url=base_json_url,
+			base_schema_url=base_schema_url,
 			metadata=metadata,
 		)
 	if output_mode in ('db', 'all'):

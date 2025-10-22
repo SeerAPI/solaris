@@ -217,7 +217,7 @@ class ResourceRef(BaseGeneralModel, Generic[TResModel]):
 
 	@classmethod
 	def schema_path(cls) -> str:
-		return 'resource_ref.json'
+		return 'common/resource_ref/'
 
 	@overload
 	@classmethod
@@ -261,7 +261,7 @@ class NamedResourceRef(ResourceRef):
 
 	@classmethod
 	def schema_path(cls) -> str:
-		return 'named_resource_ref.json'
+		return 'common/named_resource_ref/'
 
 
 class ApiResourceList(BaseGeneralModel):
@@ -276,7 +276,7 @@ class ApiResourceList(BaseGeneralModel):
 
 	@classmethod
 	def schema_path(cls) -> str:
-		return 'api_resource_list.json'
+		return 'common/api_resource_list/'
 
 
 class EidEffect(BaseResModel, BaseGeneralModel, ConvertToORM['EidEffectORM']):
@@ -287,7 +287,7 @@ class EidEffect(BaseResModel, BaseGeneralModel, ConvertToORM['EidEffectORM']):
 
 	@classmethod
 	def schema_path(cls) -> str:
-		return 'eid_effect.json'
+		return 'common/eid_effect/'
 
 	@classmethod
 	def resource_name(cls) -> str:
@@ -327,7 +327,7 @@ class EidEffectInUse(
 
 	@classmethod
 	def schema_path(cls) -> str:
-		return 'eid_effect_in_use.json'
+		return 'common/eid_effect_in_use/'
 
 	@classmethod
 	def get_orm_model(cls) -> type['EidEffectInUseORM']:
@@ -377,7 +377,7 @@ class SixAttributesBase(BaseResModelWithOptionalId, BaseGeneralModel):
 
 	@classmethod
 	def schema_path(cls) -> str:
-		return 'six_attributes.json'
+		return 'common/six_attributes/'
 
 	@classmethod
 	def from_string(
@@ -501,7 +501,7 @@ class SkillEffectInUse(
 
 	@classmethod
 	def schema_path(cls) -> str:
-		return 'skill_effect_in_use.json'
+		return 'common/skill_effect_in_use/'
 
 	@classmethod
 	def get_orm_model(cls) -> type['SkillEffectInUseORM']:
