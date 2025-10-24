@@ -19,7 +19,7 @@ class ShrinkOnlyNonRoot(JsonSchemaGenerator):
 		将非根模型的 BaseGeneralModel schema 省略为 $ref 引用
 		"""
 		cls = schema.get('cls')
-		if is_base_general_model(cls):
+		if cls is not None and is_base_general_model(cls):
 			# 标记为根模型以输出完整 schema
 			new_core_schema = schema.copy()
 			new_core_schema[ROOT_MARK_KEY] = ROOT_MARK  # type: ignore
