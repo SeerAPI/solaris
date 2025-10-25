@@ -48,7 +48,7 @@ def create_settings(
 	'如果均不存在，则使用./source 目录',
 )
 @click.option(
-	'-o',
+	'-m',
 	'--output-mode',
 	type=click.Choice(('json', 'db', 'all')),
 	default='json',
@@ -56,18 +56,31 @@ def create_settings(
 	help='输出模式，json: 输出JSON表，db: 输出到数据库，all: 两者都输出',
 )
 @click.option(
+	'--base-output-dir',
+	type=click.Path(file_okay=False, dir_okay=True),
+	default='output',
+	show_default=True,
+	help='基础输出目录，仅在 --output-mode 为 json 或 all 时有效。'
+)
+@click.option(
 	'--json-output-dir',
 	type=click.Path(file_okay=False, dir_okay=True),
 	default='data',
 	show_default=True,
-	help='JSON表输出目录，仅在 --output-mode 为 json 或 all 时有效',
+	help='JSON表输出目录，该目录会与 base_output_dir 和 api.version 拼接，'
+	'如：base_output_dir=./output, api.version=v1, json_output_dir=data, '
+	'则最终输出目录为 ./output/v1/data。'
+	'仅在 --output-mode 为 json 或 all 时有效',
 )
 @click.option(
 	'--schema-output-dir',
 	type=click.Path(file_okay=False, dir_okay=True),
 	default='schema',
 	show_default=True,
-	help='JSON Schema 输出目录，仅在 --output-mode 为 json 或 all 时有效',
+	help='JSON Schema 输出目录，该目录会与 base_output_dir 和 api.version 拼接，'
+	'如：base_output_dir=./output, api.version=v1, schema_output_dir=schema, '
+	'则最终输出目录为 ./output/v1/schema。'
+	'仅在 --output-mode 为 json 或 all 时有效',
 )
 @click.option(
 	'--base-json-url',
@@ -126,6 +139,7 @@ def create_settings(
 def analyze(
 	ctx: click.Context,
 	source_dir: str | None,
+	base_output_dir: str,
 	output_mode: str,
 	json_output_dir: str,
 	schema_output_dir: str,
@@ -177,6 +191,7 @@ def analyze(
 	if output_mode in ('json', 'all'):
 		analyze_result_to_json(
 			results,
+			base_output_dir=base_output_dir,
 			schema_output_dir=schema_output_dir,
 			data_output_dir=json_output_dir,
 			base_data_url=base_json_url,

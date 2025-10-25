@@ -104,7 +104,7 @@ solaris analyze --list-analyzers
 | 参数 | 默认值 | 说明 |
 |------|--------|------|
 | `-w, --source-dir` | 环境变量或 `./source` | 数据源目录 |
-| `-o, --output-mode` | `json` | 输出模式：json/db/all |
+| `-m, --output-mode` | `json` | 输出模式：json/db/all |
 | `--json-output-dir` | `data` | JSON 文件输出目录 |
 | `--schema-output-dir` | `schema` | JSON Schema 输出目录 |
 | `-d, --db-url` | `solaris.db` | 数据库文件路径 |
