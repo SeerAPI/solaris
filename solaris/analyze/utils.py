@@ -4,9 +4,10 @@ from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
 import pydantic_core
 
+from .typing_ import CsvTable
+
 if TYPE_CHECKING:
-	from solaris.analyze.model import BaseCategoryModel
-	from solaris.analyze.typing_ import CsvTable
+	from seerapi_models.build_model import BaseCategoryModel
 
 
 _KT = TypeVar('_KT', bound=Hashable)

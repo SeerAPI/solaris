@@ -3,6 +3,7 @@ from typing import TypeVar
 
 import click
 
+import solaris
 from solaris.analyze import (
 	analyze_result_to_db,
 	analyze_result_to_json,
@@ -14,7 +15,7 @@ from solaris.analyze.base import (
 	DataImportConfig,
 	DataSourceDirSettings,
 )
-from solaris.analyze.model import ApiMetadata
+from solaris.analyze.settings import ApiMetadataSettings
 from solaris.settings import BaseSettings, CreateSettingsError
 
 TSettings = TypeVar('TSettings', bound=BaseSettings)
@@ -172,7 +173,7 @@ def analyze(
 	DataImportConfig.set_source_dir(settings)
 	metadata = create_settings(
 		ctx,
-		ApiMetadata,
+		ApiMetadataSettings,
 		msg_maps={
 			'api_url': (
 				'未获取到有效的API URL，请使用 --api-url 指定，'
@@ -185,6 +186,8 @@ def analyze(
 		},
 		api_url=api_url,
 		api_version=api_version,
+		generator_name=solaris.__name__,
+		generator_version=solaris.__version__,
 	)
 
 	results = run_all_analyzer(analyzer_classes)

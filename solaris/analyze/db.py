@@ -1,11 +1,11 @@
 from collections.abc import Mapping
 from typing import Any, TypeVar, cast
 
+from seerapi_models.build_model import ConvertToORM
 from sqlalchemy import Engine
 from sqlmodel import Session, SQLModel, create_engine, inspect, select
 from sqlmodel.main import FieldInfo
 
-from .model import ConvertToORM
 from .typing_ import ResModel
 
 

@@ -11,7 +11,7 @@
 
 ## 简介
 
-Solaris 是 SeerAPI 的核心部分，专门用于解析和整理赛尔号三平台（Flash、HTML5、Unity）客户端数据。通过标准化的数据处理流程，将原始客户端数据转换为结构化的 JSON 文件、数据库记录和相关资源文件。
+Solaris 是 SeerAPI 的核心部分，用于解析和整理赛尔号三平台（Flash、HTML5、Unity）客户端数据。通过标准化的数据处理流程，将原始客户端数据转换为 [seerapi-models](https://github.com/SeerAPI/seerapi-models) 定义的标准结构，并输出为 JSON 文件、数据库记录和相关资源文件。
 
 ## 功能特性
 
@@ -54,7 +54,7 @@ solaris --version
 
 ### 数据解析 (parse)
 
-将客户端原始数据文件解析为中间格式：
+将Unity客户端二进制数据文件解析为中间格式：
 
 ```bash
 # 基本解析
@@ -164,7 +164,6 @@ solaris/
 
 ### 数据库输出
 - **SQLite 数据库**: 包含所有解析数据的单一数据库文件
-- **表结构**: 基于 SQLModel 定义的标准化表结构
 
 ## 开发
 

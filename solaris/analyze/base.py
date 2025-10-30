@@ -4,12 +4,10 @@ from dataclasses import KW_ONLY, dataclass, field
 import json
 from pathlib import Path
 from typing import Any, ClassVar, cast
-from typing_extensions import Self
 
-from pydantic import model_validator
 import xmltodict
 
-from solaris.settings import ENV_PREFIX, SETTINGS_CONFIG, BaseSettings
+from solaris.analyze.settings import DataSourceDirSettings
 from solaris.typing import JSON, Paths
 from solaris.utils import convert_to_number, get_nested_value
 
@@ -20,23 +18,6 @@ from .typing_ import (
 	JSONObject,
 	Patch,
 )
-
-
-class DataSourceDirSettings(BaseSettings):
-	model_config = SETTINGS_CONFIG | {'env_prefix': f'{ENV_PREFIX}DATA_'}
-	BASE_DIR: Path = Path('./source')
-	PATCH_DIR: Path = Path(BASE_DIR, 'patch')
-	HTML5_DIR: Path = Path(BASE_DIR, 'html5')
-	UNITY_DIR: Path = Path(BASE_DIR, 'unity')
-	FLASH_DIR: Path = Path(BASE_DIR, 'flash')
-
-	@model_validator(mode='after')
-	def combine_dirs(self) -> Self:
-		self.HTML5_DIR = self.HTML5_DIR
-		self.PATCH_DIR = self.PATCH_DIR
-		self.UNITY_DIR = self.UNITY_DIR
-		self.FLASH_DIR = self.FLASH_DIR
-		return self
 
 
 def _convert_xml_attr_to_number(_, key, value):
