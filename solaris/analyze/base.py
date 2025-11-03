@@ -84,7 +84,7 @@ class DataLoader(ABC):
 				import_config.unity_paths, base_dirs.UNITY_DIR, self._load_data
 			),
 			'flash': self._load_data_by_category(
-				import_config.flash_paths, base_dirs.FLASH_DIR, self._load_xml_data
+				import_config.flash_paths, base_dirs.FLASH_DIR, self._load_data
 			),
 			'patch': self._load_data_by_category(
 				import_config.patch_paths, base_dirs.PATCH_DIR, self._load_patch
@@ -134,17 +134,18 @@ class DataLoader(ABC):
 		return cast(Patch, cls._load_data(path))
 
 	@classmethod
-	def _load_xml_data(cls, path: str | Path) -> JSONObject:
-		return xmltodict.parse(
-			Path(path).read_text(),
-			encoding='utf-8',
-			attr_prefix='',
-			postprocessor=_convert_xml_attr_to_number,
-		)
-
-	@classmethod
 	def _load_data(cls, path: str | Path) -> JSONObject:
-		return json.loads(Path(path).read_text())
+		"""加载数据，优先尝试以JSON格式加载，如果失败则尝试以XML格式加载"""
+		data = Path(path).read_text()
+		try:
+			return json.loads(Path(path).read_text())
+		except json.JSONDecodeError:
+			return xmltodict.parse(
+				data,
+				encoding='utf-8',
+				attr_prefix='',
+				postprocessor=_convert_xml_attr_to_number,
+			)
 
 	@classmethod
 	@abstractmethod
