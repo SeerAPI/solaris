@@ -25,6 +25,7 @@ general_import_config = DataImportConfig(
 	flash_paths=(
 		'config.xml.PetXMLInfo.xml',
 		'config.xml.PetBookXMLInfo.xml',
+		'config.xml.PetLeftAndRightXmlInfo_petClass.xml',
 	),
 	patch_paths=(
 		'pet_gender.json',
@@ -131,3 +132,12 @@ class BasePetAnalyzer(BaseDataSourceAnalyzer):
 				result[pet_id].append(data['id'])
 
 		return dict(result)
+	
+	@cached_property
+	def pet_left_and_right_data(self) -> dict[int, int]:
+		data = self._get_data('flash', 'config.xml.PetLeftAndRightXmlInfo_petClass.xml')
+		return {
+			int(key): value
+			for key, value in data.items()
+			if key.isdigit()
+		}

@@ -31,6 +31,7 @@ class PetSkinAnalyzer(BasePetAnalyzer):
 				id=skin_id,
 				name=pet_skin['name'],
 				resource_id=resource_id,
+				enemy_resource_id=self.pet_left_and_right_data.get(resource_id),
 				pet=ResourceRef(id=pet_id, resource_name='pet'),
 				category=ResourceRef.from_model(id=category_id, model=PetSkinCategory),
 			)

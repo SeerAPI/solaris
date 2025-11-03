@@ -264,6 +264,7 @@ class PetAnalyzer(BasePetAnalyzer):
 					for soulmark_id in self.pet_soulmark_data.get(pet_id, [])
 				],
 				resource_id=pet_dict.get('real_id') or pet_id, # TODO: 需要对手侧资源id
+				enemy_resource_id=self.pet_left_and_right_data.get(pet_id),
 				encyclopedia_entry=encyclopedia_entry,
 				archive_story_entry=archive_story_entry,
 			)
