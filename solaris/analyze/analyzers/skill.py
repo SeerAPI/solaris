@@ -336,6 +336,7 @@ class SkillAnalyzer(BaseSkillEffectAnalyzer):
 				**move,
 				'accuracy': flash_data_map[move_id]['Accuracy'],
 				'crit_rate': crit_rate,
+				**flash_data_map[move_id],
 			}
 
 		return result
@@ -347,20 +348,20 @@ class SkillAnalyzer(BaseSkillEffectAnalyzer):
 			_types_namespace={'SkillEffectType': SkillEffectType},
 		)
 		Skill.model_rebuild()
-		hide_effect_csv = self._get_data('patch', 'skill_hide_effect.json')
-		category_csv = self._get_data('patch', 'skill_category.json')
+		hide_effect_table = self._get_data('patch', 'skill_hide_effect.json')
+		category_table = self._get_data('patch', 'skill_category.json')
 
 		skill_data = self.moves_data
 		category_map: CategoryMap[int, SkillCategory, ResourceRef] = (
 			create_category_map(
-				category_csv,
+				category_table,
 				model_cls=SkillCategory,
 				array_key='skill',
 			)
 		)
 		hide_effect_map: CategoryMap[int, SkillHideEffect, ResourceRef] = (
 			create_category_map(
-				hide_effect_csv,
+				hide_effect_table,
 				model_cls=SkillHideEffect,
 				array_key='skill',
 			)
@@ -409,7 +410,7 @@ class SkillAnalyzer(BaseSkillEffectAnalyzer):
 			category_map.add_element(skill_model.category.id, skill_ref)
 
 			# 处理技能隐藏效果
-			for id_, effect in hide_effect_csv.items():
+			for id_, effect in hide_effect_table.items():
 				original_name = effect['original']
 				if enum_value := skill.get(original_name, None):
 					# PwrBindDv 有两种效果，对应相同字段的不同的值
