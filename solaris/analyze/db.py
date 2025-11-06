@@ -34,8 +34,8 @@ def get_class_by_tablename(table_fullname: str) -> type[SQLModel] | None:
 class DBManager:
 	engine: Engine | None = None
 
-	def __init__(self, db_path: str, echo: bool = False, **kwargs) -> None:
-		self._kwargs = {'url': db_path, 'echo': echo, **kwargs}
+	def __init__(self, db_url: str, echo: bool = False, **kwargs) -> None:
+		self._kwargs = {'url': db_url, 'echo': echo, **kwargs}
 
 	def init(self) -> None:
 		self.engine = create_engine(**self._kwargs)

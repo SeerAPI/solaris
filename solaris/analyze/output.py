@@ -1,7 +1,7 @@
 from collections.abc import Iterable, MutableMapping, Sequence
 import inspect
 from pathlib import Path
-from typing import Annotated, Any, TypeVar
+from typing import Annotated, Any, TypeVar, Protocol, overload
 
 from pydantic import BaseModel, TypeAdapter
 from pydantic.fields import FieldInfo
@@ -15,6 +15,7 @@ from seerapi_models.common import (
 from seerapi_models.metadata import ApiMetadata
 from tqdm import tqdm
 
+from solaris.analyze.db import DBManager
 from solaris.analyze.schema_generate import (
 	JsonSchemaGenerator,
 	ShrinkOnlyNonRoot,
@@ -94,7 +95,15 @@ def _generate_api_resource_list(result: AnalyzeResult) -> ApiResourceList:
 _GT = TypeVar('_GT', bound=GenerateJsonSchema)
 
 
-class AnalyzeResultJsonOutputter:
+class OutputterProtocol(Protocol):
+	"""输出器协议"""
+
+	def run(self, results: Sequence[AnalyzeResult]) -> None:
+		"""执行输出流程"""
+		pass
+
+
+class JsonOutputter(OutputterProtocol):
 	"""负责将分析结果输出为JSON文件和Schema的类"""
 
 	def __init__(
@@ -397,3 +406,69 @@ class AnalyzeResultJsonOutputter:
 		# 输出根目录index（仅在非合并模式）
 		if not merge_json_table:
 			self._output_root_index(root_index_data)
+
+
+class DBOutputter(OutputterProtocol):
+	"""负责将分析结果输出到数据库的类"""
+
+	@overload
+	def __init__(self, metadata: ApiMetadata, *, db_manager: DBManager) -> None:
+		...
+
+	@overload
+	def __init__(
+		self,
+		metadata: ApiMetadata,
+		*,
+		db_url: str,
+		echo: bool = False,
+		**kwargs,
+	) -> None:
+		...
+
+	def __init__(self, metadata: ApiMetadata, **kwargs) -> None:
+		self.metadata = metadata
+		if 'db_manager' in kwargs:
+			self.db_manager = kwargs['db_manager']
+		elif 'db_url' in kwargs and 'echo' in kwargs:
+			self.db_manager = DBManager(**kwargs)
+		else:
+			raise ValueError('Invalid arguments')
+
+	def init(self) -> None:
+		if not self.db_manager.initialized:
+			self.db_manager.init()
+
+	@property
+	def initialized(self) -> bool:
+		return self.db_manager.initialized
+
+	def run(self, results: Sequence[AnalyzeResult]) -> None:
+		"""执行数据库输出流程
+		
+		Args:
+			results: 分析结果序列
+		"""
+		if not self.initialized:
+			raise RuntimeError('Database not initialized')
+
+		for result in (pbar_result := tqdm(results, leave=False)):
+			name = result.name or result.model.resource_name()
+			pbar_result.set_description(
+				f'正在输出数据库数据|输出{name}',
+				refresh=True,
+			)
+			data = result.data
+			output_mode = result.output_mode
+
+			if output_mode not in ('db', 'all'):
+				continue
+
+			with self.db_manager.get_session() as session:
+				from solaris.analyze.db import write_result_to_db
+				write_result_to_db(session, data)
+
+		# 保存元数据
+		with self.db_manager.get_session() as session:
+			session.add(self.metadata.to_orm())
+			session.commit()

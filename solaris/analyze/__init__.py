@@ -7,8 +7,8 @@ from tqdm import tqdm
 from solaris.utils import import_all_classes
 
 from .base import BaseAnalyzer
-from .db import DBManager, write_result_to_db
-from .output import AnalyzeResultJsonOutputter
+from .db import DBManager
+from .output import DBOutputter, JsonOutputter
 from .typing_ import AnalyzeResult
 
 ANALYZER_DEFAULT_PACKAGE_NAME = 'solaris.analyze.analyzers'
@@ -25,7 +25,7 @@ def analyze_result_to_json(
 	merge_json_table: bool = False,
 ) -> None:
 	"""分析数据并输出到JSON文件（向后兼容的函数包装）"""
-	outputter = AnalyzeResultJsonOutputter(
+	outputter = JsonOutputter(
 		metadata=metadata,
 		base_output_dir=base_output_dir,
 		schema_output_dir=schema_output_dir,
@@ -42,28 +42,14 @@ def analyze_result_to_db(
 	metadata: ApiMetadata,
 	db_url: str = 'sqlite:///solaris.db',
 ) -> None:
-	db_manager = DBManager(db_url)
-	if not db_manager.initialized:
-		db_manager.init()
-
-	for result in (pbar_result := tqdm(results, leave=False)):
-		name = result.name or result.model.resource_name()
-		pbar_result.set_description(
-			f'正在输出数据库数据|输出{name}',
-			refresh=True,
-		)
-		data = result.data
-		output_mode = result.output_mode
-
-		if output_mode not in ('db', 'all'):
-			continue
-
-		with db_manager.get_session() as session:
-			write_result_to_db(session, data)
-
-	with db_manager.get_session() as session:
-		session.add(metadata.to_orm())
-		session.commit()
+	"""分析数据并输出到数据库（向后兼容的函数包装）"""
+	outputter = DBOutputter(
+		metadata=metadata,
+		db_url=db_url,
+		echo=False,
+	)
+	outputter.init()
+	outputter.run(results)
 
 
 def import_analyzer_classes(
