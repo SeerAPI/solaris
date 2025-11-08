@@ -2,16 +2,16 @@ from functools import cached_property
 from typing import TYPE_CHECKING, Any, TypedDict, cast
 
 from seerapi_models.common import EidEffect, EidEffectInUse, ResourceRef, SixAttributes
-from seerapi_models.equip import (
+from seerapi_models.items import (
 	Equip,
 	EquipBonus,
 	EquipEffectiveOccasion,
 	EquipType,
-	OtherAttribute,
-	PkAttribute,
+	Item,
 	Suit,
 	SuitBonus,
 )
+from seerapi_models.items.equip import OtherAttribute, PkAttribute
 
 from solaris.analyze.analyzers.items._general import BaseItemAnalyzer
 from solaris.analyze.base import DataImportConfig
@@ -350,6 +350,7 @@ class EquipAnalyzer(BaseItemAnalyzer):
 				suit=suit_ref,
 				bonus=equip_bonus,
 				occasion=occasion,
+				item=ResourceRef.from_model(Item, id=equip_id),
 			)
 			part_type_map.add_element(part_type_id, equip_ref)
 

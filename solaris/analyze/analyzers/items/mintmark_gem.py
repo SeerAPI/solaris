@@ -2,13 +2,15 @@ from functools import cached_property
 from typing import TYPE_CHECKING
 
 from seerapi_models.common import ResourceRef, SkillEffectInUse
-from seerapi_models.mintmark_gem import (
+from seerapi_models.items import (
 	Gem,
 	GemCategory,
 	GemGen1,
 	GemGen2,
 	GemGenCategory,
+	Item,
 )
+from seerapi_models.skill import SkillEffectType
 
 from solaris.analyze.analyzers.skill import BaseSkillEffectAnalyzer
 from solaris.analyze.base import DataImportConfig
@@ -70,6 +72,11 @@ class GemAnalyzer(BaseSkillEffectAnalyzer):
 		return result
 
 	def _create_gem_effect(self, data: 'GemItem') -> list[SkillEffectInUse]:
+		SkillEffectInUse.model_rebuild(
+			force=True,
+			_parent_namespace_depth=2,
+			_types_namespace={'SkillEffectType': SkillEffectType},
+		)
 		effect = data['skill_effects'][0]['effect']
 		if not effect:
 			return []
@@ -138,6 +145,7 @@ class GemAnalyzer(BaseSkillEffectAnalyzer):
 				effect=self._create_gem_effect(gem_data),
 				upgrade_cost=upgrade_cost,
 				fail_compensate_range=fail_compensate_range,
+				item=ResourceRef.from_model(Item, id=gem_id),
 			)
 			gem_map[gem_id] = gem_obj
 

@@ -1,15 +1,14 @@
 from itertools import chain
-from typing import Any, Callable
-from seerapi_models.common import EidEffect, EidEffectInUse, ResourceRef
+from typing import Callable
+from seerapi_models.common import EidEffect, EidEffectInUse
 from seerapi_models.effect import PetEffect, VariationEffect
-from seerapi_models.equip import Equip, Suit, SuitBonus
-from seerapi_models.items import EnergyBead
+from seerapi_models.items import EnergyBead, Equip, SuitBonus
 from seerapi_models.pet import Soulmark
 from solaris.analyze.typing_ import AnalyzeResult, TResModel
 from solaris.analyze.base import BaseAnalyzer, BasePostAnalyzer
 
 from .effect import NewSeAnalyzer
-from .equip import EquipAnalyzer
+from .items.equip import EquipAnalyzer
 from .items.enegry_bead import EnergyBeadAnalyzer
 from .pet.soulmark import SoulmarkAnalyzer
 
