@@ -1,5 +1,5 @@
 from functools import cached_property
-from typing import TYPE_CHECKING, Any, TypedDict
+from typing import TYPE_CHECKING, Any, TypedDict, cast
 
 from seerapi_models.common import EidEffect, EidEffectInUse, ResourceRef, SixAttributes
 from seerapi_models.equip import (
@@ -266,8 +266,12 @@ class EquipAnalyzer(BaseItemAnalyzer):
 		return None
 
 	def _get_equip_items_data(self) -> "dict[int, Item1 | Item13]":
-		items_data_part1: list["Item1"] = self.get_category(1)['root']['items']
-		items_data_part2: list["Item13"] = self.get_category(13)['root']['items']
+		items_data_part1 = cast(
+			list["Item1"], self.get_category_items(1)['root']['items']
+		)
+		items_data_part2 = cast(
+			list["Item13"], self.get_category_items(13)['root']['items']
+		)
 		return {item['id']: item for item in items_data_part1 + items_data_part2}
 
 	def analyze(self) -> tuple[AnalyzeResult, ...]:

@@ -75,8 +75,8 @@ class EnergyBeadAnalyzer(BaseItemAnalyzer):
 		bead_map: dict[int, EnergyBead] = {}
 		bead_effect_data: dict[int, "NewSeItem"] = self.bead_effect_data
 		pet_item_data: dict[int, "Item3"] = {
-			data['id']: data
-			for data in self.get_category(3)['root']['items']
+			data['id']: cast("Item3", data)
+			for data in self.get_category_items(3)['root']['items']
 		}
 		desc_data: dict[int, str] = {
 			data['id']: data['des']

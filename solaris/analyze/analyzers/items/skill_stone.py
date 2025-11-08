@@ -1,6 +1,6 @@
 from functools import cached_property
 from itertools import chain
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from seerapi_models.common import ResourceRef, SkillEffectInUse
 from seerapi_models.items import Item, SkillStone, SkillStoneCategory, SkillStoneEffect
@@ -39,7 +39,7 @@ class SkillStoneAnalyzer(BaseSkillEffectAnalyzer, BaseItemAnalyzer):
 
 	@cached_property
 	def skill_stone_data(self) -> dict[int, "SkillStoneDict"]:
-		unity_data: list["Item11"] = self.get_category(11)['root']['items']
+		unity_data = cast(list["Item11"], self.get_category_items(11)['root']['items'])
 		flash_data = self._get_data(
 			'flash', 'config.xml.SkillXMLInfo_skillStoneClass.xml'
 		)['MoveStones']['MoveStone']
