@@ -79,13 +79,13 @@ class DataLoader(ABC):
 		base_dirs: DataSourceDirSettings = import_config.SOURCE_DIR_SETTINGS
 		self.data: AnalyzeData = {
 			'html5': self._load_data_by_category(
-				import_config.html5_paths, base_dirs.HTML5_DIR, self._load_data
+				import_config.html5_paths, base_dirs.HTML5_DIR, self._load_html5_data
 			),
 			'unity': self._load_data_by_category(
-				import_config.unity_paths, base_dirs.UNITY_DIR, self._load_data
+				import_config.unity_paths, base_dirs.UNITY_DIR, self._load_unity_data
 			),
 			'flash': self._load_data_by_category(
-				import_config.flash_paths, base_dirs.FLASH_DIR, self._load_data
+				import_config.flash_paths, base_dirs.FLASH_DIR, self._load_flash_data
 			),
 			'patch': self._load_data_by_category(
 				import_config.patch_paths, base_dirs.PATCH_DIR, self._load_patch
@@ -147,6 +147,18 @@ class DataLoader(ABC):
 				attr_prefix='',
 				postprocessor=_convert_xml_attr_to_number,
 			)
+
+	@classmethod
+	def _load_flash_data(cls, path: str | Path) -> JSONObject:
+		return cls._load_data(path)
+
+	@classmethod
+	def _load_unity_data(cls, path: str | Path) -> JSONObject:
+		return cls._load_data(path)
+
+	@classmethod
+	def _load_html5_data(cls, path: str | Path) -> JSONObject:
+		return cls._load_data(path)
 
 	@classmethod
 	@abstractmethod
