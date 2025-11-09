@@ -141,7 +141,7 @@ class PetAnalyzer(BasePetAnalyzer):
 					pet_class_map[pet_cls_id] = PetClass(
 						id=pet_cls_id,
 						evolution_chain=[pet_ref],
-						**cls_info # type: ignore[arg-type]
+						**cls_info,  # type: ignore[arg-type]
 					)
 				pet_cls = pet_class_map[pet_cls_id]
 				pet_cls_ref = ResourceRef.from_model(pet_cls)
@@ -161,9 +161,8 @@ class PetAnalyzer(BasePetAnalyzer):
 			yielding_ev = _handle_yielding_ev(pet_dict['YieldingEV'])
 
 			diy_stats: DiyStatsRange | None = None
-			if (
-				(diy_min := pet_dict.get('DiyRaceMin'))
-				and (diy_max := pet_dict.get('DiyRaceMax'))
+			if (diy_min := pet_dict.get('DiyRaceMin')) and (
+				diy_max := pet_dict.get('DiyRaceMax')
 			):
 				diy_stats = DiyStatsRange(
 					min=SixAttributes.from_string(diy_min, hp_first=True),
@@ -263,7 +262,7 @@ class PetAnalyzer(BasePetAnalyzer):
 					ResourceRef(id=soulmark_id, resource_name='soulmark')
 					for soulmark_id in self.pet_soulmark_data.get(pet_id, [])
 				],
-				resource_id=pet_dict.get('real_id') or pet_id, # TODO: 需要对手侧资源id
+				resource_id=pet_dict.get('real_id') or pet_id,  # TODO: 需要对手侧资源id
 				enemy_resource_id=self.pet_left_and_right_data.get(pet_id),
 				encyclopedia_entry=encyclopedia_entry,
 				archive_story_entry=archive_story_entry,

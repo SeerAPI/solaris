@@ -32,6 +32,7 @@ def _get_generation_id_from_category(category_id: int) -> int:
 
 
 if TYPE_CHECKING:
+
 	class GemItem(UnityGemItem):
 		fail_compensate_start: int
 		fail_compensate_end: int
@@ -45,18 +46,17 @@ class GemAnalyzer(BaseSkillEffectAnalyzer):
 	@classmethod
 	def get_data_import_config(cls) -> DataImportConfig:
 		return super().get_data_import_config() + DataImportConfig(
-			unity_paths=('gems.json',),
-			flash_paths=('config.xml.GemsXMLInfo.xml',)
+			unity_paths=('gems.json',), flash_paths=('config.xml.GemsXMLInfo.xml',)
 		)
 
 	@cached_property
 	def gem_data(self) -> dict[int, 'GemItem']:
-		unity_data: list['UnityGemItem'] = self._get_data(
-			'unity', 'gems.json'
-		)['gems']['gem']
-		flash_data = self._get_data(
-			'flash', 'config.xml.GemsXMLInfo.xml'
-		)['Gems']['Gem']
+		unity_data: list['UnityGemItem'] = self._get_data('unity', 'gems.json')['gems'][
+			'gem'
+		]
+		flash_data = self._get_data('flash', 'config.xml.GemsXMLInfo.xml')['Gems'][
+			'Gem'
+		]
 		flash_data_map = {i['ID']: i for i in flash_data}
 		result = {}
 		for gem in unity_data:

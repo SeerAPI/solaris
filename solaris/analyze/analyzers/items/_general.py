@@ -10,14 +10,15 @@ from solaris.typing import JSONObject
 from solaris.utils import get_nested_value
 
 if TYPE_CHECKING:
+	from solaris.parse.parsers.items_optimize.base_item import BaseItemData, DataRoot
 	from solaris.parse.parsers.items_optimize.items_optimize_cat import (
 		ItemsOptimizeCatConfig,
 	)
-	from solaris.parse.parsers.items_optimize.base_item import DataRoot, BaseItemData
 	from solaris.parse.parsers.items_tip import ItemTipItem
 
 
-_ItemConfigType: TypeAlias = "DataRoot[BaseItemData]"
+_ItemConfigType: TypeAlias = 'DataRoot[BaseItemData]'
+
 
 def _range() -> range:
 	return range(27)
@@ -41,8 +42,7 @@ class BaseItemAnalyzer(BaseDataSourceAnalyzer):
 			key = f'itemsOptimizeCatItems{cat["id"]}.json'
 			item_data = self.get_category_items(cat['id'])
 			self.data['unity'][key] = cast(
-				JSONObject,
-				_merge_max_value(cat['max'], item_data)
+				JSONObject, _merge_max_value(cat['max'], item_data)
 			)
 
 	@classmethod
@@ -53,24 +53,22 @@ class BaseItemAnalyzer(BaseDataSourceAnalyzer):
 		)
 
 	@cached_property
-	def item_category_data(self) -> "ItemsOptimizeCatConfig":
+	def item_category_data(self) -> 'ItemsOptimizeCatConfig':
 		return self._get_data('unity', 'itemsOptimizeCat.json')
 
 	@cached_property
-	def item_tip_data(self) -> dict[int, "ItemTipItem"]:
+	def item_tip_data(self) -> dict[int, 'ItemTipItem']:
 		return {
 			data['id']: data
 			for data in self._get_data('unity', 'itemsTip.json')['root']['item']
 		}
 
 	def get_category_items(self, category_id: int) -> _ItemConfigType:
-		return self._get_data(
-			'unity', f'itemsOptimizeCatItems{category_id}.json'
-		)
+		return self._get_data('unity', f'itemsOptimizeCatItems{category_id}.json')
 
 
 class ItemAnalyzer(BaseItemAnalyzer):
-	def _item_dict_to_model(self, item_data: list["BaseItemData"]) -> dict[int, "Item"]:
+	def _item_dict_to_model(self, item_data: list['BaseItemData']) -> dict[int, 'Item']:
 		return {
 			data['id']: Item(
 				id=data['id'],
@@ -83,10 +81,10 @@ class ItemAnalyzer(BaseItemAnalyzer):
 		}
 
 	def analyze(self) -> tuple[AnalyzeResult, ...]:
-		category_data: "ItemsOptimizeCatConfig" = self._get_data(
+		category_data: 'ItemsOptimizeCatConfig' = self._get_data(
 			'unity', 'itemsOptimizeCat.json'
 		)
-		category_map: dict[int, "ItemCategory"] = {}
+		category_map: dict[int, 'ItemCategory'] = {}
 		for category in category_data['root']['cats']:
 			id_ = category['id']
 			category_map[id_] = ItemCategory(
@@ -95,7 +93,7 @@ class ItemAnalyzer(BaseItemAnalyzer):
 				max=category['max'],
 			)
 
-		item_map: dict[int, "Item"] = {}
+		item_map: dict[int, 'Item'] = {}
 		for id_, category in category_map.items():
 			item_data = self.get_category_items(id_)['root']['items']
 			for item in item_data:

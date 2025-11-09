@@ -86,10 +86,10 @@ class StatChange:
 
 
 def add_condition_labels(
-	formatting_adjustment: str,
-	condition_strings: list[str]
+	formatting_adjustment: str, condition_strings: list[str]
 ) -> str | None:
 	import re
+
 	if not formatting_adjustment:
 		return None
 
@@ -102,7 +102,7 @@ def add_condition_labels(
 		if not condition:
 			continue
 		pattern = re.escape(condition)
-		replacement = f"<condition>{condition}</condition>"
+		replacement = f'<condition>{condition}</condition>'
 		result = re.sub(pattern, replacement, result)
 
 	return result
@@ -111,13 +111,11 @@ def add_condition_labels(
 class BaseSkillEffectAnalyzer(BaseDataSourceAnalyzer):
 	@classmethod
 	def get_data_import_config(cls) -> DataImportConfig:
-		return DataImportConfig(
-			unity_paths=('effectInfo.json', 'skillEffect.json')
-		)
+		return DataImportConfig(unity_paths=('effectInfo.json', 'skillEffect.json'))
 
 	@cached_property
-	def other_effect_map(self) -> dict[int, "SkillEffectItem"]:
-		other_effect_data: list["SkillEffectItem"] = self._get_data(
+	def other_effect_map(self) -> dict[int, 'SkillEffectItem']:
+		other_effect_data: list['SkillEffectItem'] = self._get_data(
 			'unity', 'skillEffect.json'
 		)['data']
 		return {item['id']: item for item in other_effect_data}
@@ -125,6 +123,7 @@ class BaseSkillEffectAnalyzer(BaseDataSourceAnalyzer):
 	@cached_property
 	def effect_type_tag_map(self) -> dict[str, SkillEffectTypeTag]:
 		import anycrc
+
 		crc16 = anycrc.Model('CRC16')
 		tag_set = {
 			tag
@@ -134,15 +133,14 @@ class BaseSkillEffectAnalyzer(BaseDataSourceAnalyzer):
 		}
 		return {
 			tag_str: SkillEffectTypeTag(
-				id=crc16.calc(tag_str.encode('utf-8')),
-				name=tag_str
+				id=crc16.calc(tag_str.encode('utf-8')), name=tag_str
 			)
 			for tag_str in tag_set
 		}
 
 	@cached_property
 	def effect_param_map(self) -> dict[int, SkillEffectParam]:
-		effect_param_data: list["ParamTypeItem"] = self._get_data(
+		effect_param_data: list['ParamTypeItem'] = self._get_data(
 			'unity', 'effectInfo.json'
 		)['root']['param_type']
 
@@ -161,7 +159,7 @@ class BaseSkillEffectAnalyzer(BaseDataSourceAnalyzer):
 
 	@cached_property
 	def effect_type_map(self) -> dict[int, SkillEffectType]:
-		effect_type_data: list["EffectInfoItem"] = self._get_data(
+		effect_type_data: list['EffectInfoItem'] = self._get_data(
 			'unity', 'effectInfo.json'
 		)['root']['effect']
 
@@ -178,7 +176,7 @@ class BaseSkillEffectAnalyzer(BaseDataSourceAnalyzer):
 						param=ResourceRef.from_model(self.effect_param_map[id_]),
 					)
 					for id_, start_index, _ in [
-						param_list[i:i+3] for i in range(0, len(param_list), 3)
+						param_list[i : i + 3] for i in range(0, len(param_list), 3)
 					]
 				]
 			other_effect_data = self.other_effect_map.get(id_)
@@ -189,9 +187,9 @@ class BaseSkillEffectAnalyzer(BaseDataSourceAnalyzer):
 			tags = []
 			if other_effect_data:
 				info_formatting_adj = add_condition_labels(
-						other_effect_data['formattingAdjustment'],
-						other_effect_data['ifTextItalic'].split('|'),
-					)
+					other_effect_data['formattingAdjustment'],
+					other_effect_data['ifTextItalic'].split('|'),
+				)
 				tags = [
 					self.effect_type_tag_map[tag]
 					for index in ('tagA', 'tagB', 'tagC')
@@ -259,10 +257,9 @@ class BaseSkillEffectAnalyzer(BaseDataSourceAnalyzer):
 					kwargs = {}
 					if mode := format_mode_map.get(param_id):
 						kwargs['format_mode'] = mode
-					info_args[slice_] = (
-						[StatChange(*effect_args[slice_], **kwargs)]
-						+ [None] * 5
-					)
+					info_args[slice_] = [StatChange(*effect_args[slice_], **kwargs)] + [
+						None
+					] * 5
 					# 由于状态变化占用6个参数位置，所以填充5个None
 					continue
 				# 特别处理id为14的参数
@@ -296,6 +293,7 @@ def clac_crit_rate(crit_rate: int) -> float:
 
 
 if TYPE_CHECKING:
+
 	class MoveItem(UnityMoveItem):
 		accuracy: int
 		crit_rate: int | None
@@ -317,13 +315,13 @@ class SkillAnalyzer(BaseSkillEffectAnalyzer):
 		return super_config + config
 
 	@cached_property
-	def moves_data(self) -> dict[int, "MoveItem"]:
-		unity_data: list["UnityMoveItem"] = self._get_data(
-			'unity', 'moves.json'
-		)['root']['moves']['move']
-		flash_data = self._get_data(
-			'flash', 'config.xml.SkillXMLInfo.xml'
-		)['root']['item']
+	def moves_data(self) -> dict[int, 'MoveItem']:
+		unity_data: list['UnityMoveItem'] = self._get_data('unity', 'moves.json')[
+			'root'
+		]['moves']['move']
+		flash_data = self._get_data('flash', 'config.xml.SkillXMLInfo.xml')['root'][
+			'item'
+		]
 		flash_data_map = {i['ID']: i for i in flash_data}
 
 		result = {}
@@ -431,8 +429,8 @@ class SkillAnalyzer(BaseSkillEffectAnalyzer):
 			AnalyzeResult(model=SkillEffectParam, data=self.effect_param_map),
 			AnalyzeResult(model=SkillHideEffect, data=hide_effect_map),
 			AnalyzeResult(model=SkillCategory, data=category_map),
-			AnalyzeResult(model=SkillEffectTypeTag, data={
-				tag.id: tag
-				for tag in self.effect_type_tag_map.values()
-			}),
+			AnalyzeResult(
+				model=SkillEffectTypeTag,
+				data={tag.id: tag for tag in self.effect_type_tag_map.values()},
+			),
 		)

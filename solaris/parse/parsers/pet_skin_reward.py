@@ -76,4 +76,3 @@ class PetSkinRewardParser(BaseParser[PetSkinRewardConfig]):
 			)
 
 		return result
-

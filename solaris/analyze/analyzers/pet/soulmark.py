@@ -21,28 +21,24 @@ class SoulmarkAnalyzer(BaseDataSourceAnalyzer):
 		)
 
 	def analyze(self) -> tuple[AnalyzeResult, ...]:
-		soulmark_data = self._get_data(
-			'unity', 'effectIcon.json'
-		)['root']['effect']
-		tag_data: list[EffectTagItem] = self._get_data(
-			'unity', 'effectag.json'
-		)['data']
-		pet_effect_icon_data: list["PetEffectIconInfo"] = self._get_data(
+		soulmark_data = self._get_data('unity', 'effectIcon.json')['root']['effect']
+		tag_data: list[EffectTagItem] = self._get_data('unity', 'effectag.json')['data']
+		pet_effect_icon_data: list['PetEffectIconInfo'] = self._get_data(
 			'unity', 'petEffectIcon.json'
 		)['data']
-		pet_effect_icon_map: dict[int, "PetEffectIconInfo"] = {
-			data['effecticonid']: data
-			for data in pet_effect_icon_data
+		pet_effect_icon_map: dict[int, 'PetEffectIconInfo'] = {
+			data['effecticonid']: data for data in pet_effect_icon_data
 		}
 		soulmark_map: dict[int, Soulmark] = {}
-		tag_map: CategoryMap[
-			int,
-			SoulmarkTagCategory,
-			ResourceRef['Soulmark']
-		] = create_category_map(
-			{data['id']: {'id': data['id'], 'name': data['tag']} for data in tag_data},
-			model_cls=SoulmarkTagCategory,
-			array_key='soulmark',
+		tag_map: CategoryMap[int, SoulmarkTagCategory, ResourceRef['Soulmark']] = (
+			create_category_map(
+				{
+					data['id']: {'id': data['id'], 'name': data['tag']}
+					for data in tag_data
+				},
+				model_cls=SoulmarkTagCategory,
+				array_key='soulmark',
+			)
 		)
 		soulmark_intensify_map: dict[int, int] = {}
 
@@ -52,8 +48,7 @@ class SoulmarkAnalyzer(BaseDataSourceAnalyzer):
 				continue
 
 			pet_refs = [
-				ResourceRef(id=pet_id, resource_name='pet')
-				for pet_id in pet_ids
+				ResourceRef(id=pet_id, resource_name='pet') for pet_id in pet_ids
 			]
 
 			pve_effective = None
@@ -61,8 +56,7 @@ class SoulmarkAnalyzer(BaseDataSourceAnalyzer):
 			if tag_ids := soulmark_dict.get('kind'):
 				pve_effective = 1 in tag_ids
 				tags = [
-					ResourceRef.from_model(tag_map[tag_id + 1])
-					for tag_id in tag_ids
+					ResourceRef.from_model(tag_map[tag_id + 1]) for tag_id in tag_ids
 				]
 
 			to_res = None

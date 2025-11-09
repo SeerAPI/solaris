@@ -61,7 +61,7 @@ def create_settings(
 	type=click.Path(file_okay=False, dir_okay=True),
 	default='output',
 	show_default=True,
-	help='基础输出目录，仅在 --output-mode 为 json 或 all 时有效。'
+	help='基础输出目录，仅在 --output-mode 为 json 或 all 时有效。',
 )
 @click.option(
 	'--json-output-dir',

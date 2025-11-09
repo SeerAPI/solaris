@@ -41,8 +41,7 @@ class PetSkinAnalyzer(BasePetAnalyzer):
 					id=category_id,
 				)
 			pet_skin_category_map.add_element(
-				category_id,
-				ResourceRef.from_model(pet_skin)
+				category_id, ResourceRef.from_model(pet_skin)
 			)
 
 		return (

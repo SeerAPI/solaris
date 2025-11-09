@@ -67,4 +67,3 @@ class PetEffectIconParser(BaseParser[PetEffectIconConfig]):
 			)
 
 		return result
-

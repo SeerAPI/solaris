@@ -19,6 +19,7 @@ from ..utils import CategoryMap, create_category_map
 if TYPE_CHECKING:
 	from solaris.parse.parsers.mintmark import MintmarkConfig, MintMarkItem
 
+
 def _create_attr_values(data: 'MintMarkItem') -> dict[str, Any]:
 	kwargs = {}
 	for k, name in [
@@ -70,9 +71,9 @@ class MintmarkAnalyzer(BaseDataSourceAnalyzer):
 		rarity_map.update({i: MintmarkRarityCategory(id=i) for i in range(1, 6)})
 		effect_map: dict[int, int] = {
 			i['ID']: i['Effect']
-			for i in self._get_data(
-				'flash', 'config.xml.CountermarkXMLInfo.xml'
-			)['MintMarks']['MintMark']
+			for i in self._get_data('flash', 'config.xml.CountermarkXMLInfo.xml')[
+				'MintMarks'
+			]['MintMark']
 			if 'Effect' in i
 		}
 		mintmark_map: dict[int, Mintmark] = {}
@@ -100,15 +101,11 @@ class MintmarkAnalyzer(BaseDataSourceAnalyzer):
 			)
 			pet_refs = None
 			if pet_ids := mintmark['monster_id']:
-				pet_refs = [
-					ResourceRef(id=id_, resource_name='pet')
-					for id_ in pet_ids
-				]
+				pet_refs = [ResourceRef(id=id_, resource_name='pet') for id_ in pet_ids]
 			skill_refs = None
 			if skill_ids := mintmark['move_id']:
 				skill_refs = [
-					ResourceRef(id=id_, resource_name='skill')
-					for id_ in skill_ids
+					ResourceRef(id=id_, resource_name='skill') for id_ in skill_ids
 				]
 			# 飓风利袭刻印的Arg字段是错误的，删除它
 			if id_ == 20187:

@@ -34,13 +34,13 @@ class BattleEffectAnalyzer(BaseDataSourceAnalyzer):
 		effect_patch: dict[int, BattleEffectPatchTable] = self._get_data(
 			'patch', 'battle_effects_custom.json'
 		)
-		effect_data: dict[str, "SubEffectItem"] = {
+		effect_data: dict[str, 'SubEffectItem'] = {
 			effect['name']: effect
 			for effect in self._get_data('unity', 'battleEffects.json')[
 				'battle_effects'
 			]['battle_effect'][0]['sub_effect']
 		}
-		effect_descs: dict[str, "EffectDesItem"] = {
+		effect_descs: dict[str, 'EffectDesItem'] = {
 			effect['kinddes']: effect
 			for effect in self._get_data('unity', 'effectDes.json')['root']['item']
 		}

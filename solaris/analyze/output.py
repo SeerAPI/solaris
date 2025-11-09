@@ -1,7 +1,7 @@
 from collections.abc import Iterable, MutableMapping, Sequence
 import inspect
 from pathlib import Path
-from typing import Annotated, Any, TypeVar, Protocol, overload
+from typing import Annotated, Any, Protocol, TypeVar, overload
 
 from pydantic import BaseModel, TypeAdapter
 from pydantic.fields import FieldInfo
@@ -30,21 +30,16 @@ from solaris.utils import join_url
 HASH_FIELD = FieldInfo(
 	annotation=str,
 	title='Hash',
-	description='数据哈希值，目前pydantic不支持对key进行排序，所以哈希值变化可能意味着数据结构变化而非数据值变化'
+	description='数据哈希值，目前pydantic不支持对key进行排序，所以哈希值变化可能意味着数据结构变化而非数据值变化',
 )
 
-DEFAULT_FIELDS = (
-	('hash', HASH_FIELD),
-)
+DEFAULT_FIELDS = (('hash', HASH_FIELD),)
 
 
 _T = TypeVar('_T', bound=MutableMapping[str, Any])
 
 
-def _add_fields_to_schema(
-	schema: _T,
-	fields: Iterable[tuple[str, FieldInfo]]
-) -> _T:
+def _add_fields_to_schema(schema: _T, fields: Iterable[tuple[str, FieldInfo]]) -> _T:
 	"""向schema添加额外字段"""
 	if 'properties' not in schema:
 		return schema
@@ -61,6 +56,7 @@ def _add_fields_to_schema(
 
 def _calc_hash(data: str | bytes) -> str:
 	import anycrc
+
 	crc32 = anycrc.Model('CRC32')
 	if isinstance(data, str):
 		data = data.encode('utf-8')
@@ -71,6 +67,7 @@ def _calc_hash(data: str | bytes) -> str:
 
 def _create_index_model(name: str, data: dict[str, Any]) -> type[BaseModel]:
 	from pydantic import Field, create_model
+
 	return create_model(
 		name,
 		**{
@@ -194,14 +191,14 @@ class JsonOutputter(OutputterProtocol):
 
 			schema_path = model.schema_path()
 			self._dump_schema(
-				model_json_schema(
-					model, schema_generator=self.shrink_generator
-				),
+				model_json_schema(model, schema_generator=self.shrink_generator),
 				Path(schema_path) / 'index.json',
 				fields=(),
 			)
 
-	def _generate_schema_for_result(self, result: AnalyzeResult) -> MutableMapping[str, Any]:
+	def _generate_schema_for_result(
+		self, result: AnalyzeResult
+	) -> MutableMapping[str, Any]:
 		"""为分析结果生成Schema
 
 		Args:
@@ -395,7 +392,8 @@ class JsonOutputter(OutputterProtocol):
 
 			# 处理单个结果
 			result_info = self._process_single_result(
-				result, merge_json_table=merge_json_table,
+				result,
+				merge_json_table=merge_json_table,
 			)
 			if result_info is not None:
 				resource_name, resource_url = result_info
@@ -412,8 +410,7 @@ class DBOutputter(OutputterProtocol):
 	"""负责将分析结果输出到数据库的类"""
 
 	@overload
-	def __init__(self, metadata: ApiMetadata, *, db_manager: DBManager) -> None:
-		...
+	def __init__(self, metadata: ApiMetadata, *, db_manager: DBManager) -> None: ...
 
 	@overload
 	def __init__(
@@ -423,8 +420,7 @@ class DBOutputter(OutputterProtocol):
 		db_url: str,
 		echo: bool = False,
 		**kwargs,
-	) -> None:
-		...
+	) -> None: ...
 
 	def __init__(self, metadata: ApiMetadata, **kwargs) -> None:
 		self.metadata = metadata
@@ -445,7 +441,7 @@ class DBOutputter(OutputterProtocol):
 
 	def run(self, results: Sequence[AnalyzeResult]) -> None:
 		"""执行数据库输出流程
-		
+
 		Args:
 			results: 分析结果序列
 		"""
@@ -466,6 +462,7 @@ class DBOutputter(OutputterProtocol):
 
 			with self.db_manager.get_session() as session:
 				from solaris.analyze.db import write_result_to_db
+
 				write_result_to_db(session, data)
 
 		# 保存元数据

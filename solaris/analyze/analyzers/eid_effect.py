@@ -1,17 +1,18 @@
+from collections.abc import Callable
 from itertools import chain
-from typing import Callable
+
 from seerapi_models.common import EidEffect, EidEffectInUse
 from seerapi_models.effect import PetEffect, VariationEffect
 from seerapi_models.items import EnergyBead, Equip, SuitBonus
 from seerapi_models.pet import Soulmark
-from solaris.analyze.typing_ import AnalyzeResult, TResModel
+
 from solaris.analyze.base import BaseAnalyzer, BasePostAnalyzer
+from solaris.analyze.typing_ import AnalyzeResult, TResModel
 
 from .effect import NewSeAnalyzer
-from .items.equip import EquipAnalyzer
 from .items.enegry_bead import EnergyBeadAnalyzer
+from .items.equip import EquipAnalyzer
 from .pet.soulmark import SoulmarkAnalyzer
-
 
 EidEffectExtractor = Callable[[TResModel], tuple[EidEffectInUse, str] | None]
 
@@ -81,7 +82,7 @@ class EidEffectAnalyzer(BasePostAnalyzer):
 			(EnergyBeadAnalyzer, EnergyBead, _extract_energy_bead_effect),
 			(SoulmarkAnalyzer, Soulmark, _extract_soulmark_effect),
 		]
-		
+
 		# 使用链式迭代器收集所有效果
 		chain_iter = chain.from_iterable(
 			self._collect_effects(analyzer, model, extractor)

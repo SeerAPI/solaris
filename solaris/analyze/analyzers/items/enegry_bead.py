@@ -36,6 +36,7 @@ def _convert_beads_arg(args: list[int], primary: bool = False) -> SixAttributes:
 
 
 if TYPE_CHECKING:
+
 	class NewSeItem(UnityNewSeItem):
 		AddType: int
 		Times: int
@@ -44,22 +45,25 @@ if TYPE_CHECKING:
 class EnergyBeadAnalyzer(BaseItemAnalyzer):
 	@classmethod
 	def get_data_import_config(cls) -> DataImportConfig:
-		return DataImportConfig(
-			unity_paths=(
-				'new_se.json',
-				'itemsTip.json',
-			),
-			flash_paths=('config.xml.PetEffectXMLInfo.xml',),
-		) + super().get_data_import_config()
+		return (
+			DataImportConfig(
+				unity_paths=(
+					'new_se.json',
+					'itemsTip.json',
+				),
+				flash_paths=('config.xml.PetEffectXMLInfo.xml',),
+			)
+			+ super().get_data_import_config()
+		)
 
 	@cached_property
-	def bead_effect_data(self) -> dict[int, "NewSeItem"]:
-		unity_data: list["UnityNewSeItem"] = self._get_data(
-			'unity', 'new_se.json'
-		)['NewSe']['NewSeIdx']
-		flash_data = self._get_data(
-			'flash', 'config.xml.PetEffectXMLInfo.xml'
-		)['NewSe']['NewSeIdx']
+	def bead_effect_data(self) -> dict[int, 'NewSeItem']:
+		unity_data: list['UnityNewSeItem'] = self._get_data('unity', 'new_se.json')[
+			'NewSe'
+		]['NewSeIdx']
+		flash_data = self._get_data('flash', 'config.xml.PetEffectXMLInfo.xml')[
+			'NewSe'
+		]['NewSeIdx']
 		flash_data_map = {i['Idx']: i for i in flash_data}
 		return {
 			data['ItemId']: {
@@ -73,9 +77,9 @@ class EnergyBeadAnalyzer(BaseItemAnalyzer):
 
 	def analyze(self) -> tuple[AnalyzeResult, ...]:
 		bead_map: dict[int, EnergyBead] = {}
-		bead_effect_data: dict[int, "NewSeItem"] = self.bead_effect_data
-		pet_item_data: dict[int, "Item3"] = {
-			data['id']: cast("Item3", data)
+		bead_effect_data: dict[int, 'NewSeItem'] = self.bead_effect_data
+		pet_item_data: dict[int, 'Item3'] = {
+			data['id']: cast('Item3', data)
 			for data in self.get_category_items(3)['root']['items']
 		}
 		desc_data: dict[int, str] = {

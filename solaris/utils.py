@@ -14,7 +14,7 @@ def import_all_classes(package_name: str, base_class: type[T]) -> list[type[T]]:
 
 	递归遍历指定包及其所有子包，查找并返回继承自指定基类的所有非抽象类。
 	该函数会自动处理导入错误，跳过无法导入的模块。
-	
+
 	支持传入包（目录）或单个模块（.py 文件）。
 
 	Args:
@@ -31,7 +31,7 @@ def import_all_classes(package_name: str, base_class: type[T]) -> list[type[T]]:
 
 		# 查找所有分析器类（包）
 		analyzers = import_all_classes('solaris.analyze', BaseAnalyzer)
-		
+
 		# 查找单个模块中的分析器类
 		analyzers = import_all_classes('solaris.analyze.analyzers.pet.soulmark', BaseAnalyzer)
 		```
@@ -275,9 +275,7 @@ def get_nested_value(
 
 def join_url(base_url: str, *parts: str, end_slash: bool = False) -> str:
 	url = '/'.join(
-		str(i).strip('/')
-		for i in [base_url, *parts]
-		if i and i not in ('.', '/', './')
+		str(i).strip('/') for i in [base_url, *parts] if i and i not in ('.', '/', './')
 	)
 	if end_slash:
 		url += '/'

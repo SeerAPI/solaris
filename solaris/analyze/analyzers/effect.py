@@ -16,10 +16,9 @@ class NewSeAnalyzer(BaseDataSourceAnalyzer):
 		return DataImportConfig(unity_paths=('new_se.json',))
 
 	def analyze(self) -> tuple[AnalyzeResult, ...]:
-		effect_data: list[dict[str, Any]] = self._get_data(
-			'unity',
-			'new_se.json'
-		)['NewSe']['NewSeIdx']
+		effect_data: list[dict[str, Any]] = self._get_data('unity', 'new_se.json')[
+			'NewSe'
+		]['NewSeIdx']
 		effect_map: dict[int, PetEffect] = {}
 		effect_group_map: dict[str, PetEffectGroup] = {}
 
@@ -60,7 +59,7 @@ class NewSeAnalyzer(BaseDataSourceAnalyzer):
 			AnalyzeResult(model=PetEffect, data=effect_map),
 			AnalyzeResult(
 				model=PetEffectGroup,
-				data={group.id: group for group in effect_group_map.values()}
+				data={group.id: group for group in effect_group_map.values()},
 			),
 			AnalyzeResult(model=VariationEffect, data=variation_map),
 		)

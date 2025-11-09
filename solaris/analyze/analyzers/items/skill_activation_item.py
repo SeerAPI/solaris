@@ -18,11 +18,11 @@ class SkillActivationItemAnalyzer(BaseDataSourceAnalyzer):
 		return DataImportConfig(unity_paths=('spHideMoves.json',))
 
 	def analyze(self) -> tuple[AnalyzeResult, ...]:
-		skill_activation_data: dict[int, "SpMovesItem"] = {
+		skill_activation_data: dict[int, 'SpMovesItem'] = {
 			data['item']: data
-			for data in self._get_data(
-				'unity', 'spHideMoves.json'
-			)['config']['sp_moves']
+			for data in self._get_data('unity', 'spHideMoves.json')['config'][
+				'sp_moves'
+			]
 		}
 
 		skill_activation_map: dict[int, SkillActivationItem] = {}

@@ -77,6 +77,7 @@ class EquipBonusItem(TypedDict):
 
 
 if TYPE_CHECKING:
+
 	class EquipItem(UnityEquipItem):
 		occasion: int
 		equip_bonus: EquipBonusItem | None
@@ -85,13 +86,13 @@ if TYPE_CHECKING:
 
 EMPTY_EQUIP_BONUS_ITEM = {
 	'Lv': 1,
-	'Attribute': "0 0 0 0 0 0",
+	'Attribute': '0 0 0 0 0 0',
 	'AddWay': 1,
-	'BattleLv': "0 0 0 0 0 0",
-	'OtherAttribute': "0 0 0",
-	'EffectID': "",
-	'EffectArgs': "",
-	'Desc': "",
+	'BattleLv': '0 0 0 0 0 0',
+	'OtherAttribute': '0 0 0',
+	'EffectID': '',
+	'EffectArgs': '',
+	'Desc': '',
 }
 
 
@@ -100,15 +101,21 @@ class EquipAnalyzer(BaseItemAnalyzer):
 
 	@classmethod
 	def get_data_import_config(cls) -> DataImportConfig:
-		return DataImportConfig(
-			flash_paths=('config.xml.ItemSeXMLInfo.xml', 'config.xml.ItemXMLInfo.xml'),
-			unity_paths=('suit.json', 'equip.json'),
-			patch_paths=('equip_effective_occasion.json', 'equip_type.json'),
-		) + super().get_data_import_config()
+		return (
+			DataImportConfig(
+				flash_paths=(
+					'config.xml.ItemSeXMLInfo.xml',
+					'config.xml.ItemXMLInfo.xml',
+				),
+				unity_paths=('suit.json', 'equip.json'),
+				patch_paths=('equip_effective_occasion.json', 'equip_type.json'),
+			)
+			+ super().get_data_import_config()
+		)
 
 	def _create_equip_bonus_item(
-		self,
-		flash_equip: dict[str, Any]) -> EquipBonusItem | None:
+		self, flash_equip: dict[str, Any]
+	) -> EquipBonusItem | None:
 		rank_data = flash_equip['Rank']
 		if isinstance(rank_data, dict):
 			equip_bonus_data = rank_data
@@ -123,9 +130,7 @@ class EquipAnalyzer(BaseItemAnalyzer):
 		add_way = bool(equip_bonus_data['AddWay'])
 		other_attr_args = split_string_arg(equip_bonus_data['OtherAttribute'])
 		other_attr = (
-			OtherAttribute.from_list(other_attr_args)
-			if any(other_attr_args)
-			else None
+			OtherAttribute.from_list(other_attr_args) if any(other_attr_args) else None
 		)
 		attr_args = split_string_arg(equip_bonus_data['Attribute'])
 		equip_attr = SixAttributes.from_list(attr_args, percent=add_way)
@@ -152,11 +157,7 @@ class EquipAnalyzer(BaseItemAnalyzer):
 			suit_effect_args,
 			flash_equip.get('AddArgs'),
 		)
-		mon_id = (
-			args
-			if any(args := split_string_arg(flash_equip['MonID']))
-			else []
-		)
+		mon_id = args if any(args := split_string_arg(flash_equip['MonID'])) else []
 		return SuitBonusItem(
 			desc=flash_equip['Desc'],
 			mon_id=mon_id,
@@ -167,20 +168,20 @@ class EquipAnalyzer(BaseItemAnalyzer):
 		)
 
 	@cached_property
-	def ability_equip_map(self) -> dict[int, "EquipItem"]:
-		unity_data: list["UnityEquipItem"] = self._get_data(
-			'unity', 'equip.json'
-		)['equips']['equip']
-		flash_data = self._get_data(
-			'flash', 'config.xml.ItemSeXMLInfo.xml'
-		)['Equips']['Equip']
+	def ability_equip_map(self) -> dict[int, 'EquipItem']:
+		unity_data: list['UnityEquipItem'] = self._get_data('unity', 'equip.json')[
+			'equips'
+		]['equip']
+		flash_data = self._get_data('flash', 'config.xml.ItemSeXMLInfo.xml')['Equips'][
+			'Equip'
+		]
 		flash_data_map = {i['ItemID']: i for i in flash_data}
 
-		result: dict[int, "EquipItem"] = {}
+		result: dict[int, 'EquipItem'] = {}
 		for equip in unity_data:
 			flash_equip = flash_data_map[equip['item_id']]
 			item_id = equip['item_id']
-			equip_item: "EquipItem" = {
+			equip_item: 'EquipItem' = {
 				**equip,
 				'occasion': flash_equip['Occasion'],
 				'equip_bonus': self._create_equip_bonus_item(flash_equip),
@@ -189,7 +190,7 @@ class EquipAnalyzer(BaseItemAnalyzer):
 			result[item_id] = equip_item
 		return result
 
-	def _get_equip_to_suit_map(self, suit_data: "SuitConfig") -> dict[int, Suit]:
+	def _get_equip_to_suit_map(self, suit_data: 'SuitConfig') -> dict[int, Suit]:
 		"""
 		获取装备到套装的映射关系
 		"""
@@ -198,9 +199,8 @@ class EquipAnalyzer(BaseItemAnalyzer):
 			suit_id = suit['id']
 			suit_bonus: SuitBonus | None = None
 			equip_ids = suit['cloths']
-			if (
-				(part_dict := self.ability_equip_map.get(equip_ids[0]))
-				and (suit_bonus_dict := part_dict['suit_bonus'])
+			if (part_dict := self.ability_equip_map.get(equip_ids[0])) and (
+				suit_bonus_dict := part_dict['suit_bonus']
 			):
 				eid_effect_id = suit_bonus_dict['effect_id']
 				eid_effect_args = suit_bonus_dict['effect_args']
@@ -227,8 +227,7 @@ class EquipAnalyzer(BaseItemAnalyzer):
 				name=suit['name'],
 				suit_desc=suit['suitdes'],
 				equips=[
-					ResourceRef.from_model(Equip, id=equip_id)
-					for equip_id in equip_ids
+					ResourceRef.from_model(Equip, id=equip_id) for equip_id in equip_ids
 				],
 				transform=bool(suit.get('transform')),
 				tran_speed=suit.get('tran_speed'),
@@ -240,16 +239,15 @@ class EquipAnalyzer(BaseItemAnalyzer):
 
 	@cached_property
 	def flash_equip_items_data(self) -> dict[int, dict[str, Any]]:
-		flash_data = self._get_data(
-			'flash', 'config.xml.ItemXMLInfo.xml'
-		)['root']['items']
+		flash_data = self._get_data('flash', 'config.xml.ItemXMLInfo.xml')['root'][
+			'items'
+		]
 		return {
 			item['ID']: item
 			for category in flash_data
 			if category['Name'] == '个人装扮'
 			for item in category['item']
 		}
-
 
 	def _create_pk_attribute(self, equip_id: int) -> 'PkAttribute | None':
 		equip = self.flash_equip_items_data[equip_id]
@@ -265,17 +263,17 @@ class EquipAnalyzer(BaseItemAnalyzer):
 
 		return None
 
-	def _get_equip_items_data(self) -> "dict[int, Item1 | Item13]":
+	def _get_equip_items_data(self) -> 'dict[int, Item1 | Item13]':
 		items_data_part1 = cast(
-			list["Item1"], self.get_category_items(1)['root']['items']
+			list['Item1'], self.get_category_items(1)['root']['items']
 		)
 		items_data_part2 = cast(
-			list["Item13"], self.get_category_items(13)['root']['items']
+			list['Item13'], self.get_category_items(13)['root']['items']
 		)
 		return {item['id']: item for item in items_data_part1 + items_data_part2}
 
 	def analyze(self) -> tuple[AnalyzeResult, ...]:
-		suit_data: "SuitConfig" = self._get_data('unity', 'suit.json')
+		suit_data: 'SuitConfig' = self._get_data('unity', 'suit.json')
 
 		part_type_patch = self._get_data('patch', 'equip_type.json')
 		occasion_patch = self._get_data('patch', 'equip_effective_occasion.json')
@@ -308,9 +306,8 @@ class EquipAnalyzer(BaseItemAnalyzer):
 			occasion = None
 
 			# 处理部件加成
-			if (
-				(ability_equip := self.ability_equip_map.get(equip_id))
-				and (bonus_dict := ability_equip['equip_bonus'])
+			if (ability_equip := self.ability_equip_map.get(equip_id)) and (
+				bonus_dict := ability_equip['equip_bonus']
 			):
 				occasion = ResourceRef.from_model(
 					occasion_map[ability_equip['occasion']]

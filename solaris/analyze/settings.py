@@ -7,8 +7,7 @@ from seerapi_models.metadata import ApiMetadata
 from solaris.settings import ENV_PREFIX, SETTINGS_CONFIG, BaseSettings
 
 
-class ApiMetadataSettings(ApiMetadata, BaseSettings):
-    ...
+class ApiMetadataSettings(ApiMetadata, BaseSettings): ...
 
 
 class DataSourceDirSettings(BaseSettings):

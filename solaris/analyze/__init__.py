@@ -15,21 +15,24 @@ ANALYZER_DEFAULT_PACKAGE_NAME = 'solaris.analyze.analyzers'
 
 class AnalyzerDependencyError(Exception):
 	"""分析器依赖关系错误
-	
+
 	当分析器的依赖关系存在问题时抛出，例如：
 	- 循环依赖
 	- 依赖的分析器不存在
 	- 依赖链无法满足
 	"""
+
 	pass
 
 
 class AnalyzerExecutionError(Exception):
 	"""分析器执行错误
-	
+
 	当分析器执行过程中发生错误时抛出
 	"""
+
 	pass
+
 
 def analyze_result_to_json(
 	results: Sequence[AnalyzeResult],
@@ -80,26 +83,26 @@ def _build_dependency_graph(
 	analyzers: list[type[BaseAnalyzer]],
 ) -> dict[type[BaseAnalyzer], list[type[BaseAnalyzer]]]:
 	"""构建分析器的依赖关系图
-	
+
 	Args:
 		analyzers: 分析器类列表
-	
+
 	Returns:
 		依赖关系图，键为分析器类，值为其依赖的分析器类列表
-	
+
 	Raises:
 		AnalyzerDependencyError: 当存在循环依赖或依赖的分析器不存在时
 	"""
 	analyzer_set = set(analyzers)
 	dependency_graph: dict[type[BaseAnalyzer], list[type[BaseAnalyzer]]] = {}
-	
+
 	# 构建依赖图
 	for analyzer in analyzers:
 		if issubclass(analyzer, BasePostAnalyzer):
 			# 创建临时实例来获取依赖
 			temp_instance = analyzer()
 			dependencies = list(temp_instance.get_input_analyzers())
-			
+
 			# 检查依赖是否都存在
 			for dep in dependencies:
 				if dep not in analyzer_set:
@@ -107,12 +110,12 @@ def _build_dependency_graph(
 						f'分析器 {analyzer.__name__} 依赖的分析器 '
 						f'{dep.__name__} 不在分析器列表中'
 					)
-			
+
 			dependency_graph[analyzer] = dependencies
 		else:
 			# 数据源分析器没有依赖
 			dependency_graph[analyzer] = []
-	
+
 	# 检测循环依赖
 	def _has_cycle(
 		node: type[BaseAnalyzer],
@@ -121,17 +124,17 @@ def _build_dependency_graph(
 	) -> bool:
 		visited.add(node)
 		rec_stack.add(node)
-		
+
 		for neighbor in dependency_graph.get(node, []):
 			if neighbor not in visited:
 				if _has_cycle(neighbor, visited, rec_stack):
 					return True
 			elif neighbor in rec_stack:
 				return True
-		
+
 		rec_stack.remove(node)
 		return False
-	
+
 	visited: set[type[BaseAnalyzer]] = set()
 	for analyzer in analyzers:
 		if analyzer not in visited:
@@ -139,7 +142,7 @@ def _build_dependency_graph(
 				raise AnalyzerDependencyError(
 					f'检测到循环依赖，涉及分析器: {analyzer.__name__}'
 				)
-	
+
 	return dependency_graph
 
 
@@ -148,17 +151,17 @@ def _topological_sort_analyzers(
 	dependency_graph: dict[type[BaseAnalyzer], list[type[BaseAnalyzer]]],
 ) -> list[type[BaseAnalyzer]]:
 	"""使用拓扑排序确定分析器的执行顺序
-	
+
 	在依赖图中，dependency_graph[A] = [B, C] 表示 A 依赖 B 和 C，
 	因此 B 和 C 必须在 A 之前执行。
-	
+
 	Args:
 		analyzers: 分析器类列表
 		dependency_graph: 依赖关系图，键为分析器，值为它依赖的分析器列表
-	
+
 	Returns:
 		排序后的分析器列表，保证依赖的分析器在前
-	
+
 	Raises:
 		AnalyzerDependencyError: 当存在循环依赖时（理论上不应该发生）
 	"""
@@ -166,18 +169,18 @@ def _topological_sort_analyzers(
 	in_degree: dict[type[BaseAnalyzer], int] = {
 		analyzer: len(dependency_graph.get(analyzer, [])) for analyzer in analyzers
 	}
-	
+
 	# 找出所有入度为0的节点（没有依赖的节点）
 	queue: list[type[BaseAnalyzer]] = [
 		analyzer for analyzer in analyzers if in_degree[analyzer] == 0
 	]
 	sorted_analyzers: list[type[BaseAnalyzer]] = []
-	
+
 	while queue:
 		# 取出入度为0的节点
 		current = queue.pop(0)
 		sorted_analyzers.append(current)
-		
+
 		# 找出所有依赖当前节点的节点，将它们的入度减1
 		for analyzer in analyzers:
 			if current in dependency_graph.get(analyzer, []):
@@ -188,7 +191,7 @@ def _topological_sort_analyzers(
 	# 检查是否所有节点都已排序
 	if len(sorted_analyzers) != len(analyzers):
 		raise AnalyzerDependencyError('无法完成拓扑排序，可能存在循环依赖')
-	
+
 	return sorted_analyzers
 
 
@@ -196,18 +199,18 @@ def run_all_analyzer(
 	analyzers: list[type[BaseAnalyzer]],
 ) -> list[AnalyzeResult]:
 	"""执行所有分析器，自动处理依赖关系
-	
+
 	该函数会：
 	1. 分析依赖关系并进行拓扑排序
 	2. 按依赖顺序执行分析器
 	3. 为后处理分析器传入其依赖的分析器结果
-	
+
 	Args:
 		analyzers: 分析器类列表
-	
+
 	Returns:
 		所有分析器的结果列表
-	
+
 	Raises:
 		AnalyzerDependencyError: 当依赖关系存在问题时
 		AnalyzerExecutionError: 当分析器执行失败时
@@ -222,14 +225,14 @@ def run_all_analyzer(
 	# 存储所有分析器的结果
 	analyzer_results: dict[type[BaseAnalyzer], list[AnalyzeResult]] = {}
 	all_results: list[AnalyzeResult] = []
-	
+
 	# 按顺序执行分析器
 	for analyzer_cls in (pbar_analyzer := tqdm(sorted_analyzers, leave=False)):
 		pbar_analyzer.set_description(
 			f'正在分析数据|调用{analyzer_cls.__name__}',
 			refresh=True,
 		)
-		
+
 		try:
 			# 根据类型创建分析器实例
 			if issubclass(analyzer_cls, BasePostAnalyzer):
@@ -238,17 +241,17 @@ def run_all_analyzer(
 			else:
 				# 数据源分析器直接创建
 				analyzer = analyzer_cls()
-			
+
 			# 执行分析
 			result = analyzer.analyze()
-			
+
 			# 存储结果
 			analyzer_results[analyzer_cls] = list(result)
 			all_results.extend(result)
-			
+
 		except Exception as e:
 			raise AnalyzerExecutionError(
 				f'分析器 {analyzer_cls.__name__} 执行失败: {e}'
 			) from e
-	
+
 	return all_results
