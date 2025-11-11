@@ -79,7 +79,7 @@ def _create_index_model(name: str, data: dict[str, Any]) -> type[BaseModel]:
 
 def _generate_api_resource_list(result: AnalyzeResult) -> ApiResourceList:
 	refs: list[NamedResourceRef] = [
-		NamedResourceRef(
+		NamedResourceRef.from_res_name(
 			id=i.id,
 			resource_name=i.resource_name(),
 			name=getattr(i, 'name', None),

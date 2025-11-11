@@ -3,6 +3,7 @@ from typing import Any
 
 from seerapi_models.common import ResourceRef
 from seerapi_models.pet import (
+	Pet,
 	PetArchiveStoryBook,
 	PetArchiveStoryEntry,
 	PetEncyclopediaEntry,
@@ -49,7 +50,7 @@ class PetEncyclopediaAnalyzer(BasePetAnalyzer):
 				foundin=foundin,
 				food=food,
 				introduction=data.get('Features', ''),
-				pet=ResourceRef(id=id_, resource_name='pet'),
+				pet=ResourceRef.from_model(Pet, id=id_),
 			)
 			results[id_] = entry
 		return (
@@ -77,7 +78,7 @@ class PetArchiveStoryAnalyzer(BasePetAnalyzer):
 			entry = PetArchiveStoryEntry(
 				id=id_,
 				content=content,
-				pet=ResourceRef(id=data['monid'], resource_name='pet'),
+				pet=ResourceRef.from_model(Pet, id=data['monid']),
 				book=ResourceRef.from_model(PetArchiveStoryBook, id=story_id),
 			)
 			entry_map[id_] = entry

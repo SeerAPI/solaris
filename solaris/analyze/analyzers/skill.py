@@ -3,6 +3,7 @@ from functools import cached_property
 from typing import TYPE_CHECKING, Literal
 
 from seerapi_models.common import ResourceRef, SkillEffectInUse
+from seerapi_models.element_type import TypeCombination
 from seerapi_models.skill import (
 	Skill,
 	SkillCategory,
@@ -367,10 +368,7 @@ class SkillAnalyzer(BaseSkillEffectAnalyzer):
 		skill_map: dict[int, Skill] = {}
 		for skill_id, skill in skill_data.items():
 			skill_name = skill['name']
-			skill_type = ResourceRef(
-				id=skill['type'],
-				resource_name='element_type_combination',
-			)
+			skill_type = ResourceRef.from_model(TypeCombination, id=skill['type'])
 			skill_category = ResourceRef.from_model(category_map[skill['category']])
 			skill_side_effect = self.create_skill_effect(
 				skill['side_effect'],

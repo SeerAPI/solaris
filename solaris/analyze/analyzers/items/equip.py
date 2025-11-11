@@ -12,6 +12,7 @@ from seerapi_models.items import (
 	SuitBonus,
 )
 from seerapi_models.items.equip import OtherAttribute, PkAttribute
+from seerapi_models.pet import Pet
 
 from solaris.analyze.analyzers.items._general import BaseItemAnalyzer
 from solaris.analyze.base import DataImportConfig
@@ -218,7 +219,7 @@ class EquipAnalyzer(BaseItemAnalyzer):
 					eid_effect=eid_effect,
 					newse_id=suit_bonus_dict.get('newse_id'),
 					effective_pets=[
-						ResourceRef(id=mon_id, resource_name='pet')
+						ResourceRef.from_model(Pet, id=mon_id)
 						for mon_id in suit_bonus_dict['mon_id']
 					],
 				)

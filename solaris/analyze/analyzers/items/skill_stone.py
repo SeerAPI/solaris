@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, cast
 from seerapi_models.common import ResourceRef, SkillEffectInUse
 from seerapi_models.items import Item, SkillStone, SkillStoneCategory, SkillStoneEffect
 from seerapi_models.skill import SkillEffectType
+from seerapi_models.element_type import TypeCombination
 
 from solaris.analyze.base import AnalyzeResult, DataImportConfig
 from solaris.analyze.utils import CategoryMap
@@ -94,10 +95,7 @@ class SkillStoneAnalyzer(BaseSkillEffectAnalyzer, BaseItemAnalyzer):
 				skill_stone_category_map[type_id] = SkillStoneCategory(
 					id=type_id,
 					name=category_name,
-					type=ResourceRef(
-						id=type_id,
-						resource_name='element_type_combination',
-					),
+					type=ResourceRef.from_model(TypeCombination, id=type_id),
 				)
 
 			category = skill_stone_category_map[type_id]

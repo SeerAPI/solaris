@@ -11,6 +11,8 @@ from seerapi_models.mintmark import (
 	SkillMintmarkEffect,
 	UniversalMintmark,
 )
+from seerapi_models.pet import Pet
+from seerapi_models.skill import Skill
 
 from ..base import BaseDataSourceAnalyzer, DataImportConfig
 from ..typing_ import AnalyzeResult
@@ -101,11 +103,11 @@ class MintmarkAnalyzer(BaseDataSourceAnalyzer):
 			)
 			pet_refs = None
 			if pet_ids := mintmark['monster_id']:
-				pet_refs = [ResourceRef(id=id_, resource_name='pet') for id_ in pet_ids]
+				pet_refs = [ResourceRef.from_model(Pet, id=id_) for id_ in pet_ids]
 			skill_refs = None
 			if skill_ids := mintmark['move_id']:
 				skill_refs = [
-					ResourceRef(id=id_, resource_name='skill') for id_ in skill_ids
+					ResourceRef.from_model(Skill, id=id_) for id_ in skill_ids
 				]
 			# 飓风利袭刻印的Arg字段是错误的，删除它
 			if id_ == 20187:

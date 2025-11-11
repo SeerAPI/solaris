@@ -1,5 +1,5 @@
 from seerapi_models.common import ResourceRef
-from seerapi_models.pet import PetSkin, PetSkinCategory
+from seerapi_models.pet import Pet, PetSkin, PetSkinCategory
 
 from solaris.analyze.base import AnalyzeResult
 from solaris.analyze.utils import CategoryMap
@@ -32,8 +32,8 @@ class PetSkinAnalyzer(BasePetAnalyzer):
 				name=pet_skin['name'],
 				resource_id=resource_id,
 				enemy_resource_id=self.pet_left_and_right_data.get(resource_id),
-				pet=ResourceRef(id=pet_id, resource_name='pet'),
-				category=ResourceRef.from_model(id=category_id, model=PetSkinCategory),
+				pet=ResourceRef.from_model(Pet, id=pet_id),
+				category=ResourceRef.from_model(PetSkinCategory, id=category_id),
 			)
 			pet_skin_map[skin_id] = pet_skin
 			if category_id not in pet_skin_category_map:

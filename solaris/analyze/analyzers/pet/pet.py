@@ -1,16 +1,21 @@
 from typing import Any
 
 from seerapi_models.common import ResourceRef, SixAttributes
+from seerapi_models.element_type import TypeCombination
 from seerapi_models.items import SkillActivationItem
 from seerapi_models.pet import (
 	Pet,
+	PetArchiveStoryEntry,
 	PetClass,
+	PetEncyclopediaEntry,
 	PetGenderCategory,
 	PetMountTypeCategory,
 	PetVipBuffCategory,
 	SkillInPet,
+	Soulmark,
 )
 from seerapi_models.pet.pet import DiyStatsRange
+from seerapi_models.skill import Skill
 
 from solaris.analyze.typing_ import AnalyzeResult, CsvTable
 from solaris.analyze.utils import CategoryMap, create_category_map
@@ -37,10 +42,7 @@ class PetAnalyzer(BasePetAnalyzer):
 		if skill_id in self.skill_activation_data:
 			data = self.skill_activation_data[skill_id]
 			if data['monster'] == pet_id:
-				return ResourceRef(
-					id=data['item'],
-					resource_name='skill_activation_item',
-				)
+				return ResourceRef.from_model(SkillActivationItem, id=data['item'])
 		return None
 
 	def extract_skills_from_list(
@@ -68,7 +70,7 @@ class PetAnalyzer(BasePetAnalyzer):
 			data = SkillInPet(
 				id=skill_id,
 				pet_id=pet_id,
-				skill=ResourceRef(id=skill_id, resource_name='skill'),
+				skill=ResourceRef.from_model(Skill, id=skill_id),
 				learning_level=learning_level,
 				is_special=is_special,
 				is_advanced=is_advanced,
@@ -111,7 +113,7 @@ class PetAnalyzer(BasePetAnalyzer):
 				break
 			pet_name = pet_dict['def_name']
 			pet_ref = ResourceRef.from_model(Pet, id=pet_id)
-			pet_type = ResourceRef(id=pet_dict['type'], resource_name='element-type')
+			pet_type = ResourceRef.from_model(TypeCombination, id=pet_dict['type'])
 			pet_gender_id = pet_dict.get('gender', 0)
 			if pet_gender_id > 2:
 				pet_gender_id = 0
@@ -224,16 +226,16 @@ class PetAnalyzer(BasePetAnalyzer):
 
 			encyclopedia_entry = None
 			if pet_id in self.pet_encyclopedia_data:
-				encyclopedia_entry = ResourceRef(
+				encyclopedia_entry = ResourceRef.from_model(
+					PetEncyclopediaEntry,
 					id=pet_id,
-					resource_name='pet_encyclopedia_entry',
 				)
 
 			archive_story_entry = None
 			if pet_id in self.pet_archive_story_book_data:
-				archive_story_entry = ResourceRef(
+				archive_story_entry = ResourceRef.from_model(
+					PetArchiveStoryEntry,
 					id=pet_id,
-					resource_name='pet_archive_story_entry',
 				)
 
 			pet_resource = Pet(
@@ -259,7 +261,7 @@ class PetAnalyzer(BasePetAnalyzer):
 				has_resistance=bool(pet_dict.get('Resist', 0)),
 				skill=pet_skill_resources,
 				soulmark=[
-					ResourceRef(id=soulmark_id, resource_name='soulmark')
+					ResourceRef.from_model(Soulmark, id=soulmark_id)
 					for soulmark_id in self.pet_soulmark_data.get(pet_id, [])
 				],
 				resource_id=pet_dict.get('real_id') or pet_id,  # TODO: 需要对手侧资源id

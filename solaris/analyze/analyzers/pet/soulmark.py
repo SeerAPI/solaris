@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING
 
 from seerapi_models.common import EidEffect, EidEffectInUse, ResourceRef
-from seerapi_models.pet import Soulmark, SoulmarkTagCategory
+from seerapi_models.pet import Pet, Soulmark, SoulmarkTagCategory
 
 from solaris.analyze.base import BaseDataSourceAnalyzer, DataImportConfig
 from solaris.analyze.typing_ import AnalyzeResult
@@ -48,7 +48,8 @@ class SoulmarkAnalyzer(BaseDataSourceAnalyzer):
 				continue
 
 			pet_refs = [
-				ResourceRef(id=pet_id, resource_name='pet') for pet_id in pet_ids
+				ResourceRef.from_model(Pet, id=pet_id)
+				for pet_id in pet_ids
 			]
 
 			pve_effective = None
