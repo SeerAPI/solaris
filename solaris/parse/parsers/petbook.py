@@ -176,7 +176,6 @@ class _PbMonsterItem(TypedDict):
 	def_name: str
 	features: str
 	target: str
-	tyjumptargetpe: str
 	id: int
 
 
@@ -335,12 +334,10 @@ class PetBookParser(BaseParser[PetBookConfig]):
 		features = reader.ReadUTFBytesWithLength()
 		mid = reader.read_i32()
 		target = reader.ReadUTFBytesWithLength()
-		ty = reader.ReadUTFBytesWithLength()
 		return {
 			'def_name': def_name,
 			'features': features,
 			'target': target,
-			'tyjumptargetpe': ty,
 			'id': mid,
 		}
 
