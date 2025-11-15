@@ -1,131 +1,37 @@
-from collections.abc import Iterable, MutableMapping, Sequence
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Annotated, Any, TypeVar
 
-from pydantic import BaseModel, Field, TypeAdapter, create_model
-from pydantic.fields import FieldInfo
-from pydantic.json_schema import GenerateJsonSchema
+from seerapi_models.metadata import ApiMetadata
 from tqdm import tqdm
 
 from solaris.utils import import_all_classes
 
-from .base import BaseAnalyzer
-from .db import DBManager, write_result_to_db
-from .model import (
-	ApiMetadata,
-	ApiResourceList,
-	BaseGeneralModel,
-	NamedResourceRef,
-	ResourceRef,
-)
-from .schema_generate import JsonSchemaGenerator, ShrinkOnlyNonRoot, model_json_schema
+from .base import BaseAnalyzer, BasePostAnalyzer
+from .output import DBOutputter, JsonOutputter
 from .typing_ import AnalyzeResult
-from .utils import to_json
 
 ANALYZER_DEFAULT_PACKAGE_NAME = 'solaris.analyze.analyzers'
 
-HASH_FIELD = FieldInfo(
-	annotation=str,
-	title='Hash',
-	description='数据哈希值，目前pydantic不支持对key进行排序，所以哈希值变化可能意味着数据结构变化而非数据值变化'
-)
 
-DEFAULT_FIELDS = (
-	('hash', HASH_FIELD),
-)
+class AnalyzerDependencyError(Exception):
+	"""分析器依赖关系错误
 
+	当分析器的依赖关系存在问题时抛出，例如：
+	- 循环依赖
+	- 依赖的分析器不存在
+	- 依赖链无法满足
+	"""
 
-def _calc_hash(data: str | bytes) -> str:
-	import anycrc
-	crc32 = anycrc.Model('CRC32')
-	if isinstance(data, str):
-		data = data.encode('utf-8')
-
-	hash_value = crc32.calc(data)
-	return format(hash_value, 'x')
+	pass
 
 
-def _dump_data(data: Any, path: Path) -> None:
-	if isinstance(data, BaseModel):
-		data = data.model_dump(by_alias=True)
-	if not isinstance(data, MutableMapping):
-		raise ValueError(f'Invalid data type: {type(data)}')
+class AnalyzerExecutionError(Exception):
+	"""分析器执行错误
 
-	data['hash'] = _calc_hash(to_json(data, indent=None))
+	当分析器执行过程中发生错误时抛出
+	"""
 
-	path.parent.mkdir(parents=True, exist_ok=True)
-	path.write_bytes(to_json(data))
-
-
-T = TypeVar('T', bound=MutableMapping[str, Any])
-def _add_fields_to_schema(
-	schema: T,
-	fields: Iterable[tuple[str, FieldInfo]]
-) -> T:
-	"""向schema添加额外字段"""
-	if 'properties' not in schema:
-		return schema
-
-	for field_name, field_info in fields:
-		field_name = field_info.alias or field_name
-		adapter = TypeAdapter(Annotated[field_info.annotation, field_info])
-		schema['properties'][field_name] = adapter.json_schema(mode='serialization')
-		if field_info.is_required:
-			schema['required'].append(field_name)
-
-	return schema
-
-
-def _dump_schema(
-	schema: MutableMapping[str, Any],
-	path: Path,
-	*,
-	fields: tuple[tuple[str, FieldInfo], ...] = ()
-) -> None:
-	schema = _add_fields_to_schema(schema, fields)
-
-	path.parent.mkdir(parents=True, exist_ok=True)
-	path.write_bytes(to_json(schema))
-
-
-def _output_all_general_model_schema(output_dir: Path, *, base_url: str) -> None:
-	BaseGeneralModel.base_url = base_url
-	for path, model in BaseGeneralModel.__subclasses_dict__.items():
-		_dump_schema(model_json_schema(model), output_dir / path / 'index.json')
-
-
-def _generate_api_resource_list(result: AnalyzeResult) -> ApiResourceList:
-	refs: list[NamedResourceRef] = [
-		NamedResourceRef(
-			id=i.id,
-			resource_name=i.resource_name(),
-			name=getattr(i, 'name', None),
-		)
-		for i in result.data.values()
-	]
-	return ApiResourceList(count=len(refs), results=refs)
-
-
-def _create_index_model(name: str, data: dict[str, Any]) -> type[BaseModel]:
-	return create_model(
-		name,
-		**{
-			k: (str, Field(field_title_generator=lambda k, __: f'{k} Path'))
-			for k in data.keys()
-		},  # type: ignore
-	)
-
-
-def _join_url(base_url: str, *parts: str, end_slash: bool = False) -> str:
-	url = '/'.join(
-		str(i).strip('/')
-		for i in [base_url, *parts]
-		if i and i not in ('.', '/', './')
-	)
-	if end_slash:
-		url += '/'
-
-	return url
+	pass
 
 
 def analyze_result_to_json(
@@ -139,121 +45,16 @@ def analyze_result_to_json(
 	base_data_url: str | None = None,
 	merge_json_table: bool = False,
 ) -> None:
-	"""分析数据并输出到JSON文件"""
-	version = metadata.api_version
-	base_url = metadata.api_url
-	data_url = base_data_url or _join_url(
-		base_url, version, str(data_output_dir)
+	"""分析数据并输出到JSON文件（向后兼容的函数包装）"""
+	outputter = JsonOutputter(
+		metadata=metadata,
+		base_output_dir=base_output_dir,
+		schema_output_dir=schema_output_dir,
+		base_schema_url=base_schema_url,
+		data_output_dir=data_output_dir,
+		base_data_url=base_data_url,
 	)
-	schema_url = base_schema_url or _join_url(
-		base_url, version, str(schema_output_dir)
-	)
-
-	ResourceRef.base_data_url = data_url
-
-	data_output_dir = Path().joinpath(
-		base_output_dir,
-		version,
-		data_output_dir,
-	)
-	data_output_dir.mkdir(parents=True, exist_ok=True)
-	schema_output_dir = Path().joinpath(
-		base_output_dir,
-		version,
-		schema_output_dir,
-	)
-	schema_output_dir.mkdir(parents=True, exist_ok=True)
-	_output_all_general_model_schema(
-		schema_output_dir,
-		base_url=schema_url,
-	)
-
-	def output_json_and_schema(
-		path: Path | str,
-		*,
-		data: Any,
-		schema: Any | None = None,
-		schema_generator: type[GenerateJsonSchema] = ShrinkOnlyNonRoot,
-		post_add_fields: tuple[tuple[str, FieldInfo], ...] = DEFAULT_FIELDS,
-	) -> None:
-		if schema is None:
-			if isinstance(data, TypeAdapter):
-				schema = data.json_schema(schema_generator=schema_generator)
-			elif isinstance(data, BaseModel):
-				schema = model_json_schema(
-					type(data),
-					schema_generator=schema_generator,
-				)
-
-		if not isinstance(schema, MutableMapping):
-			raise ValueError(f'Invalid schema: {schema}')
-
-		_dump_data(data, data_output_dir.joinpath(path))
-		_dump_schema(schema, schema_output_dir.joinpath(path), fields=post_add_fields)
-
-	index_data: dict[str, str] = {}
-	for result in (pbar_result := tqdm(results, leave=False)):
-		# 初始化变量
-		model = result.model
-		resource_name = result.name or model.resource_name()
-		schema = result.schema or model_json_schema(model)
-		data = result.data
-		output_mode = result.output_mode
-
-		# 检查是否需要输出到JSON
-		if output_mode not in ('json', 'all'):
-			continue
-
-		# 设置进度条
-		pbar_result.set_description(
-			f'正在输出JSON数据|输出{resource_name}',
-			refresh=True,
-		)
-
-		output_paths: dict[Path, Any] = {}
-		if merge_json_table:
-			output_json_and_schema(
-				f'{resource_name}.json',
-				data=data,
-				schema=schema,
-				post_add_fields=(),  # 不添加额外字段
-			)
-		else:
-			for res_id, res_data in data.items():
-				res_path = data_output_dir.joinpath(
-					resource_name,
-					str(res_id),
-					'index.json',
-				)
-				res_path.parent.mkdir(parents=True, exist_ok=True)
-				output_paths[res_path] = res_data
-
-			schema_path = schema_output_dir.joinpath(resource_name, '$id', 'index.json')
-			_dump_schema(schema, schema_path, fields=DEFAULT_FIELDS)
-
-			# 输出ApiResourceList
-			api_resource_list = _generate_api_resource_list(result)
-			output_json_and_schema(
-				Path(resource_name) / 'index.json',
-				data=api_resource_list,
-				schema_generator=JsonSchemaGenerator,
-			)
-
-		for path, data in output_paths.items():
-			_dump_data(data, path)
-
-		index_data[resource_name] = _join_url(data_url, resource_name)
-
-	# 输出metadata
-	output_json_and_schema('metadata.json', data=metadata)
-
-	if not merge_json_table:  # 输出根目录 index.json
-		index_model = _create_index_model('Index', index_data)
-		output_json_and_schema(
-			'index.json',
-			data=index_data,
-			schema=model_json_schema(index_model),
-		)
+	outputter.run(results, merge_json_table=merge_json_table)
 
 
 def analyze_result_to_db(
@@ -262,50 +63,195 @@ def analyze_result_to_db(
 	metadata: ApiMetadata,
 	db_url: str = 'sqlite:///solaris.db',
 ) -> None:
-	db_manager = DBManager(db_url)
-	if not db_manager.initialized:
-		db_manager.init()
-
-	for result in (pbar_result := tqdm(results, leave=False)):
-		name = result.name or result.model.resource_name()
-		pbar_result.set_description(
-			f'正在输出数据库数据|输出{name}',
-			refresh=True,
-		)
-		data = result.data
-		output_mode = result.output_mode
-
-		if output_mode not in ('db', 'all'):
-			continue
-
-		with db_manager.get_session() as session:
-			write_result_to_db(session, data)
-
-	with db_manager.get_session() as session:
-		session.add(metadata.to_orm())
-		session.commit()
+	"""分析数据并输出到数据库（向后兼容的函数包装）"""
+	outputter = DBOutputter(
+		metadata=metadata,
+		db_url=db_url,
+		echo=False,
+	)
+	outputter.init()
+	outputter.run(results)
 
 
 def import_analyzer_classes(
 	package_name: str = ANALYZER_DEFAULT_PACKAGE_NAME,
 ) -> list[type[BaseAnalyzer]]:
-	return import_all_classes(
-		package_name,
-		BaseAnalyzer,
-	)
+	return import_all_classes(package_name, BaseAnalyzer)
+
+
+def _build_dependency_graph(
+	analyzers: list[type[BaseAnalyzer]],
+) -> dict[type[BaseAnalyzer], list[type[BaseAnalyzer]]]:
+	"""构建分析器的依赖关系图
+
+	Args:
+		analyzers: 分析器类列表
+
+	Returns:
+		依赖关系图，键为分析器类，值为其依赖的分析器类列表
+
+	Raises:
+		AnalyzerDependencyError: 当存在循环依赖或依赖的分析器不存在时
+	"""
+	analyzer_set = set(analyzers)
+	dependency_graph: dict[type[BaseAnalyzer], list[type[BaseAnalyzer]]] = {}
+
+	# 构建依赖图
+	for analyzer in analyzers:
+		if issubclass(analyzer, BasePostAnalyzer):
+			# 创建临时实例来获取依赖
+			temp_instance = analyzer()
+			dependencies = list(temp_instance.get_input_analyzers())
+
+			# 检查依赖是否都存在
+			for dep in dependencies:
+				if dep not in analyzer_set:
+					raise AnalyzerDependencyError(
+						f'分析器 {analyzer.__name__} 依赖的分析器 '
+						f'{dep.__name__} 不在分析器列表中'
+					)
+
+			dependency_graph[analyzer] = dependencies
+		else:
+			# 数据源分析器没有依赖
+			dependency_graph[analyzer] = []
+
+	# 检测循环依赖
+	def _has_cycle(
+		node: type[BaseAnalyzer],
+		visited: set[type[BaseAnalyzer]],
+		rec_stack: set[type[BaseAnalyzer]],
+	) -> bool:
+		visited.add(node)
+		rec_stack.add(node)
+
+		for neighbor in dependency_graph.get(node, []):
+			if neighbor not in visited:
+				if _has_cycle(neighbor, visited, rec_stack):
+					return True
+			elif neighbor in rec_stack:
+				return True
+
+		rec_stack.remove(node)
+		return False
+
+	visited: set[type[BaseAnalyzer]] = set()
+	for analyzer in analyzers:
+		if analyzer not in visited:
+			if _has_cycle(analyzer, visited, set()):
+				raise AnalyzerDependencyError(
+					f'检测到循环依赖，涉及分析器: {analyzer.__name__}'
+				)
+
+	return dependency_graph
+
+
+def _topological_sort_analyzers(
+	analyzers: list[type[BaseAnalyzer]],
+	dependency_graph: dict[type[BaseAnalyzer], list[type[BaseAnalyzer]]],
+) -> list[type[BaseAnalyzer]]:
+	"""使用拓扑排序确定分析器的执行顺序
+
+	在依赖图中，dependency_graph[A] = [B, C] 表示 A 依赖 B 和 C，
+	因此 B 和 C 必须在 A 之前执行。
+
+	Args:
+		analyzers: 分析器类列表
+		dependency_graph: 依赖关系图，键为分析器，值为它依赖的分析器列表
+
+	Returns:
+		排序后的分析器列表，保证依赖的分析器在前
+
+	Raises:
+		AnalyzerDependencyError: 当存在循环依赖时（理论上不应该发生）
+	"""
+	# 计算每个节点的入度（该节点依赖多少个其他节点）
+	in_degree: dict[type[BaseAnalyzer], int] = {
+		analyzer: len(dependency_graph.get(analyzer, [])) for analyzer in analyzers
+	}
+
+	# 找出所有入度为0的节点（没有依赖的节点）
+	queue: list[type[BaseAnalyzer]] = [
+		analyzer for analyzer in analyzers if in_degree[analyzer] == 0
+	]
+	sorted_analyzers: list[type[BaseAnalyzer]] = []
+
+	while queue:
+		# 取出入度为0的节点
+		current = queue.pop(0)
+		sorted_analyzers.append(current)
+
+		# 找出所有依赖当前节点的节点，将它们的入度减1
+		for analyzer in analyzers:
+			if current in dependency_graph.get(analyzer, []):
+				in_degree[analyzer] -= 1
+				if in_degree[analyzer] == 0:
+					queue.append(analyzer)
+
+	# 检查是否所有节点都已排序
+	if len(sorted_analyzers) != len(analyzers):
+		raise AnalyzerDependencyError('无法完成拓扑排序，可能存在循环依赖')
+
+	return sorted_analyzers
 
 
 def run_all_analyzer(
 	analyzers: list[type[BaseAnalyzer]],
 ) -> list[AnalyzeResult]:
-	results: list[AnalyzeResult] = []
-	for analyzer_cls in (pbar_analyzer := tqdm(analyzers, leave=False)):
+	"""执行所有分析器，自动处理依赖关系
+
+	该函数会：
+	1. 分析依赖关系并进行拓扑排序
+	2. 按依赖顺序执行分析器
+	3. 为后处理分析器传入其依赖的分析器结果
+
+	Args:
+		analyzers: 分析器类列表
+
+	Returns:
+		所有分析器的结果列表
+
+	Raises:
+		AnalyzerDependencyError: 当依赖关系存在问题时
+		AnalyzerExecutionError: 当分析器执行失败时
+	"""
+	if not analyzers:
+		return []
+
+	# 构建依赖图并排序
+	dependency_graph = _build_dependency_graph(analyzers)
+	sorted_analyzers = _topological_sort_analyzers(analyzers, dependency_graph)
+
+	# 存储所有分析器的结果
+	analyzer_results: dict[type[BaseAnalyzer], list[AnalyzeResult]] = {}
+	all_results: list[AnalyzeResult] = []
+
+	# 按顺序执行分析器
+	for analyzer_cls in (pbar_analyzer := tqdm(sorted_analyzers, leave=False)):
 		pbar_analyzer.set_description(
 			f'正在分析数据|调用{analyzer_cls.__name__}',
 			refresh=True,
 		)
-		analyzer = analyzer_cls()
-		result = analyzer.analyze()
-		results.extend(result)
 
-	return results
+		try:
+			# 根据类型创建分析器实例
+			if issubclass(analyzer_cls, BasePostAnalyzer):
+				# 后处理分析器需要传入依赖结果
+				analyzer = analyzer_cls(input_results=analyzer_results)
+			else:
+				# 数据源分析器直接创建
+				analyzer = analyzer_cls()
+
+			# 执行分析
+			result = analyzer.analyze()
+
+			# 存储结果
+			analyzer_results[analyzer_cls] = list(result)
+			all_results.extend(result)
+
+		except Exception as e:
+			raise AnalyzerExecutionError(
+				f'分析器 {analyzer_cls.__name__} 执行失败: {e}'
+			) from e
+
+	return all_results

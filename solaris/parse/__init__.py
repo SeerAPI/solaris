@@ -1,4 +1,5 @@
 from pathlib import Path
+import warnings
 
 from solaris.parse.base import BaseParser
 from solaris.utils import change_workdir, import_all_classes
@@ -17,10 +18,22 @@ def import_parser_classes(
 	Returns:
 		解析器类列表
 	"""
-	return import_all_classes(
+	parsers = import_all_classes(
 		package_name,
 		BaseParser,
 	)
+	parsed_files = {}
+	for parser in parsers:
+		filename = parser.parsed_config_filename()
+		if filename in parsed_files:
+			warnings.warn(
+				f'解析器的输出文件名重复: "{filename}"，'
+				f'冲突的解析器: {parsed_files[filename].__name__} 和 {parser.__name__}，'
+				f'请修改解析器的输出文件名，或者删除重复的解析器',
+				UserWarning,
+			)
+		parsed_files[filename] = parser
+	return parsers
 
 
 def run_all_parser(

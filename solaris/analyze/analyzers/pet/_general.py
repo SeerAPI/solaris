@@ -25,6 +25,7 @@ general_import_config = DataImportConfig(
 	flash_paths=(
 		'config.xml.PetXMLInfo.xml',
 		'config.xml.PetBookXMLInfo.xml',
+		'config.xml.PetLeftAndRightXmlInfo_petClass.xml',
 	),
 	patch_paths=(
 		'pet_gender.json',
@@ -42,12 +43,12 @@ class BasePetAnalyzer(BaseDataSourceAnalyzer):
 
 	@cached_property
 	def pet_origin_data(self) -> dict[int, dict[str, Any]]:
-		flash_data = self._get_data(
-			'flash', 'config.xml.PetXMLInfo.xml'
-		)['Monsters']['Monster']
-		unity_data: list["MonsterItem"] = self._get_data(
-			'unity', 'monsters.json'
-		)['monsters']['monster']
+		flash_data = self._get_data('flash', 'config.xml.PetXMLInfo.xml')['Monsters'][
+			'Monster'
+		]
+		unity_data: list['MonsterItem'] = self._get_data('unity', 'monsters.json')[
+			'monsters'
+		]['monster']
 		keys = (
 			'YieldingExp',
 			'YieldingEV',
@@ -80,47 +81,35 @@ class BasePetAnalyzer(BaseDataSourceAnalyzer):
 	@cached_property
 	def pet_skin_data(self) -> dict[int, '_SkinItem']:
 		data: PetSkinConfig = self._get_data('unity', 'petSkin.json')
-		return {
-			skin['id']: skin
-			for skin in data['pet_skins']['skin']
-		}
+		return {skin['id']: skin for skin in data['pet_skins']['skin']}
 
 	@cached_property
 	def skill_activation_data(self) -> dict[int, 'SpMovesItem']:
 		data: SpHideMovesConfig = self._get_data('unity', 'spHideMoves.json')
-		return {
-			data['moves']: data
-			for data in data['config']['sp_moves']
-		}
+		return {data['moves']: data for data in data['config']['sp_moves']}
 
 	@cached_property
 	def pet_advanced_skill_data(self) -> dict[int, 'SpMovesItem']:
 		data: SpHideMovesConfig = self._get_data('unity', 'spHideMoves.json')
-		return {
-			data['moves']: data
-			for data in data['config']['show_moves']
-		}
+		return {data['moves']: data for data in data['config']['show_moves']}
 
 	@cached_property
 	def pet_encyclopedia_data(self) -> dict[int, dict[str, Any]]:
 		return {
 			book['ID']: book
-			for book in self._get_data(
-				'flash', 'config.xml.PetBookXMLInfo.xml'
-			)['root']['Monster']
+			for book in self._get_data('flash', 'config.xml.PetBookXMLInfo.xml')[
+				'root'
+			]['Monster']
 		}
 
 	@cached_property
 	def pet_archive_story_book_data(self) -> dict[int, 'ArchivesStoryInfo']:
 		data: ArchivesStoryConfig = self._get_data('unity', 'archivesStory.json')
-		return {
-			book['id']: book
-			for book in data['data']
-		}
+		return {book['id']: book for book in data['data']}
 
 	@cached_property
 	def pet_soulmark_data(self) -> dict[int, list[int]]:
-		soulmark_data: list["EffectIconItem"] = self._get_data(
+		soulmark_data: list['EffectIconItem'] = self._get_data(
 			'unity', 'effectIcon.json'
 		)['root']['effect']
 
@@ -131,3 +120,8 @@ class BasePetAnalyzer(BaseDataSourceAnalyzer):
 				result[pet_id].append(data['id'])
 
 		return dict(result)
+
+	@cached_property
+	def pet_left_and_right_data(self) -> dict[int, int]:
+		data = self._get_data('flash', 'config.xml.PetLeftAndRightXmlInfo_petClass.xml')
+		return {int(key): value for key, value in data.items() if key.isdigit()}

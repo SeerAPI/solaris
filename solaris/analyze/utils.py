@@ -4,9 +4,10 @@ from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
 import pydantic_core
 
+from .typing_ import CsvTable
+
 if TYPE_CHECKING:
-	from solaris.analyze.model import BaseCategoryModel
-	from solaris.analyze.typing_ import CsvTable
+	from seerapi_models.build_model import BaseCategoryModel
 
 
 _KT = TypeVar('_KT', bound=Hashable)
@@ -97,7 +98,9 @@ def create_category_map(
 
 	return result
 
+
 T = TypeVar('T', bound=Hashable)
+
 
 def merge_dict_item(target: dict[T, Any], source: dict[T, Any], key: T) -> None:
 	"""将 source 字典中的key对应的值合并到 target 中，
@@ -105,6 +108,7 @@ def merge_dict_item(target: dict[T, Any], source: dict[T, Any], key: T) -> None:
 	"""
 	if source.get(key) is not None:
 		target[key] = source[key]
+
 
 to_json = functools.partial(
 	pydantic_core.to_json,

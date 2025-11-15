@@ -51,7 +51,7 @@ class ItemsOptimizeCatParser(BaseParser[ItemsOptimizeCatConfig]):
 				cat_item: CatItem = {
 					'db_cat_id': reader.ReadSignedInt(),
 					'id': reader.ReadSignedInt(),
-					'max': reader.ReadSignedInt(),
+					'max': reader.ReadUnsignedInt(),
 					'name': reader.ReadUTFBytesWithLength(),
 					'url': reader.ReadUTFBytesWithLength(),
 				}

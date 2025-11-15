@@ -88,4 +88,3 @@ class SkillEffectParser(BaseParser[SkillEffectConfig]):
 			)
 
 		return result
-

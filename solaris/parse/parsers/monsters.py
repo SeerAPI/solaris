@@ -37,7 +37,8 @@ class LearnableMoves(TypedDict):
 	move: list[MoveItem]
 	sp_move: list[SpMoveItem]
 
-MonsterItem = TypedDict(  # noqa: UP013
+
+MonsterItem = TypedDict(
 	'MonsterItem',
 	{
 		'def_name': str,
@@ -68,8 +69,9 @@ MonsterItem = TypedDict(  # noqa: UP013
 		'transform': int,
 		'type': int,
 		'vip': int,
-	}
+	},
 )
+
 
 # 精灵容器结构
 class _Monsters(TypedDict):

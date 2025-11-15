@@ -73,4 +73,3 @@ class BuffParser(BaseParser[BuffConfig]):
 			)
 
 		return result
-

@@ -15,8 +15,10 @@ def import_all_classes(package_name: str, base_class: type[T]) -> list[type[T]]:
 	递归遍历指定包及其所有子包，查找并返回继承自指定基类的所有非抽象类。
 	该函数会自动处理导入错误，跳过无法导入的模块。
 
+	支持传入包（目录）或单个模块（.py 文件）。
+
 	Args:
-		package_name: 要搜索的包名，如 'solaris.analyze.parsers'
+		package_name: 要搜索的包名或模块名，如 'solaris.analyze.parsers' 或 'solaris.analyze.parsers.pet'
 		base_class: 基类类型，用于筛选子类
 
 	Returns:
@@ -27,12 +29,31 @@ def import_all_classes(package_name: str, base_class: type[T]) -> list[type[T]]:
 		# 查找所有解析器类
 		parsers = import_all_classes('solaris.parse.parsers', BaseParser)
 
-		# 查找所有分析器类
+		# 查找所有分析器类（包）
 		analyzers = import_all_classes('solaris.analyze', BaseAnalyzer)
+
+		# 查找单个模块中的分析器类
+		analyzers = import_all_classes('solaris.analyze.analyzers.pet.soulmark', BaseAnalyzer)
 		```
 	"""
 	classes = []
 	package = importlib.import_module(package_name)
+
+	def _discover_classes_in_module(module: object) -> None:
+		"""在指定模块中查找子类。
+
+		Args:
+			module: 要搜索的模块对象
+		"""
+		for attribute_name in dir(module):
+			attribute = getattr(module, attribute_name)
+			if (
+				inspect.isclass(attribute)
+				and issubclass(get_origin(attribute) or attribute, base_class)
+				and not inspect.isabstract(attribute)
+				and attribute not in classes
+			):
+				classes.append(attribute)
 
 	def _discover_classes(pkg_path: MutableSequence[str], pkg_name: str) -> None:
 		"""递归发现指定包及其子包中的子类。
@@ -47,15 +68,7 @@ def import_all_classes(package_name: str, base_class: type[T]) -> list[type[T]]:
 				# 导入模块
 				module = importlib.import_module(module_name)
 				# 在模块中查找子类
-				for attribute_name in dir(module):
-					attribute = getattr(module, attribute_name)
-					if (
-						inspect.isclass(attribute)
-						and issubclass(get_origin(attribute) or attribute, base_class)
-						and not inspect.isabstract(attribute)
-						and attribute not in classes
-					):
-						classes.append(attribute)
+				_discover_classes_in_module(module)
 
 				# 如果是包，递归处理子包
 				if is_pkg:
@@ -65,7 +78,14 @@ def import_all_classes(package_name: str, base_class: type[T]) -> list[type[T]]:
 				# 忽略导入失败的模块
 				continue
 
-	_discover_classes(package.__path__, package.__name__)
+	# 检查是否为包（有 __path__ 属性）还是模块
+	if hasattr(package, '__path__'):
+		# 是包，递归遍历
+		_discover_classes(package.__path__, package.__name__)
+	else:
+		# 是单个模块，直接在该模块中查找
+		_discover_classes_in_module(package)
+
 	return classes
 
 
@@ -251,3 +271,13 @@ def get_nested_value(
 			return None
 		data = data.pop(key) if delete else data[key]
 	return data
+
+
+def join_url(base_url: str, *parts: str, end_slash: bool = False) -> str:
+	url = '/'.join(
+		str(i).strip('/') for i in [base_url, *parts] if i and i not in ('.', '/', './')
+	)
+	if end_slash:
+		url += '/'
+
+	return url

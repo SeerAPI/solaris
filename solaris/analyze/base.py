@@ -4,12 +4,10 @@ from dataclasses import KW_ONLY, dataclass, field
 import json
 from pathlib import Path
 from typing import Any, ClassVar, cast
-from typing_extensions import Self
 
-from pydantic import model_validator
 import xmltodict
 
-from solaris.settings import ENV_PREFIX, SETTINGS_CONFIG, BaseSettings
+from solaris.analyze.settings import DataSourceDirSettings
 from solaris.typing import JSON, Paths
 from solaris.utils import convert_to_number, get_nested_value
 
@@ -19,24 +17,8 @@ from .typing_ import (
 	DataSourceType,
 	JSONObject,
 	Patch,
+	TResModel,
 )
-
-
-class DataSourceDirSettings(BaseSettings):
-	model_config = SETTINGS_CONFIG | {'env_prefix': f'{ENV_PREFIX}DATA_'}
-	BASE_DIR: Path = Path('./source')
-	PATCH_DIR: Path = Path(BASE_DIR, 'patch')
-	HTML5_DIR: Path = Path(BASE_DIR, 'html5')
-	UNITY_DIR: Path = Path(BASE_DIR, 'unity')
-	FLASH_DIR: Path = Path(BASE_DIR, 'flash')
-
-	@model_validator(mode='after')
-	def combine_dirs(self) -> Self:
-		self.HTML5_DIR = self.HTML5_DIR
-		self.PATCH_DIR = self.PATCH_DIR
-		self.UNITY_DIR = self.UNITY_DIR
-		self.FLASH_DIR = self.FLASH_DIR
-		return self
 
 
 def _convert_xml_attr_to_number(_, key, value):
@@ -97,13 +79,13 @@ class DataLoader(ABC):
 		base_dirs: DataSourceDirSettings = import_config.SOURCE_DIR_SETTINGS
 		self.data: AnalyzeData = {
 			'html5': self._load_data_by_category(
-				import_config.html5_paths, base_dirs.HTML5_DIR, self._load_data
+				import_config.html5_paths, base_dirs.HTML5_DIR, self._load_html5_data
 			),
 			'unity': self._load_data_by_category(
-				import_config.unity_paths, base_dirs.UNITY_DIR, self._load_data
+				import_config.unity_paths, base_dirs.UNITY_DIR, self._load_unity_data
 			),
 			'flash': self._load_data_by_category(
-				import_config.flash_paths, base_dirs.FLASH_DIR, self._load_xml_data
+				import_config.flash_paths, base_dirs.FLASH_DIR, self._load_flash_data
 			),
 			'patch': self._load_data_by_category(
 				import_config.patch_paths, base_dirs.PATCH_DIR, self._load_patch
@@ -153,17 +135,30 @@ class DataLoader(ABC):
 		return cast(Patch, cls._load_data(path))
 
 	@classmethod
-	def _load_xml_data(cls, path: str | Path) -> JSONObject:
-		return xmltodict.parse(
-			Path(path).read_text(),
-			encoding='utf-8',
-			attr_prefix='',
-			postprocessor=_convert_xml_attr_to_number,
-		)
+	def _load_data(cls, path: str | Path) -> JSONObject:
+		"""加载数据，优先尝试以JSON格式加载，如果失败则尝试以XML格式加载"""
+		data = Path(path).read_text()
+		try:
+			return json.loads(Path(path).read_text())
+		except json.JSONDecodeError:
+			return xmltodict.parse(
+				data,
+				encoding='utf-8',
+				attr_prefix='',
+				postprocessor=_convert_xml_attr_to_number,
+			)
 
 	@classmethod
-	def _load_data(cls, path: str | Path) -> JSONObject:
-		return json.loads(Path(path).read_text())
+	def _load_flash_data(cls, path: str | Path) -> JSONObject:
+		return cls._load_data(path)
+
+	@classmethod
+	def _load_unity_data(cls, path: str | Path) -> JSONObject:
+		return cls._load_data(path)
+
+	@classmethod
+	def _load_html5_data(cls, path: str | Path) -> JSONObject:
+		return cls._load_data(path)
 
 	@classmethod
 	@abstractmethod
@@ -268,3 +263,113 @@ class BaseDataSourceAnalyzer(DataLoader, BaseAnalyzer):
 			info_parts.extend(path_info)
 
 		return '\n  '.join(info_parts)
+
+
+class BasePostAnalyzer(BaseAnalyzer):
+	"""后处理分析器抽象基类，该类型的分析器使用其他分析器的分析结果作为输入
+
+	后处理分析器需要实现 get_input_analyzers() 方法来声明依赖的分析器。
+	在构造时会接收所有依赖分析器的结果，可以通过辅助方法获取需要的数据。
+
+	Example:
+		```python
+		class MyPostAnalyzer(BasePostAnalyzer):
+			def get_input_analyzers(self) -> tuple[type[BaseAnalyzer], ...]:
+				return (SkillAnalyzer, EffectAnalyzer)
+
+			def analyze(self) -> tuple[AnalyzeResult, ...]:
+				# 获取技能数据
+				skill_data = self.get_input_data(SkillAnalyzer, Skill)
+				# 获取效果结果
+				effect_result = self.get_input_result(EffectAnalyzer, PetEffect)
+				# 处理数据...
+				return (AnalyzeResult(model=MyModel, data=my_data),)
+		```
+	"""
+
+	def __init__(
+		self,
+		input_results: dict[type[BaseAnalyzer], list[AnalyzeResult]] | None = None,
+	) -> None:
+		"""初始化后处理分析器
+
+		Args:
+			input_results: 依赖分析器的结果字典，键为分析器类，值为该分析器的结果列表
+		"""
+		super().__init__()
+		self._input_results = input_results or {}
+
+	@abstractmethod
+	def get_input_analyzers(self) -> tuple[type[BaseAnalyzer], ...]:
+		"""返回该分析器依赖的分析器类列表
+
+		Returns:
+			依赖的分析器类元组，这些分析器必须在当前分析器之前执行
+		"""
+		pass
+
+	def _get_input_data(
+		self,
+		analyzer_cls: type[BaseAnalyzer],
+		model_cls: type[TResModel],
+	) -> dict[int, TResModel]:
+		"""获取指定分析器的指定模型数据字典
+
+		Args:
+			analyzer_cls: 分析器类
+			model_cls: 模型类
+
+		Returns:
+			数据字典，键为ID，值为模型实例
+
+		Raises:
+			ValueError: 如果找不到指定的分析器或模型
+		"""
+		result = self._get_input_result(analyzer_cls, model_cls)
+		return dict(result.data)
+
+	def _get_input_result(
+		self,
+		analyzer_cls: type[BaseAnalyzer],
+		model_cls: type[TResModel],
+	) -> AnalyzeResult[TResModel]:
+		"""获取指定分析器的指定模型 AnalyzeResult
+
+		Args:
+			analyzer_cls: 分析器类
+			model_cls: 模型类
+
+		Returns:
+			AnalyzeResult 对象
+
+		Raises:
+			ValueError: 如果找不到指定的分析器或模型
+		"""
+		results = self._get_all_input_results(analyzer_cls)
+		for result in results:
+			if result.model == model_cls:
+				return result
+
+		raise ValueError(
+			f'未找到分析器 {analyzer_cls.__name__} 的模型 {model_cls.__name__} 的结果'
+		)
+
+	def _get_all_input_results(
+		self,
+		analyzer_cls: type[BaseAnalyzer],
+	) -> list[AnalyzeResult]:
+		"""获取指定分析器的所有结果
+
+		Args:
+			analyzer_cls: 分析器类
+
+		Returns:
+			AnalyzeResult 列表
+
+		Raises:
+			ValueError: 如果找不到指定的分析器
+		"""
+		if analyzer_cls not in self._input_results:
+			raise ValueError(f'未找到分析器 {analyzer_cls.__name__} 的结果')
+
+		return self._input_results[analyzer_cls]

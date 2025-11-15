@@ -13,7 +13,7 @@ from typing_extensions import NamedTuple
 from solaris.typing import JSON, ClientPlatform, JSONObject
 
 if TYPE_CHECKING:
-	from solaris.analyze.model import BaseResModel, BaseResModelWithOptionalId
+	from seerapi_models.build_model import BaseResModel, BaseResModelWithOptionalId
 
 
 _MT = TypeVar('_MT', bound=MutableMapping)
