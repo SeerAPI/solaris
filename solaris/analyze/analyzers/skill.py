@@ -341,12 +341,6 @@ class SkillAnalyzer(BaseSkillEffectAnalyzer):
 		return result
 
 	def analyze(self) -> tuple[AnalyzeResult, ...]:
-		SkillEffectInUse.model_rebuild(
-			force=True,
-			_parent_namespace_depth=2,
-			_types_namespace={'SkillEffectType': SkillEffectType},
-		)
-		Skill.model_rebuild()
 		hide_effect_table = self._get_data('patch', 'skill_hide_effect.json')
 		category_table = self._get_data('patch', 'skill_category.json')
 

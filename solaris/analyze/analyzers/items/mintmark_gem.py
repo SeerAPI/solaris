@@ -72,11 +72,6 @@ class GemAnalyzer(BaseSkillEffectAnalyzer):
 		return result
 
 	def _create_gem_effect(self, data: 'GemItem') -> list[SkillEffectInUse]:
-		SkillEffectInUse.model_rebuild(
-			force=True,
-			_parent_namespace_depth=2,
-			_types_namespace={'SkillEffectType': SkillEffectType},
-		)
 		effect = data['skill_effects'][0]['effect']
 		if not effect:
 			return []

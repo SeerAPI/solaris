@@ -53,7 +53,6 @@ class SkillStoneAnalyzer(BaseSkillEffectAnalyzer, BaseItemAnalyzer):
 			move_effects = [
 				SkillStoneEffect(
 					prob=effect['EffectProb'] / 100,
-					skill_stone_id=id_,
 					effect=self.create_skill_effect(
 						type_ids=split_string_arg(effect['SideEffect']),
 						args=split_string_arg(effect['SideEffectArg']),
@@ -71,11 +70,6 @@ class SkillStoneAnalyzer(BaseSkillEffectAnalyzer, BaseItemAnalyzer):
 		return result
 
 	def analyze(self) -> tuple[AnalyzeResult, ...]:
-		SkillEffectInUse.model_rebuild(
-			force=True,
-			_parent_namespace_depth=2,
-			_types_namespace={'SkillEffectType': SkillEffectType},
-		)
 		skill_stone_data = self.skill_stone_data
 
 		category_type_set = set()

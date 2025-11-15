@@ -137,7 +137,6 @@ class MintmarkAnalyzer(BaseDataSourceAnalyzer):
 				name=name,
 				type=type_ref,
 				rarity=rarity_ref,
-				rarity_id=rarity_id,
 				pet=pet_refs,
 				effect=skill_effect,
 				desc=mintmark['effect_des'],

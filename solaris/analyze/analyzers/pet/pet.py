@@ -68,8 +68,6 @@ class PetAnalyzer(BasePetAnalyzer):
 			skill_id = skill_data['id']
 			learning_level = skill_data.get('learning_lv')
 			data = SkillInPet(
-				id=skill_id,
-				pet_id=pet_id,
 				skill=ResourceRef.from_model(Skill, id=skill_id),
 				learning_level=learning_level,
 				is_special=is_special,
@@ -77,10 +75,10 @@ class PetAnalyzer(BasePetAnalyzer):
 				is_fifth=is_fifth,
 				skill_activation_item=self.get_skill_activation_item(skill_id, pet_id),
 			)
-			if data.id in skill_id_set:
+			if skill_id in skill_id_set:
 				continue
 
-			skill_id_set.add(data.id)
+			skill_id_set.add(skill_id)
 			result.append(data)
 
 		return result
