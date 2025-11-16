@@ -290,11 +290,10 @@ class BaseSkillEffectAnalyzer(BaseDataSourceAnalyzer):
 def clac_crit_rate(crit_rate: int) -> float:
 	if crit_rate == 0:
 		return 0
-	return crit_rate / 16
+	return crit_rate / 16 * 100
 
 
 if TYPE_CHECKING:
-
 	class MoveItem(UnityMoveItem):
 		accuracy: int
 		crit_rate: int | None
