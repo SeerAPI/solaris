@@ -422,6 +422,12 @@ class SkillAnalyzer(BaseSkillEffectAnalyzer):
 			AnalyzeResult(model=SkillCategory, data=category_map),
 			AnalyzeResult(
 				model=SkillEffectTypeTag,
-				data={tag.id: tag for tag in self.effect_type_tag_map.values()},
+				data={
+					tag.id: tag
+					for tag in sorted( # 不排序的话顺序是随机的，每次运行都不一样
+						self.effect_type_tag_map.values(),
+						key=lambda x: x.id
+					)
+				},
 			),
 		)
