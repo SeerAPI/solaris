@@ -385,6 +385,7 @@ class SkillAnalyzer(BaseSkillEffectAnalyzer):
 				accuracy=skill['accuracy'],
 				crit_rate=skill['crit_rate'],
 				priority=skill['priority'],
+				atk_num=skill.get('AtkNum', 1),
 				must_hit=bool(skill['must_hit']),
 				info=skill['info'] or None,
 			)
