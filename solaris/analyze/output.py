@@ -379,7 +379,7 @@ class JsonOutputter(OutputterProtocol):
 			merge_json_table: 是否合并为单个JSON文件
 		"""
 		# 输出通用模型Schema
-		# self._output_all_common_model_schema()
+		self._output_all_common_model_schema()
 
 		# 处理所有结果
 		root_index_data: dict[str, str] = {}
