@@ -20,6 +20,7 @@ class _SkinItem(TypedDict):
 	name: str
 	skin_kind: list[_SkinKindItem]
 	id: int
+	jump_target: int
 	mon_id: int
 	type: int
 
@@ -60,7 +61,8 @@ class PetSkinParser(BaseParser[PetSkinConfig]):
 			# 读取 SkinItem（严格遵循 C# 顺序）
 			go = reader.ReadUTFBytesWithLength()
 			go_type = reader.ReadUTFBytesWithLength()
-			sid = reader.read_i32()
+			id_ = reader.read_i32()
+			jump_target = reader.read_i32()
 			mon_id = reader.read_i32()
 			name = reader.ReadUTFBytesWithLength()
 
@@ -84,7 +86,8 @@ class PetSkinParser(BaseParser[PetSkinConfig]):
 				'go_type': go_type,
 				'name': name,
 				'skin_kind': skin_kind,
-				'id': sid,
+				'id': id_,
+				'jump_target': jump_target,
 				'mon_id': mon_id,
 				'type': skin_type,
 			}
