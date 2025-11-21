@@ -88,6 +88,10 @@ class PetAnalyzer(BasePetAnalyzer):
 		vipbuff_table: CsvTable = self._get_data('patch', 'pet_vipbuff.json')
 		mount_type_table: CsvTable = self._get_data('patch', 'pet_mount_type.json')
 
+		story_entry_data_with_pet_id = {
+			v['monid']: v for v in self.pet_archive_story_book_data.values()
+		}
+
 		# 记录 PetClass，key为PetClass的ID，value为PetClass对象
 		pet_class_map: dict[int, PetClass] = {}
 		# 记录性别，key为性别id
@@ -230,10 +234,11 @@ class PetAnalyzer(BasePetAnalyzer):
 				)
 
 			archive_story_entry = None
-			if pet_id in self.pet_archive_story_book_data:
+			if pet_id in story_entry_data_with_pet_id:
+				story_entry_data = story_entry_data_with_pet_id[pet_id]
 				archive_story_entry = ResourceRef.from_model(
 					PetArchiveStoryEntry,
-					id=pet_id,
+					id=story_entry_data['id'],
 				)
 
 			pet_resource = Pet(
