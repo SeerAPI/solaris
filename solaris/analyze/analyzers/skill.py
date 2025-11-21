@@ -294,6 +294,7 @@ def clac_crit_rate(crit_rate: int) -> float:
 
 
 if TYPE_CHECKING:
+
 	class MoveItem(UnityMoveItem):
 		accuracy: int
 		crit_rate: int | None
@@ -425,9 +426,8 @@ class SkillAnalyzer(BaseSkillEffectAnalyzer):
 				model=SkillEffectTypeTag,
 				data={
 					tag.id: tag
-					for tag in sorted( # 不排序的话顺序是随机的，每次运行都不一样
-						self.effect_type_tag_map.values(),
-						key=lambda x: x.id
+					for tag in sorted(  # 不排序的话顺序是随机的，每次运行都不一样
+						self.effect_type_tag_map.values(), key=lambda x: x.id
 					)
 				},
 			),

@@ -10,7 +10,6 @@ from seerapi_models.items import (
 	GemGenCategory,
 	Item,
 )
-from seerapi_models.skill import SkillEffectType
 
 from solaris.analyze.analyzers.skill import BaseSkillEffectAnalyzer
 from solaris.analyze.base import DataImportConfig

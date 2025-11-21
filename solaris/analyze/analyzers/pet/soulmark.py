@@ -47,10 +47,7 @@ class SoulmarkAnalyzer(BaseDataSourceAnalyzer):
 			if not (pet_ids := soulmark_dict.get('pet_id')):
 				continue
 
-			pet_refs = [
-				ResourceRef.from_model(Pet, id=pet_id)
-				for pet_id in pet_ids
-			]
+			pet_refs = [ResourceRef.from_model(Pet, id=pet_id) for pet_id in pet_ids]
 
 			pve_effective = None
 			tags = []
