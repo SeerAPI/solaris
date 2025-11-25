@@ -1,257 +1,201 @@
-# from sqlmodel import Field, Relationship
+from typing import TYPE_CHECKING
 
-# from ..model import BaseGeneralModel, BaseResModel, ConvertToORM, ResourceRef
-# from ..base import Analyzer, DataImportConfig
-# from ..typing_ import AnalyzeResult
+from seerapi_models.achievement import (
+	Achievement,
+	AchievementBranch,
+	AchievementCategory,
+	AchievementType,
+	Title,
+)
+from seerapi_models.achievement import (
+	AchievementCategoryNameEnum as CatNameEnum,
+)
+from seerapi_models.common import ResourceRef, SixAttributes
 
+from solaris.analyze.base import BaseDataSourceAnalyzer, DataImportConfig
+from solaris.analyze.typing_ import AnalyzeResult, CsvTable
+from solaris.analyze.utils import CategoryMap, create_category_map
 
-# TREE_RESOURCE_NAME = "achievement_tree"
-
-
-# class RootNodeBase(BaseResModel):
-# name: str = Field(description="根节点名称")
-
-# @classmethod
-# def resource_name(cls) -> str:
-# return "achievement_tree_root"
-
-
-# class RootNode(RootNodeBase, ConvertToORM["RootNodeORM"]):
-# branches: list["BranchNode"] = Field(
-# default_factory=list, description="分支节点列表"
-# )
-
-# @classmethod
-# def get_orm_model(cls) -> type["RootNodeORM"]:
-# return RootNodeORM
-
-# def to_orm(self) -> "RootNodeORM":
-# return RootNodeORM(
-# id=self.id, name=self.name, branches=[
-# b.to_orm() for b in self.branches
-# ]
-# )
+if TYPE_CHECKING:
+	from solaris.parse.parsers.achievements import AchievementsConfig
 
 
-# class RootNodeORM(RootNodeBase, table=True):
-# branches: list["BranchNodeORM"] = Relationship(back_populates="parent")
+def _from_desc_analyze_attr_bonus(desc: str) -> SixAttributes | None:
+	"""从描述中分析能力加成属性"""
+	if not desc:
+		return None
+
+	import re
+
+	attr_mapping = {
+		'攻击': 'atk',
+		'防御': 'def',
+		'特攻': 'sp_atk',
+		'特防': 'sp_def',
+		'速度': 'spd',
+		'体力': 'hp',
+	}
+
+	# 初始化属性字典
+	attributes: dict[str, int] = dict.fromkeys(attr_mapping.values(), 0)
+	percent = False
+
+	match = re.search(r'全属性[+＋](\d+)', desc)
+	if match:
+		kwargs: dict[str, int] = dict.fromkeys(
+			attr_mapping.values(), int(match.group(1))
+		)
+		return SixAttributes(**kwargs, percent=False)
+
+	# 批量匹配所有属性
+	for chinese_name, english_name in attr_mapping.items():
+		match = re.search(rf'{chinese_name}[+＋](\d+)', desc)
+		if match:
+			value = int(match.group(1))
+			# 检查是否有百分比符号
+			percent_match = re.search(rf'{chinese_name}[+＋]\d+%', desc)
+			if percent_match:
+				# 如果有百分比符号，设置百分比标签
+				percent = True
+
+			attributes[english_name] = value
+
+	# 如果没有匹配到任何属性，返回None
+	if not any(attributes.values()):
+		return None
+
+	attr_bonus = SixAttributes(**attributes, percent=percent)
+	return attr_bonus
 
 
-# class BranchNodeBase(BaseResModel):
-# name: str = Field(description="分支节点名称")
+def _achievement_classifier(achievement: Achievement) -> set[CatNameEnum]:
+	"""根据成就分类器"""
+	category_names = set[CatNameEnum]()
+	if achievement.is_hide:
+		category_names.add(CatNameEnum.hide_achievement)
+	if achievement.is_ability_bonus:
+		category_names.add(CatNameEnum.ability_achievement)
 
-# @classmethod
-# def resource_name(cls) -> str:
-# return "achievement_tree_branch"
-
-
-# class BranchNode(BranchNodeBase, ConvertToORM["BranchNodeORM"]):
-# parent: ResourceRef[RootNode] = Field(description="父节点（RootNode）资源引用")
-# rules: list["RuleNode"] = Field(default_factory=list, description="规则节点列表")
-
-# @classmethod
-# def get_orm_model(cls) -> type["BranchNodeORM"]:
-# return BranchNodeORM
-
-# def to_orm(self) -> "BranchNodeORM":
-# return BranchNodeORM(
-# id=self.id,
-# name=self.name,
-# parent_id=self.parent.id,
-# rules=[r.to_orm() for r in self.rules],
-# )
+	return category_names
 
 
-# class BranchNodeORM(BranchNodeBase, table=True):
-# parent_id: int | None = Field(
-# default=None,
-# foreign_key="achievement_tree_root.id"
-# )
-# parent: "RootNodeORM" = Relationship(back_populates="branches")
-# rules: list["RuleNodeORM"] = Relationship(back_populates="parent")
+CATEGORY_NAME_MAP: CsvTable[dict] = {
+	id_: {'id': id_, 'name': enum.value} for id_, enum in enumerate(CatNameEnum)
+}
 
 
-# class RuleNodeBase(BaseResModel):
-# name: str = Field(description="规则节点名称")
-# intro: str | None = Field(description="规则节点简介")
-
-# @classmethod
-# def resource_name(cls) -> str:
-# return "achievement_tree_rule"
+CATEGORY_ID_MAP: dict[CatNameEnum, int] = {
+	enum: id_ for id_, enum in enumerate(CatNameEnum)
+}
 
 
-# class RuleNode(RuleNodeBase, ConvertToORM["RuleNodeORM"]):
-# parent: ResourceRef[BranchNode] = Field(
-# description="父节点（BranchNode）资源引用"
-# )
-# achievements: list["AchievementNode"] = Field(
-# default_factory=list, description="成就节点列表"
-# )
+class AchievementAnalyzer(BaseDataSourceAnalyzer):
+	@classmethod
+	def get_data_import_config(cls) -> DataImportConfig:
+		return DataImportConfig(
+			unity_paths=('achievements.json',),
+		)
 
-# @classmethod
-# def get_orm_model(cls) -> type["RuleNodeORM"]:
-# return RuleNodeORM
+	def analyze(self) -> tuple[AnalyzeResult, ...]:
+		data: 'AchievementsConfig' = self._get_data('unity', 'achievements.json')
+		achievement_map: dict[int, Achievement] = {}
+		title_map: dict[int, Title] = {}
+		achievement_branch_map: dict[int, AchievementBranch] = {}
+		achievement_type_map: dict[int, AchievementType] = {}
+		category_map: CategoryMap[int, AchievementCategory, ResourceRef] = (
+			create_category_map(
+				CATEGORY_NAME_MAP,
+				model_cls=AchievementCategory,
+				array_key='achievement',
+			)
+		)
+		achievement_id = 1
+		for type_ in data['achievement_rules']['type']:
+			type_id = type_['id']
+			type_model = AchievementType(
+				id=type_id,
+				name=type_['desc'],
+				point_total=0,
+			)
+			for branch_ in type_['branches']:
+				for rule_ in branch_['branch']:
+					branch_point_total = 0
+					branch_id = rule_['id']
+					branch_model = AchievementBranch(
+						id=branch_id,
+						name=rule_['desc'],
+						point_total=0,
+						is_series=rule_['is_show_pro'] == 1,
+						type=ResourceRef.from_model(AchievementType, id=type_id),
+					)
+					for achievement in rule_['rule']:
+						original_title = achievement['title']
+						title = original_title.replace('|', '')
+						achievement_model = Achievement(
+							id=achievement_id,
+							title_id=achievement['spe_name_bonus'] or None,
+							name=achievement['ach_name'],
+							point=achievement['achievement_point'],
+							desc=achievement['desc'],
+							original_title=original_title or None,
+							title=title or None,
+							is_ability_bonus=achievement['ability_title'] == 1,
+							ability_desc=achievement['abtext'] or None,
+							is_hide=achievement['hide'] == 1,
+							type=ResourceRef.from_model(AchievementType, id=type_id),
+							branch=ResourceRef.from_model(
+								AchievementBranch, id=branch_id
+							),
+							attr_bonus=_from_desc_analyze_attr_bonus(
+								achievement['abtext']
+							),
+						)
 
-# def to_orm(self) -> "RuleNodeORM":
-# return RuleNodeORM(
-# id=self.id,
-# name=self.name,
-# intro=self.intro,
-# parent_id=self.parent.id,
-# achievements=[a.to_orm() for a in self.achievements],
-# )
+						# 有两个title_id为79的称号，为其中一个分配新序号解决这个问题
+						if (
+							achievement_model.title_id == 79
+							and achievement_model.name == '战斗圣光斗士'
+						):
+							achievement_model.title_id = 10079
 
+						title_model = achievement_model.to_title()
+						if title_model is not None:
+							title_map[title_model.id] = title_model
+						ref = ResourceRef.from_model(achievement_model)
+						category_names = _achievement_classifier(achievement_model)
+						for category_name in category_names:
+							category_map.add_element(
+								CATEGORY_ID_MAP[category_name], ref
+							)
 
-# class RuleNodeORM(RuleNodeBase, table=True):
-# parent_id: int | None = Field(
-# default=None, foreign_key="achievement_tree_branch.id")
-# parent: "BranchNodeORM" = Relationship(back_populates="rules")
+						achievement_map[achievement_id] = achievement_model
+						branch_point_total += achievement_model.point
+						branch_model.achievement.append(ref)
+						achievement_id += 1
 
-# achievements: list["AchievementNodeORM"] = Relationship(
-# back_populates="parent")
+					branch_model.point_total = branch_point_total
+					type_model.point_total += branch_model.point_total
+					type_model.branch.append(ResourceRef.from_model(branch_model))
+					achievement_branch_map[branch_id] = branch_model
 
-# @classmethod
-# def resource_name(cls) -> str:
-# return "achievement_tree_rule"
+			achievement_type_map[type_id] = type_model
 
+		# 添加下一级成就和上一级成就
+		for achievement in achievement_branch_map.values():
+			if not achievement.is_series:
+				continue
+			for prev_ref, next_ref in zip(
+				achievement.achievement, achievement.achievement[1:]
+			):
+				prev_model = achievement_map[prev_ref.id]
+				next_model = achievement_map[next_ref.id]
+				prev_model.next_level_achievement = next_ref
+				next_model.prev_level_achievement = prev_ref
 
-# class AchievementNodeBase(BaseResModel, BaseGeneralModel):
-# name: str = Field(description="成就名称")
-# point: int = Field(description="成就点数")
-# title: str | None = Field(description="成就称号")
-# desc: str = Field(description="成就描述")
-# is_ability: bool = Field(description="是否是能力加成成就")
-# ability_desc: str | None = Field(
-# description="能力加成成就描述，仅在该成就为能力加成成就时有效"
-# )
-
-# @classmethod
-# def resource_name(cls) -> str:
-# return "achievement"
-
-# @classmethod
-# def schema_path(cls) -> str:
-# return "achievement_node.json"
-
-
-# class AchievementNode(AchievementNodeBase, ConvertToORM["AchievementNodeORM"]):
-# parent: ResourceRef[RuleNode] = Field(description="父节点引用")
-
-# @classmethod
-# def get_orm_model(cls) -> type["AchievementNodeORM"]:
-# return AchievementNodeORM
-
-# def to_orm(self) -> "AchievementNodeORM":
-# return AchievementNodeORM(
-# id=self.id,
-# name=self.name,
-# point=self.point,
-# title=self.title,
-# desc=self.desc,
-# is_ability=self.is_ability,
-# ability_desc=self.ability_desc,
-# parent_id=self.parent.id,
-# )
-
-
-# class AchievementNodeORM(AchievementNodeBase, table=True):
-# parent_id: int | None = Field(
-# default=None, foreign_key="achievement_tree_rule.id")
-# parent: "RuleNodeORM" = Relationship(back_populates="achievements")
-
-
-# class AchievementsAnalyzer(Analyzer):
-# """成就数据分析器"""
-
-# @classmethod
-# def get_data_import_config(cls) -> DataImportConfig:
-# return DataImportConfig(
-# html5_paths=("xml/achievements.json",),
-# )
-
-# def analyze(self) -> tuple[AnalyzeResult, ...]:
-# achievements_data = self._get_data('html5', 'xml/achievements.json')["AchievementRules"]["type"]
-# achievement_tree: dict[int, RootNode] = {}
-# all_achievements: dict[int, AchievementNode] = {}
-# ability_achievements: dict[int, AchievementNode] = {}
-# branch_id = 1
-# rule_id = 1
-# achievement_id = 1
-# for ach_type in achievements_data:
-# root_id = ach_type.get("ID")
-# root_name = ach_type.get("Desc")
-# root_node = RootNode(
-# id=root_id,
-# name=root_name,
-# branches=[],
-# )
-# achievement_tree[root_id] = root_node
-# for branches in ach_type.get("Branches", []):
-# # branch_id = branches.get("ID")
-# branch_name = branches.get("Desc")
-# branch_node = BranchNode(
-# id=branch_id,
-# name=branch_name,
-# rules=[],
-# parent=ResourceRef(
-# id=root_id,
-# path=f'{root_id}',
-# resource_name=TREE_RESOURCE_NAME,
-# ),
-# )
-# branch_id += 1
-# root_node.branches.append(branch_node)
-# for branch in branches.get("Branch", []):
-# # rule_id = branch.get("ID")
-# rule_name = branch.get("Desc")
-# rule_intro = branch.get("introl")
-# rule_node = RuleNode(
-# id=rule_id,
-# name=rule_name,
-# intro=rule_intro,
-# achievements=[],
-# parent=ResourceRef(
-# id=branch_id,
-# resource_name=TREE_RESOURCE_NAME,
-# ),
-# )
-# rule_id += 1
-# branch_node.rules.append(rule_node)
-# for rule in branch.get("Rule", []):
-# achievement = AchievementNode(
-# id=achievement_id,
-# name=rule.get("achName", rule_name),
-# point=rule.get("AchievementPoint"),
-# title=rule.get("title"),
-# desc=rule.get("Desc"),
-# is_ability=bool(rule.get("AbilityTitle")),
-# ability_desc=rule.get("abtext"),
-# parent=ResourceRef(
-# id=rule_id,
-# resource_name=TREE_RESOURCE_NAME,
-# path=f'{root_id}/{branch_id}/{rule_id}',
-# ),
-# )
-# rule_node.achievements.append(achievement)
-# if achievement.is_ability:
-# ability_achievements[achievement_id] = achievement
-# else:
-# all_achievements[achievement_id] = achievement
-# achievement_id += 1
-
-# return (
-# AnalyzeResult(
-# model=RootNode,
-# data=achievement_tree,
-# ),
-# AnalyzeResult(
-# model=AchievementNode,
-# data=all_achievements,
-# output_mode='json',
-# ),
-# AnalyzeResult(
-# model=AchievementNode,
-# data=ability_achievements,
-# output_mode='json',
-# ),
-# )
+		return (
+			AnalyzeResult(Achievement, achievement_map),
+			AnalyzeResult(AchievementBranch, achievement_branch_map),
+			AnalyzeResult(AchievementType, achievement_type_map),
+			AnalyzeResult(AchievementCategory, category_map, output_mode='json'),
+			AnalyzeResult(Title, title_map, output_mode='json'),
+		)
