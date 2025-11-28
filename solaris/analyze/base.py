@@ -17,7 +17,7 @@ from .typing_ import (
 	DataSourceType,
 	JSONObject,
 	Patch,
-	TResModel,
+	TResModelRequiredId,
 )
 
 
@@ -311,8 +311,8 @@ class BasePostAnalyzer(BaseAnalyzer):
 	def _get_input_data(
 		self,
 		analyzer_cls: type[BaseAnalyzer],
-		model_cls: type[TResModel],
-	) -> dict[int, TResModel]:
+		model_cls: type[TResModelRequiredId],
+	) -> dict[int, TResModelRequiredId]:
 		"""获取指定分析器的指定模型数据字典
 
 		Args:
@@ -331,8 +331,8 @@ class BasePostAnalyzer(BaseAnalyzer):
 	def _get_input_result(
 		self,
 		analyzer_cls: type[BaseAnalyzer],
-		model_cls: type[TResModel],
-	) -> AnalyzeResult[TResModel]:
+		model_cls: type[TResModelRequiredId],
+	) -> AnalyzeResult[TResModelRequiredId]:
 		"""获取指定分析器的指定模型 AnalyzeResult
 
 		Args:

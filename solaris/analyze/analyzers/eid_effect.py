@@ -7,14 +7,14 @@ from seerapi_models.items import EnergyBead, Equip, SuitBonus
 from seerapi_models.pet import Soulmark
 
 from solaris.analyze.base import BaseAnalyzer, BasePostAnalyzer
-from solaris.analyze.typing_ import AnalyzeResult, TResModel
+from solaris.analyze.typing_ import AnalyzeResult, TResModelRequiredId
 
 from .effect import NewSeAnalyzer
 from .items.enegry_bead import EnergyBeadAnalyzer
 from .items.equip import EquipAnalyzer
 from .pet.soulmark import SoulmarkAnalyzer
 
-EidEffectExtractor = Callable[[TResModel], tuple[EidEffectInUse, str] | None]
+EidEffectExtractor = Callable[[TResModelRequiredId], tuple[EidEffectInUse, str] | None]
 
 
 def _extract_pet_effect(obj: PetEffect) -> tuple[EidEffectInUse, str]:
@@ -63,7 +63,7 @@ class EidEffectAnalyzer(BasePostAnalyzer):
 	def _collect_effects(
 		self,
 		analyzer_cls: type[BaseAnalyzer],
-		model_cls: type[TResModel],
+		model_cls: type[TResModelRequiredId],
 		extractor: EidEffectExtractor,
 	):
 		"""从指定数据源收集效果引用"""

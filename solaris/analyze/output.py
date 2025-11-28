@@ -23,7 +23,7 @@ from solaris.analyze.schema_generate import (
 	create_generator,
 	seerapi_common_models,
 )
-from solaris.analyze.typing_ import AnalyzeResult
+from solaris.analyze.typing_ import AnalyzeResult, TResModelRequiredId
 from solaris.analyze.utils import to_json
 from solaris.utils import join_url
 
