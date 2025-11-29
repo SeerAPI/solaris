@@ -44,6 +44,7 @@ def analyze_result_to_json(
 	data_output_dir: str | Path,
 	base_data_url: str | None = None,
 	merge_json_table: bool = False,
+	output_name_data: bool = False,
 ) -> None:
 	"""分析数据并输出到JSON文件（向后兼容的函数包装）"""
 	outputter = JsonOutputter(
@@ -54,7 +55,11 @@ def analyze_result_to_json(
 		data_output_dir=data_output_dir,
 		base_data_url=base_data_url,
 	)
-	outputter.run(results, merge_json_table=merge_json_table)
+	outputter.run(
+		results,
+		merge_json_table=merge_json_table,
+		output_name_data=output_name_data,
+	)
 
 
 def analyze_result_to_db(

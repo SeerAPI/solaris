@@ -19,7 +19,7 @@ from seerapi_models.build_model import BaseGeneralModel
 if TYPE_CHECKING:
 	from pydantic._internal._core_utils import CoreSchemaOrField
 
-from seerapi_models.common import ApiResourceList, ResourceRef
+from seerapi_models.common import ApiResourceList, NamedData, ResourceRef
 
 from solaris.utils import join_url
 
@@ -39,6 +39,10 @@ def _mark_in_schema(core_schema) -> bool:
 def _add_mark_to_schema(core_schema) -> dict:
 	core_schema[ROOT_MARK_KEY] = ROOT_MARK
 	return core_schema
+
+
+def _get_cls_from_schema(core_schema: CoreSchema) -> type | None:
+	return core_schema.get('cls')
 
 
 class _ExtraSchemaField(TypedDict):
@@ -170,6 +174,25 @@ def ref_get_pydantic_json_schema(schema, handler):
 	return json_schema | create_extra_schema(model_name=model_name)
 
 
+@PydanticJsFunctionInjector.register(NamedData)
+def named_data_get_pydantic_json_schema(schema, handler):
+	json_schema = {
+		'$schema': 'https://json-schema.org/draft/2020-12/schema',
+		'title': 'NamedData',
+		'type': 'object',
+		'properties': {
+			'data': {
+				'type': 'object',
+				'patternProperties': {'^[0-9]+$': {'$dynamicRef': '#TResModel'}},
+				'additionalProperties': False,
+			}
+		},
+		'required': ['data'],
+		'$defs': {'TResModel': {'$dynamicAnchor': 'TResModel'}},
+	}
+	return json_schema
+
+
 class JsonSchemaGenerator(GenerateJsonSchema):
 	base_url: str
 
@@ -182,7 +205,7 @@ class JsonSchemaGenerator(GenerateJsonSchema):
 			raise ValueError('base_url is not set')
 
 		json_schema = super().model_schema(schema)
-		cls = schema.get('cls')
+		cls = _get_cls_from_schema(schema)
 		if cls is None or not is_base_general_model(cls) or _mark_in_schema(schema):
 			return json_schema
 
@@ -200,7 +223,8 @@ class ShrinkOnlyNonRoot(JsonSchemaGenerator):
 		重写根级别 schema 生成，
 		将非根模型的 BaseGeneralModel schema 省略为 $ref 引用
 		"""
-		cls = schema.get('cls')
+		cls = _get_cls_from_schema(schema)
+
 		if cls is not None and is_base_general_model(cls):
 			# 标记为根模型以输出完整 schema
 			new_core_schema = schema.copy()

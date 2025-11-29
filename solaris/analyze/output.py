@@ -1,7 +1,15 @@
-from collections.abc import Iterable, MutableMapping, Sequence
+from collections import defaultdict
+from collections.abc import Iterable, Mapping, MutableMapping, Sequence
 import inspect
 from pathlib import Path
-from typing import Annotated, Any, Protocol, TypeVar, overload
+from typing import (
+	Annotated,
+	Any,
+	Protocol,
+	TypeAlias,
+	TypeVar,
+	overload,
+)
 
 from pydantic import BaseModel, TypeAdapter
 from pydantic.fields import FieldInfo
@@ -9,6 +17,7 @@ from pydantic.json_schema import GenerateJsonSchema, model_json_schema
 from seerapi_models.common import (
 	ApiResourceList,
 	BaseGeneralModel,
+	NamedData,
 	NamedResourceRef,
 	ResourceRef,
 )
@@ -36,10 +45,13 @@ HASH_FIELD = FieldInfo(
 DEFAULT_FIELDS = (('hash', HASH_FIELD),)
 
 
-_T = TypeVar('_T', bound=MutableMapping[str, Any])
+_TMap = TypeVar('_TMap', bound=MutableMapping[str, Any])
+DataMap: TypeAlias = Mapping[int, TResModelRequiredId]
 
 
-def _add_fields_to_schema(schema: _T, fields: Iterable[tuple[str, FieldInfo]]) -> _T:
+def _add_fields_to_schema(
+	schema: _TMap, fields: Iterable[tuple[str, FieldInfo]]
+) -> _TMap:
 	"""向schema添加额外字段"""
 	if 'properties' not in schema:
 		return schema
@@ -77,14 +89,14 @@ def _create_index_model(name: str, data: dict[str, Any]) -> type[BaseModel]:
 	)
 
 
-def _generate_api_resource_list(result: AnalyzeResult) -> ApiResourceList:
+def _generate_api_resource_list(data: DataMap[TResModelRequiredId]) -> ApiResourceList:
 	refs: list[NamedResourceRef] = [
 		NamedResourceRef.from_res_name(
 			id=i.id,
 			resource_name=i.resource_name(),
 			name=getattr(i, 'name', None),
 		)
-		for i in result.data.values()
+		for i in data.values()
 	]
 	return ApiResourceList(count=len(refs), results=refs)
 
@@ -262,22 +274,95 @@ class JsonOutputter(OutputterProtocol):
 			schema=schema,
 		)
 
-	def _output_split_json(
-		self,
-		result: AnalyzeResult,
-		resource_name: str,
-		schema: MutableMapping[str, Any],
-	) -> None:
-		"""输出分散模式的JSON（每个资源一个文件）
+	def _generate_named_data_schema(
+		self, resource_name: str
+	) -> MutableMapping[str, Any]:
+		"""生成名称到数据的映射表的Schema"""
+		schema = {
+			'$schema': 'https://json-schema.org/draft/2020-12/schema',
+			'type': 'object',
+			'properties': {
+				'data': {
+					'$defs': {
+						'TResModel': {
+							'$dynamicAnchor': 'TResModel',
+							'type': 'object',
+							'$ref': join_url(self.schema_url, resource_name, '$id'),
+						}
+					},
+					'$ref': join_url(self.schema_url, 'common', 'named_data'),
+				}
+			},
+			'required': ['data'],
+		}
+
+		return schema
+
+	def _generate_name_data(
+		self, data: DataMap[TResModelRequiredId]
+	) -> Mapping[str, NamedData[TResModelRequiredId]]:
+		"""生成名称到数据的映射表
 
 		Args:
 			result: 分析结果
+		"""
+		name_data: defaultdict[str, NamedData[TResModelRequiredId]] = defaultdict(
+			lambda: NamedData(data={})
+		)
+		for id, model in data.items():
+			if name := getattr(model, 'name', None):
+				name_data[str(name)].data[id] = model
+
+		return name_data
+
+	def _output_named_json(
+		self,
+		name_data: Mapping[str, NamedData[TResModelRequiredId]],
+		resource_name: str,
+		schema: MutableMapping[str, Any],
+	) -> None:
+		"""以名称作为key，将数据输出为JSON文件
+
+		Args:
+			name_data: 名称到数据的映射表
 			resource_name: 资源名称
-			schema: Schema
+			schema: JSON Schema
+		"""
+
+		# 准备输出路径
+		output_paths: dict[Path, NamedData[TResModelRequiredId]] = {}
+		for name, res_data in name_data.items():
+			res_path = Path(resource_name).joinpath(name, 'index.json')
+			output_paths[res_path] = res_data
+
+		# 输出Schema
+		schema = self._generate_named_data_schema(resource_name)
+		schema_path = Path(resource_name).joinpath('$name', 'index.json')
+		self._dump_schema(schema, schema_path)
+
+		# 批量输出数据文件
+		for path, data in output_paths.items():
+			self._dump_data(data, path)
+
+	def _output_individual_json(
+		self,
+		data: DataMap[TResModelRequiredId],
+		resource_name: str,
+		schema: MutableMapping[str, Any],
+	) -> None:
+		"""输出按ID分散的JSON数据
+
+		将数据按资源ID分散到不同的文件中，每个资源ID对应一个独立的JSON文件。
+		同时输出对应的JSON Schema和API资源列表。
+
+		Args:
+			data: 分析出的数据，键为资源ID，值为资源模型实例
+			resource_name: 资源名称，用于构建输出路径
+			schema: JSON Schema定义，用于数据验证
 		"""
 		# 准备输出路径
-		output_paths: dict[Path, Any] = {}
-		for res_id, res_data in result.data.items():
+		output_paths: dict[Path, TResModelRequiredId] = {}
+		for res_id, res_data in data.items():
 			res_path = Path(resource_name).joinpath(str(res_id), 'index.json')
 			output_paths[res_path] = res_data
 
@@ -286,24 +371,24 @@ class JsonOutputter(OutputterProtocol):
 		self._dump_schema(schema, schema_path)
 
 		# 输出ApiResourceList
-		self._output_api_resource_list(result, resource_name)
+		self._output_api_resource_list(data, resource_name)
 
 		# 批量输出数据文件
-		for path, data in output_paths.items():
-			self._dump_data(data, path)
+		for path, res_data in output_paths.items():
+			self._dump_data(res_data, path)
 
 	def _output_api_resource_list(
 		self,
-		result: AnalyzeResult,
+		data: DataMap[TResModelRequiredId],
 		resource_name: str,
 	) -> None:
 		"""输出ApiResourceList
 
 		Args:
-			result: 分析结果
+			data: 分析结果数据
 			resource_name: 资源名称
 		"""
-		api_resource_list = _generate_api_resource_list(result)
+		api_resource_list = _generate_api_resource_list(data)
 		api_resource_list_schema = model_json_schema(
 			ApiResourceList,
 			schema_generator=self.normal_generator,
@@ -317,16 +402,17 @@ class JsonOutputter(OutputterProtocol):
 
 	def _process_single_result(
 		self,
-		result: AnalyzeResult,
+		result: AnalyzeResult[TResModelRequiredId],
 		*,
 		merge_json_table: bool,
+		output_name_data: bool,
 	) -> tuple[str, str] | None:
 		"""处理单个分析结果
 
 		Args:
 			result: 分析结果
 			merge_json_table: 是否合并为单个JSON文件
-
+			output_name_data: 是否输出名称映射
 		Returns:
 			如果需要输出，返回 (resource_name, resource_url)，否则返回 None
 		"""
@@ -336,7 +422,7 @@ class JsonOutputter(OutputterProtocol):
 
 		# 提取基本信息
 		model = result.model
-		resource_name = result.name or model.resource_name()
+		resource_name = model.resource_name()
 		schema = self._generate_schema_for_result(result)
 		data = result.data
 
@@ -344,7 +430,11 @@ class JsonOutputter(OutputterProtocol):
 		if merge_json_table:
 			self._output_merged_json(resource_name, data, schema)
 		else:
-			self._output_split_json(result, resource_name, schema)
+			self._output_individual_json(data, resource_name, schema)
+			# 输出名称映射
+			if output_name_data:
+				name_data = self._generate_name_data(data)
+				self._output_named_json(name_data, resource_name, schema)
 
 		# 返回索引信息
 		return resource_name, join_url(self.data_url, resource_name)
@@ -371,6 +461,7 @@ class JsonOutputter(OutputterProtocol):
 		results: Sequence[AnalyzeResult],
 		*,
 		merge_json_table: bool = False,
+		output_name_data: bool = False,
 	) -> None:
 		"""执行JSON输出流程
 
@@ -384,7 +475,7 @@ class JsonOutputter(OutputterProtocol):
 		# 处理所有结果
 		root_index_data: dict[str, str] = {}
 		for result in (pbar_result := tqdm(results, leave=False)):
-			resource_name = result.name or result.model.resource_name()
+			resource_name = result.model.resource_name()
 			pbar_result.set_description(
 				f'正在输出JSON数据|输出{resource_name}',
 				refresh=True,
@@ -394,10 +485,12 @@ class JsonOutputter(OutputterProtocol):
 			result_info = self._process_single_result(
 				result,
 				merge_json_table=merge_json_table,
+				output_name_data=output_name_data,
 			)
 			if result_info is not None:
 				resource_name, resource_url = result_info
 				root_index_data[resource_name] = resource_url
+
 		# 输出metadata
 		self._output_metadata()
 
@@ -449,7 +542,7 @@ class DBOutputter(OutputterProtocol):
 			raise RuntimeError('Database not initialized')
 
 		for result in (pbar_result := tqdm(results, leave=False)):
-			name = result.name or result.model.resource_name()
+			name = result.model.resource_name()
 			pbar_result.set_description(
 				f'正在输出数据库数据|输出{name}',
 				refresh=True,
