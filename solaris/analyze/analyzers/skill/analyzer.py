@@ -1,6 +1,5 @@
-from dataclasses import KW_ONLY, dataclass
 from functools import cached_property
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
 from seerapi_models.common import ResourceRef, SkillEffectInUse
 from seerapi_models.element_type import TypeCombination
@@ -14,9 +13,21 @@ from seerapi_models.skill import (
 	SkillHideEffect,
 )
 
-from solaris.analyze.base import BaseDataSourceAnalyzer, DataImportConfig
+from solaris.analyze.analyzers.element_type import ElementTypeAnalyzer
+from solaris.analyze.base import (
+	BaseAnalyzer,
+	BaseDataSourcePostAnalyzer,
+	DataImportConfig,
+)
 from solaris.analyze.typing_ import AnalyzeResult
 from solaris.analyze.utils import CategoryMap, create_category_map
+
+from .effect_handlers import (
+	INFO_HANDLER_MAP,
+	EffectArgs,
+	InfoArgs,
+	effect_handler_default,
+)
 
 if TYPE_CHECKING:
 	from solaris.parse.parsers.effect_info import EffectInfoItem, ParamTypeItem
@@ -24,7 +35,7 @@ if TYPE_CHECKING:
 	from solaris.parse.parsers.skill_effect import SkillEffectItem
 
 
-def _slice_args(args_nums: list[int], args: list[int]) -> list[list[int]]:
+def _slice_args(args: EffectArgs, args_nums: list[int]) -> list[EffectArgs]:
 	"""
 	将args按args_nums以切片。
 	最后一个切片会包含所有剩余的参数。
@@ -44,46 +55,6 @@ def _slice_args(args_nums: list[int], args: list[int]) -> list[list[int]]:
 	# 最后一个切片包含所有剩余的参数
 	result.append(args[start_index:])
 	return result
-
-
-@dataclass
-class StatChange:
-	atk: int
-	def_: int
-	sp_atk: int
-	sp_def: int
-	spd: int
-	acc: int
-	_: KW_ONLY
-	# 字符串格式化模式：正符号、负符号、无符号、根据值、无数字
-	format_mode: Literal['+', '-', 'unsigned', 'value', 'none'] = 'value'
-	split_char: str = '、'
-
-	def __post_init__(self):
-		self.stat_info = [
-			'攻击',
-			'防御',
-			'特攻',
-			'特防',
-			'速度',
-			'命中',
-		]
-		self._format_func = {
-			'+': lambda x: f'+{abs(x):d}',
-			'-': lambda x: f'-{abs(x):d}',
-			'unsigned': lambda x: f'{abs(x):d}',
-			'value': lambda x: f'{x:+d}',
-			'none': lambda x: '',
-		}[self.format_mode]
-
-	def __str__(self) -> str:
-		return self.split_char.join(
-			[
-				f'{stat}{self._format_func(num)}'
-				for stat, num in zip(self.stat_info, self.__dict__.values())
-				if num != 0 and stat
-			]
-		)
 
 
 def add_condition_labels(
@@ -109,10 +80,17 @@ def add_condition_labels(
 	return result
 
 
-class BaseSkillEffectAnalyzer(BaseDataSourceAnalyzer):
+class BaseSkillEffectAnalyzer(BaseDataSourcePostAnalyzer):
+	@classmethod
+	def get_input_analyzers(cls) -> tuple[type[BaseAnalyzer], ...]:
+		return (ElementTypeAnalyzer,)
+
 	@classmethod
 	def get_data_import_config(cls) -> DataImportConfig:
-		return DataImportConfig(unity_paths=('effectInfo.json', 'skillEffect.json'))
+		return DataImportConfig(
+			unity_paths=('effectInfo.json', 'skillEffect.json'),
+			patch_paths=('skill_effect.json', 'effect_info.json'),
+		)
 
 	@cached_property
 	def other_effect_map(self) -> dict[int, 'SkillEffectItem']:
@@ -216,8 +194,19 @@ class BaseSkillEffectAnalyzer(BaseDataSourceAnalyzer):
 
 		return effect_type_map
 
+	@property
+	def type_combination_map(self) -> dict[int, TypeCombination]:
+		return self._get_input_data(ElementTypeAnalyzer, TypeCombination)
+
+	@property
+	def type_combination_name_map(self) -> dict[int, str]:
+		return {
+			type_combination.id: type_combination.name
+			for type_combination in self.type_combination_map.values()
+		}
+
 	def create_skill_effect(
-		self, type_ids: list[int], args: list[int]
+		self, type_ids: list[int], args: EffectArgs
 	) -> list[SkillEffectInUse]:
 		"""根据效果类型ID和参数列表，创建技能效果对象列表。
 
@@ -228,53 +217,38 @@ class BaseSkillEffectAnalyzer(BaseDataSourceAnalyzer):
 		Returns:
 			一个包含SkillEffectInUse对象的列表。如果出现未知效果类型或参数错误，则返回空元组。
 		"""
-		args_nums = []
+		new_type_ids: list[int] = []
+		args_nums: list[int] = []
 		# 遍历每个效果类型ID，从effect_type_map中获取所需参数数量
 		for i in type_ids:
-			if i not in self.effect_type_map:
-				return []
-
+			if i == 0:
+				continue
+			new_type_ids.append(i)
 			args_nums.append(self.effect_type_map[i].args_num)
 
 		# 使用_slice_args辅助函数，根据每个效果所需的参数数量，将扁平的args列表
 		# 切分为嵌套列表
-		sliced_args: list[list[int]] = _slice_args(args_nums, list(args))
+
+		sliced_args: list[list[int]] = _slice_args(list(args), args_nums)
 		results = []
-		format_mode_map = {16: 'none', 24: '-'}
 		# 遍历切分后的参数和对应的效果类型ID
-		for type_id, effect_args in zip(type_ids, sliced_args):
+		for type_id, effect_args in zip(new_type_ids, sliced_args):
 			type_ = self.effect_type_map[type_id]
 			# info_args用于格式化效果描述字符串，初始值为效果参数的副本
-			info_args: list[int | StatChange | str | None] = list(effect_args)
+			info_args: InfoArgs = list(effect_args)
 			# 处理需要特殊格式化的参数
 			for p in type_.param or []:
-				param_index = p.position
-				param_ref = p.param
-				param = self.effect_param_map[param_ref.id]
-				# param_id为16, 24表示这是一个StatChange（状态变化）参数
-				if (param_id := param.id) in (0, 16, 24) and len(info_args) > 6:
-					# 将6个参数合并为一个StatChange对象
-					slice_ = slice(param_index, param_index + 6)
-					kwargs = {}
-					if mode := format_mode_map.get(param_id):
-						kwargs['format_mode'] = mode
-					info_args[slice_] = [StatChange(*effect_args[slice_], **kwargs)] + [
-						None
-					] * 5
-					# 由于状态变化占用6个参数位置，所以填充5个None
-					continue
-				# 特别处理id为14的参数
-				if param_id == 14:
-					info_args[param_index] = f'{effect_args[param_index]:+d}'
-					continue
-				# 如果参数有预定义的描述信息(param.infos)
-				if isinstance(param_infos := param.infos, list):
-					pos = effect_args[param_index]
-					try:
-						# 使用参数值作为索引，在infos中查找对应的描述文本并使用
-						info_args[param_index] = param_infos[pos]
-					except IndexError:
-						return []
+				param: SkillEffectParam = self.effect_param_map[p.param.id]
+				info_args = effect_handler_default(
+					effect_args,
+					param,
+					p.position,
+					info_args,
+					type_combination_map=self.type_combination_name_map,
+				)
+
+			if type_id in INFO_HANDLER_MAP:
+				info_args = INFO_HANDLER_MAP[type_id](effect_args, info_args)
 
 			results.append(
 				SkillEffectInUse(

@@ -45,14 +45,8 @@ class ElementTypeAnalyzer(BaseDataSourceAnalyzer):
 				id=id_,
 				name=item['cn'],
 				name_en='_'.join(item['en']),
-				primary=ResourceRef.from_model(
-					ElementType,
-					id=comp1,
-				),
-				secondary=ResourceRef.from_model(
-					ElementType,
-					id=comp2,
-				)
+				primary=ResourceRef.from_model(ElementType, id=comp1),
+				secondary=ResourceRef.from_model(ElementType, id=comp2)
 				if comp2
 				else None,
 			)

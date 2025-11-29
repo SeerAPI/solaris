@@ -86,4 +86,4 @@ fixture-parentheses = false
 mark-parentheses = false
 
 [dependency-groups]
-dev = ["ruff>=0.13.0"]
+dev = ["ruff>=0.13.0", "pytest>=9.0.1"]
