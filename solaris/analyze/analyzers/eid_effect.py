@@ -51,7 +51,8 @@ def _extract_soulmark_effect(obj: Soulmark) -> tuple[EidEffectInUse, str] | None
 class EidEffectAnalyzer(BasePostAnalyzer):
 	"""分析并提取特性/特质数据"""
 
-	def get_input_analyzers(self):
+	@classmethod
+	def get_input_analyzers(cls) -> tuple[type[BaseAnalyzer], ...]:
 		return (NewSeAnalyzer, EquipAnalyzer, EnergyBeadAnalyzer, SoulmarkAnalyzer)
 
 	def _eid_ref_to_obj(self, eid_ref: EidEffectInUse) -> EidEffect:

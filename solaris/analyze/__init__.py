@@ -6,7 +6,7 @@ from tqdm import tqdm
 
 from solaris.utils import import_all_classes
 
-from .base import BaseAnalyzer, BasePostAnalyzer
+from .base import BaseAnalyzer, PostAnalyzerMixin
 from .output import DBOutputter, JsonOutputter
 from .typing_ import AnalyzeResult
 
@@ -98,10 +98,10 @@ def _build_dependency_graph(
 
 	# 构建依赖图
 	for analyzer in analyzers:
-		if issubclass(analyzer, BasePostAnalyzer):
-			# 创建临时实例来获取依赖
-			temp_instance = analyzer()
-			dependencies = list(temp_instance.get_input_analyzers())
+		# 检查是否是后处理分析器（使用Mixin检查而不是具体类）
+		if issubclass(analyzer, PostAnalyzerMixin):
+			# 直接调用类方法获取依赖，不需要创建实例
+			dependencies = list(analyzer.get_input_analyzers())
 
 			# 检查依赖是否都存在
 			for dep in dependencies:
@@ -235,7 +235,8 @@ def run_all_analyzer(
 
 		try:
 			# 根据类型创建分析器实例
-			if issubclass(analyzer_cls, BasePostAnalyzer):
+			# 检查是否使用了PostAnalyzerMixin
+			if issubclass(analyzer_cls, PostAnalyzerMixin):
 				# 后处理分析器需要传入依赖结果
 				analyzer = analyzer_cls(input_results=analyzer_results)
 			else:

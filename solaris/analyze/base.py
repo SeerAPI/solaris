@@ -101,7 +101,7 @@ class DataLoader(ABC):
 			# 如果已存在同名数据则覆盖
 			if mode == 'create':
 				content = self._process_create_patch_content(content)
-				self.data[patch_type][target] = content
+				self.data[patch_type][target] = content  # type: ignore[assignment]
 				continue
 			# 如果补丁模式为 append，则将内容追加到目标数据的指定位置
 			for fp, origin_data in self.data[patch_type].items():
@@ -265,42 +265,34 @@ class BaseDataSourceAnalyzer(DataLoader, BaseAnalyzer):
 		return '\n  '.join(info_parts)
 
 
-class BasePostAnalyzer(BaseAnalyzer):
-	"""后处理分析器抽象基类，该类型的分析器使用其他分析器的分析结果作为输入
+class PostAnalyzerMixin:
+	"""后处理分析器Mixin，提供接收和访问其他分析器结果的功能
 
-	后处理分析器需要实现 get_input_analyzers() 方法来声明依赖的分析器。
-	在构造时会接收所有依赖分析器的结果，可以通过辅助方法获取需要的数据。
+	该Mixin可以与任何分析器基类组合使用，使分析器能够接收其他分析器的结果。
+	使用Mixin模式可以支持多重继承，例如同时继承DataLoader和后处理功能。
 
-	Example:
-		```python
-		class MyPostAnalyzer(BasePostAnalyzer):
-			def get_input_analyzers(self) -> tuple[type[BaseAnalyzer], ...]:
-				return (SkillAnalyzer, EffectAnalyzer)
-
-			def analyze(self) -> tuple[AnalyzeResult, ...]:
-				# 获取技能数据
-				skill_data = self.get_input_data(SkillAnalyzer, Skill)
-				# 获取效果结果
-				effect_result = self.get_input_result(EffectAnalyzer, PetEffect)
-				# 处理数据...
-				return (AnalyzeResult(model=MyModel, data=my_data),)
-		```
+	使用该Mixin的类需要实现 get_input_analyzers() 类方法来声明依赖的分析器。
 	"""
 
-	def __init__(
-		self,
-		input_results: dict[type[BaseAnalyzer], list[AnalyzeResult]] | None = None,
-	) -> None:
-		"""初始化后处理分析器
+	def __init__(self, **kwargs: Any) -> None:
+		"""初始化后处理分析器Mixin
 
 		Args:
-			input_results: 依赖分析器的结果字典，键为分析器类，值为该分析器的结果列表
+			**kwargs: 关键字参数，包括：
+				- input_results: 依赖分析器的结果字典，
+					键为分析器类，值为该分析器的结果列表
+				- 其他参数将传递给父类
 		"""
-		super().__init__()
-		self._input_results = input_results or {}
+		# 从kwargs中提取input_results参数
+		self._input_results: dict[type[BaseAnalyzer], list[AnalyzeResult]] = (
+			kwargs.pop('input_results', None) or {}
+		)
+		# 调用父类的__init__，支持多重继承链
+		super().__init__(**kwargs)
 
+	@classmethod
 	@abstractmethod
-	def get_input_analyzers(self) -> tuple[type[BaseAnalyzer], ...]:
+	def get_input_analyzers(cls) -> tuple[type[BaseAnalyzer], ...]:
 		"""返回该分析器依赖的分析器类列表
 
 		Returns:
@@ -373,3 +365,61 @@ class BasePostAnalyzer(BaseAnalyzer):
 			raise ValueError(f'未找到分析器 {analyzer_cls.__name__} 的结果')
 
 		return self._input_results[analyzer_cls]
+
+
+class BasePostAnalyzer(PostAnalyzerMixin, BaseAnalyzer):
+	"""后处理分析器抽象基类，该类型的分析器使用其他分析器的分析结果作为输入
+
+	后处理分析器需要实现 get_input_analyzers() 类方法来声明依赖的分析器。
+	在构造时会接收所有依赖分析器的结果，可以通过辅助方法获取需要的数据。
+
+	Example:
+		```python
+		class MyPostAnalyzer(BasePostAnalyzer):
+			@classmethod
+			def get_input_analyzers(cls) -> tuple[type[BaseAnalyzer], ...]:
+				return (SkillAnalyzer, EffectAnalyzer)
+
+			def analyze(self) -> tuple[AnalyzeResult, ...]:
+				# 获取技能数据
+				skill_data = self._get_input_data(SkillAnalyzer, Skill)
+				# 获取效果结果
+				effect_result = self._get_input_result(EffectAnalyzer, PetEffect)
+				# 处理数据...
+				return (AnalyzeResult(model=MyModel, data=my_data),)
+		```
+	"""
+
+	pass
+
+
+class BaseDataSourcePostAnalyzer(PostAnalyzerMixin, BaseDataSourceAnalyzer):
+	"""混合分析器抽象基类，既能加载数据源又能接收其他分析器结果
+
+	该类结合了 DataLoader 和 PostAnalyzerMixin 的功能，
+	适用于需要同时访问原始数据源和其他分析器处理结果的场景。
+
+	Example:
+		```python
+		class MyHybridAnalyzer(BaseDataSourcePostAnalyzer):
+			@classmethod
+			def get_data_import_config(cls) -> DataImportConfig:
+				return DataImportConfig(
+					unity_paths=['some_data.json']
+				)
+
+			@classmethod
+			def get_input_analyzers(cls) -> tuple[type[BaseAnalyzer], ...]:
+				return (SkillAnalyzer,)
+
+			def analyze(self) -> tuple[AnalyzeResult, ...]:
+				# 可以访问数据源
+				raw_data = self._get_data('unity', 'some_data.json')
+				# 也可以访问其他分析器的结果
+				skill_data = self._get_input_data(SkillAnalyzer, Skill)
+				# 处理数据...
+				return (AnalyzeResult(model=MyModel, data=my_data),)
+		```
+	"""
+
+	pass
