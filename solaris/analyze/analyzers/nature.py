@@ -36,7 +36,7 @@ class NatureAnalyzer(BaseDataSourceAnalyzer):
 					sp_atk=item['sp_atk'],
 					sp_def=item['sp_def'],
 					spd=item['spd'],
-					hp=0,
+					hp=1,
 					percent=True,
 				),
 			)
