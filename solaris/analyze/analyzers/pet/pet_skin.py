@@ -8,7 +8,11 @@ from ._general import BasePetAnalyzer
 
 
 class PetSkinAnalyzer(BasePetAnalyzer):
-	def analyze(self) -> tuple[AnalyzeResult, ...]:
+	@classmethod
+	def get_result_res_models(cls):
+		return (PetSkin, PetSkinCategory)
+
+	def analyze(self):
 		pet_skin_data = self.pet_skin_data
 		real_id_data: dict[int, int] = {
 			id_: pet['real_id']

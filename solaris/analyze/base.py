@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 from typing import Any, ClassVar, cast
 
+from seerapi_models.build_model import BaseResModel
 import xmltodict
 
 from solaris.analyze.settings import DataSourceDirSettings
@@ -207,6 +208,12 @@ class BaseAnalyzer(ABC):
 
 	@abstractmethod
 	def analyze(self) -> tuple[AnalyzeResult, ...]:
+		pass
+
+	@classmethod
+	@abstractmethod
+	def get_result_res_models(cls) -> tuple[type[BaseResModel], ...]:
+		"""获取该分析器返回为 JSON 类型的资源模型类型列表，该方法必须被子类实现"""
 		pass
 
 	@classmethod

@@ -29,6 +29,10 @@ def get_height_or_weight(text: Any) -> float | None:
 
 
 class PetEncyclopediaAnalyzer(BasePetAnalyzer):
+	@classmethod
+	def get_result_res_models(cls):
+		return (PetEncyclopediaEntry, PetArchiveStoryBook)
+
 	def analyze(self) -> tuple[AnalyzeResult, ...]:
 		results = {}
 		for id_, data in self.pet_encyclopedia_data.items():

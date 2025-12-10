@@ -56,6 +56,10 @@ class EnergyBeadAnalyzer(BaseItemAnalyzer):
 			+ super().get_data_import_config()
 		)
 
+	@classmethod
+	def get_result_res_models(cls):
+		return (EnergyBead,)
+
 	@cached_property
 	def bead_effect_data(self) -> dict[int, 'NewSeItem']:
 		unity_data: list['UnityNewSeItem'] = self._get_data('unity', 'new_se.json')[
@@ -116,9 +120,4 @@ class EnergyBeadAnalyzer(BaseItemAnalyzer):
 			)
 			bead_map[bead.id] = bead
 
-		return (
-			AnalyzeResult(
-				model=EnergyBead,
-				data=bead_map,
-			),
-		)
+		return (AnalyzeResult(model=EnergyBead, data=bead_map),)

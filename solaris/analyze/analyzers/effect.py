@@ -15,7 +15,11 @@ class NewSeAnalyzer(BaseDataSourceAnalyzer):
 	def get_data_import_config(cls) -> DataImportConfig:
 		return DataImportConfig(unity_paths=('new_se.json',))
 
-	def analyze(self) -> tuple[AnalyzeResult, ...]:
+	@classmethod
+	def get_result_res_models(cls):
+		return (PetEffect, PetEffectGroup, VariationEffect)
+
+	def analyze(self):
 		effect_data: list[dict[str, Any]] = self._get_data('unity', 'new_se.json')[
 			'NewSe'
 		]['NewSeIdx']

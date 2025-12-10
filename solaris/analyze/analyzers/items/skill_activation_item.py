@@ -17,6 +17,10 @@ class SkillActivationItemAnalyzer(BaseDataSourceAnalyzer):
 	def get_data_import_config(cls) -> DataImportConfig:
 		return DataImportConfig(unity_paths=('spHideMoves.json',))
 
+	@classmethod
+	def get_result_res_models(cls):
+		return (SkillActivationItem,)
+
 	def analyze(self) -> tuple[AnalyzeResult, ...]:
 		skill_activation_data: dict[int, 'SpMovesItem'] = {
 			data['item']: data
@@ -39,9 +43,4 @@ class SkillActivationItemAnalyzer(BaseDataSourceAnalyzer):
 				pet=pet_ref,
 			)
 
-		return (
-			AnalyzeResult(
-				model=SkillActivationItem,
-				data=skill_activation_map,
-			),
-		)
+		return (AnalyzeResult(model=SkillActivationItem, data=skill_activation_map),)

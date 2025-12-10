@@ -96,7 +96,17 @@ class AchievementAnalyzer(BaseDataSourceAnalyzer):
 			unity_paths=('achievements.json',),
 		)
 
-	def analyze(self) -> tuple[AnalyzeResult, ...]:
+	@classmethod
+	def get_result_res_models(cls):
+		return (
+			Achievement,
+			AchievementBranch,
+			AchievementType,
+			AchievementCategory,
+			Title,
+		)
+
+	def analyze(self):
 		data: 'AchievementsConfig' = self._get_data('unity', 'achievements.json')
 		achievement_map: dict[int, Achievement] = {}
 		title_map: dict[int, Title] = {}

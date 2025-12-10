@@ -46,6 +46,18 @@ class MintmarkAnalyzer(BaseDataSourceAnalyzer):
 			patch_paths=('mintmark_type.json',),
 		)
 
+	@classmethod
+	def get_result_res_models(cls):
+		return (
+			Mintmark,
+			AbilityMintmark,
+			SkillMintmark,
+			UniversalMintmark,
+			MintmarkClassCategory,
+			MintmarkTypeCategory,
+			MintmarkRarityCategory,
+		)
+
 	def analyze(self) -> tuple[AnalyzeResult, ...]:
 		"""分析刻印数据并返回模式构建器列表"""
 		mintmark_data: MintmarkConfig = self._get_data('unity', 'mintmark.json')

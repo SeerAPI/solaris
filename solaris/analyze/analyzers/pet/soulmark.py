@@ -20,6 +20,10 @@ class SoulmarkAnalyzer(BaseDataSourceAnalyzer):
 			unity_paths=('effectag.json', 'effectIcon.json', 'petEffectIcon.json'),
 		)
 
+	@classmethod
+	def get_result_res_models(cls):
+		return (Soulmark, SoulmarkTagCategory)
+
 	def analyze(self) -> tuple[AnalyzeResult, ...]:
 		soulmark_data = self._get_data('unity', 'effectIcon.json')['root']['effect']
 		tag_data: list[EffectTagItem] = self._get_data('unity', 'effectag.json')['data']

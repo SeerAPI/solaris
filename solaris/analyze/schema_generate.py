@@ -1,20 +1,24 @@
-from collections import defaultdict
+from collections import Counter, defaultdict
 from collections.abc import Callable
 from functools import partial
 import importlib
 import re
-from typing import TYPE_CHECKING, ClassVar, TypedDict, TypeVar, cast
+from typing import TYPE_CHECKING, Any, TypedDict, TypeVar, cast
 from typing_extensions import TypeIs, Unpack
 
+from openapi_pydantic import Schema
 from pydantic import GetJsonSchemaHandler
 from pydantic.json_schema import (
 	GenerateJsonSchema,
+	JsonRef,
 	JsonSchemaMode,
 	JsonSchemaValue,
 	model_json_schema,
 )
 from pydantic_core import CoreSchema
 from seerapi_models.build_model import BaseGeneralModel
+
+from solaris.analyze.openapi_builder import build_ref_string, create_model_name_string
 
 if TYPE_CHECKING:
 	from pydantic._internal._core_utils import CoreSchemaOrField
@@ -36,9 +40,21 @@ def _mark_in_schema(core_schema) -> bool:
 	return core_schema.get(ROOT_MARK_KEY) is ROOT_MARK
 
 
-def _add_mark_to_schema(core_schema) -> dict:
-	core_schema[ROOT_MARK_KEY] = ROOT_MARK
-	return core_schema
+def _add_mark_to_schema(schema):
+	"""
+	重写根级别 schema 生成，
+	将非根模型的 BaseGeneralModel schema 省略为 $ref 引用
+	"""
+	cls = _get_cls_from_schema(schema)
+
+	if cls is not None and is_base_general_model(cls):
+		# 标记为根模型以输出完整 schema
+		new_core_schema = schema.copy()
+		new_core_schema[ROOT_MARK_KEY] = ROOT_MARK
+	else:
+		new_core_schema = schema
+
+	return new_core_schema
 
 
 def _get_cls_from_schema(core_schema: CoreSchema) -> type | None:
@@ -65,12 +81,12 @@ def _get_model_name(cls: type) -> str:
 	cls_name: str = cls.__name__
 	bracket_matches = re.findall(r'\[([^\]]+)\]', cls_name)
 	if len(bracket_matches) == 0:
-		raise ValueError(f'无效的模型名称: {cls_name}，该模型不是泛型模型')
+		raise ValueError(f'无效的模型名称：{cls_name}，该模型不是泛型模型')
 
 	model_cls_name = bracket_matches[0]
 	if (model := all_models.get(model_cls_name)) is None:
 		raise ValueError(
-			f'无效的模型名称: {cls_name}，找不到泛型参数{model_cls_name}对应的模型'
+			f'无效的模型名称：{cls_name}，找不到泛型参数{model_cls_name}对应的模型'
 		)
 
 	return model.resource_name()
@@ -100,19 +116,21 @@ class PydanticJsFunctionInjector:
 	- 实现跨模型的 JSON Schema 增强逻辑，而无需修改模型定义
 
 	Example:
-		>>> @PydanticJsFunctionInjector.register(ResourceRef, ApiResourceList)
+		>>>
+		injector = PydanticJsFunctionInjector()
+		@injector.register(ResourceRef, ApiResourceList)
 		... def add_model_name(schema, handler):
 		...     json_schema = handler(schema)
 		...     json_schema['extra'] = {'model_name': 'example'}
 		...     return json_schema
 	"""
 
-	injected_functions: ClassVar[defaultdict[type, list[injected_func]]] = defaultdict(
-		list
-	)
+	def __init__(self):
+		self.injected_functions: defaultdict[type, list[injected_func]] = defaultdict(
+			list
+		)
 
-	@classmethod
-	def register(cls, *types: type):
+	def register(self, *types: type):
 		"""装饰器工厂：将函数注册到指定的类型
 
 		注册的函数会在对应类型生成 JSON Schema 时被调用，
@@ -127,14 +145,13 @@ class PydanticJsFunctionInjector:
 
 		def decorator(func: injected_func) -> injected_func:
 			for type_ in types:
-				cls.injected_functions[type_].append(func)
+				self.injected_functions[type_].append(func)
 
 			return func
 
 		return decorator
 
-	@classmethod
-	def inject_functions(cls, schema: _TCoreSchemaOrField) -> _TCoreSchemaOrField:
+	def inject_functions(self, schema: _TCoreSchemaOrField) -> _TCoreSchemaOrField:
 		"""将已注册的函数注入到 CoreSchema 的 metadata 中
 
 		遍历所有已注册的类型，如果 schema 对应的类是某个注册类型的子类，
@@ -154,7 +171,7 @@ class PydanticJsFunctionInjector:
 			return schema
 
 		# 遍历注册表，匹配第一个符合的类型
-		for type_, functions in cls.injected_functions.items():
+		for type_, functions in self.injected_functions.items():
 			if issubclass(model_cls, type_):
 				metadata['pydantic_js_functions'].extend(functions)
 				break
@@ -162,7 +179,12 @@ class PydanticJsFunctionInjector:
 		return schema
 
 
-@PydanticJsFunctionInjector.register(ResourceRef, ApiResourceList)
+json_schema_injector = PydanticJsFunctionInjector()
+openapi_injector = PydanticJsFunctionInjector()
+
+
+@openapi_injector.register(ResourceRef, ApiResourceList)
+@json_schema_injector.register(ResourceRef, ApiResourceList)
 def ref_get_pydantic_json_schema(schema, handler):
 	cls = schema.get('cls')
 	json_schema = handler(schema)
@@ -174,7 +196,8 @@ def ref_get_pydantic_json_schema(schema, handler):
 	return json_schema | create_extra_schema(model_name=model_name)
 
 
-@PydanticJsFunctionInjector.register(NamedData)
+@openapi_injector.register(NamedData)
+@json_schema_injector.register(NamedData)
 def named_data_get_pydantic_json_schema(schema, handler):
 	json_schema = {
 		'$schema': 'https://json-schema.org/draft/2020-12/schema',
@@ -193,11 +216,55 @@ def named_data_get_pydantic_json_schema(schema, handler):
 	return json_schema
 
 
+def _get_all_json_refs(item: Any) -> set[JsonRef]:
+	"""Get all the definitions references from a JSON schema."""
+	refs: set[JsonRef] = set()
+	stack = [item]
+
+	while stack:
+		current = stack.pop()
+		if isinstance(current, dict):
+			for key, value in current.items():
+				if key == 'examples' and isinstance(value, list):
+					continue
+				if key == '$ref' and isinstance(value, str):
+					if value.startswith('#/components/schemas/'):
+						continue
+					refs.add(JsonRef(value))
+				elif isinstance(value, dict):
+					stack.append(value)
+				elif isinstance(value, list):
+					stack.extend(value)
+		elif isinstance(current, list):
+			stack.extend(current)
+
+	return refs
+
+
+def remove_defs_and_refs(schema: dict):
+	# 来自：https://stackoverflow.com/questions/79215270/how-to-remove-defs-and-ref-when-creating-a-nested-json-schema-using-pydantic
+	schema = schema.copy()
+	defs = schema.pop('$defs', {})
+
+	def resolve(subschema):
+		if isinstance(subschema, dict):
+			ref = subschema.get('$ref', None)
+			if ref and not ref.startswith('#/components/schemas/'):
+				_def = ref.split('/')[-1]
+				return resolve(defs[_def])
+			return {_def: resolve(_ref) for _def, _ref in subschema.items()}
+		if isinstance(subschema, list):
+			return [resolve(ss) for ss in subschema]
+		return subschema
+
+	return resolve(schema)
+
+
 class JsonSchemaGenerator(GenerateJsonSchema):
 	base_url: str
 
 	def generate_inner(self, schema):
-		PydanticJsFunctionInjector.inject_functions(schema)
+		json_schema_injector.inject_functions(schema)
 		return super().generate_inner(schema)
 
 	def model_schema(self, schema):
@@ -219,19 +286,91 @@ class JsonSchemaGenerator(GenerateJsonSchema):
 
 class ShrinkOnlyNonRoot(JsonSchemaGenerator):
 	def generate(self, schema, mode: JsonSchemaMode = 'serialization'):
-		"""
-		重写根级别 schema 生成，
-		将非根模型的 BaseGeneralModel schema 省略为 $ref 引用
-		"""
+		new_core_schema = _add_mark_to_schema(schema)
+		json_schema = super().generate(new_core_schema, mode)
+		return json_schema
+
+
+class OpenAPISchemaGenerator(GenerateJsonSchema):
+	def get_json_ref_counts(self, json_schema: JsonSchemaValue) -> dict[JsonRef, int]:
+		"""Get all values corresponding to the key '$ref' anywhere in the json_schema."""
+		json_refs: dict[JsonRef, int] = Counter()
+
+		def _add_json_refs(schema: Any) -> None:
+			if isinstance(schema, dict):
+				if '$ref' in schema:
+					json_ref = JsonRef(schema['$ref'])
+					if not isinstance(json_ref, str):
+						return  # in this case, '$ref' might have been the name of a property
+					if json_ref.startswith('#/components/schemas/'):
+						return
+					already_visited = json_ref in json_refs
+					json_refs[json_ref] += 1
+					if already_visited:
+						return  # prevent recursion on a definition that was already visited
+					try:
+						defs_ref = self.json_to_defs_refs[json_ref]
+						if defs_ref in self._core_defs_invalid_for_json_schema:
+							raise self._core_defs_invalid_for_json_schema[defs_ref]
+						_add_json_refs(self.definitions[defs_ref])
+					except KeyError:
+						if not json_ref.startswith(('http://', 'https://')):
+							raise
+
+				for k, v in schema.items():
+					if k == 'examples' and isinstance(v, list):
+						# Skip examples that may contain arbitrary values and references
+						# (see the comment in `_get_all_json_refs` for more details).
+						continue
+					_add_json_refs(v)
+			elif isinstance(schema, list):
+				for v in schema:
+					_add_json_refs(v)
+
+		_add_json_refs(json_schema)
+		return json_refs
+
+	def _garbage_collect_definitions(self, schema: JsonSchemaValue) -> None:
+		visited_defs_refs = set()
+		unvisited_json_refs = _get_all_json_refs(schema)
+		while unvisited_json_refs:
+			next_json_ref = unvisited_json_refs.pop()
+			try:
+				next_defs_ref = self.json_to_defs_refs[next_json_ref]
+				if next_defs_ref in visited_defs_refs:
+					continue
+				visited_defs_refs.add(next_defs_ref)
+				unvisited_json_refs.update(
+					_get_all_json_refs(self.definitions[next_defs_ref])
+				)
+			except KeyError:
+				if not next_json_ref.startswith(('http://', 'https://')):
+					raise
+
+		self.definitions = {
+			k: v for k, v in self.definitions.items() if k in visited_defs_refs
+		}
+
+	def generate_inner(self, schema):
+		openapi_injector.inject_functions(schema)
+		return super().generate_inner(schema)
+
+	def model_schema(self, schema):
+		json_schema = super().model_schema(schema)
 		cls = _get_cls_from_schema(schema)
+		if cls is None or not is_base_general_model(cls) or _mark_in_schema(schema):
+			return json_schema
 
-		if cls is not None and is_base_general_model(cls):
-			# 标记为根模型以输出完整 schema
-			new_core_schema = schema.copy()
-			_add_mark_to_schema(new_core_schema)
-		else:
-			new_core_schema = schema
+		return {'$ref': build_ref_string(Schema, name=create_model_name_string(cls))}
 
+	def generate(self, schema, mode: JsonSchemaMode = 'serialization'):
+		json_schema = super().generate(schema, mode)
+		return cast(JsonSchemaValue, remove_defs_and_refs(json_schema))
+
+
+class OpenAPIShrinkOnlyNonRoot(OpenAPISchemaGenerator):
+	def generate(self, schema, mode: JsonSchemaMode = 'serialization'):
+		new_core_schema = _add_mark_to_schema(schema)
 		json_schema = super().generate(new_core_schema, mode)
 		return json_schema
 

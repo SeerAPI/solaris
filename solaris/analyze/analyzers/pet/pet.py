@@ -36,6 +36,16 @@ def _handle_yielding_ev(value: str | int) -> SixAttributes:
 
 
 class PetAnalyzer(BasePetAnalyzer):
+	@classmethod
+	def get_result_res_models(cls):
+		return (
+			Pet,
+			PetClass,
+			PetGenderCategory,
+			PetVipBuffCategory,
+			PetMountTypeCategory,
+		)
+
 	def get_skill_activation_item(
 		self, skill_id: int, pet_id: int
 	) -> ResourceRef['SkillActivationItem'] | None:

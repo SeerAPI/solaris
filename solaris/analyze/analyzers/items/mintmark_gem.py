@@ -48,6 +48,10 @@ class GemAnalyzer(BaseSkillEffectAnalyzer):
 			unity_paths=('gems.json',), flash_paths=('config.xml.GemsXMLInfo.xml',)
 		)
 
+	@classmethod
+	def get_result_res_models(cls):
+		return (Gem, GemCategory, GemGenCategory, GemGen1, GemGen2)
+
 	@cached_property
 	def gem_data(self) -> dict[int, 'GemItem']:
 		unity_data: list['UnityGemItem'] = self._get_data('unity', 'gems.json')['gems'][
@@ -60,7 +64,6 @@ class GemAnalyzer(BaseSkillEffectAnalyzer):
 		result = {}
 		for gem in unity_data:
 			id_ = gem['id']
-
 			result[id_] = {
 				**gem,
 				'fail_compensate_start': flash_data_map[id_]['FailCompensateStart'],
@@ -68,6 +71,7 @@ class GemAnalyzer(BaseSkillEffectAnalyzer):
 				'equit_lv1_cnt1': flash_data_map[id_]['EquitLv1Cnt1'],
 				'inlay_prob': flash_data_map[id_]['InlayProb'],
 			}
+
 		return result
 
 	def _create_gem_effect(self, data: 'GemItem') -> list[SkillEffectInUse]:

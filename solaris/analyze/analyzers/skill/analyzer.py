@@ -289,6 +289,17 @@ class SkillAnalyzer(BaseSkillEffectAnalyzer):
 		)
 		return super_config + config
 
+	@classmethod
+	def get_result_res_models(cls):
+		return (
+			Skill,
+			SkillEffectType,
+			SkillEffectParam,
+			SkillHideEffect,
+			SkillCategory,
+			SkillEffectTypeTag,
+		)
+
 	@cached_property
 	def moves_data(self) -> dict[int, 'MoveItem']:
 		unity_data: list['UnityMoveItem'] = self._get_data('unity', 'moves.json')[

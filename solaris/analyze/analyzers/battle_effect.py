@@ -30,7 +30,11 @@ class BattleEffectAnalyzer(BaseDataSourceAnalyzer):
 			patch_paths=('battle_effect_type.json', 'battle_effects_custom.json'),
 		)
 
-	def analyze(self) -> tuple[AnalyzeResult, ...]:
+	@classmethod
+	def get_result_res_models(cls):
+		return (BattleEffect, BattleEffectCategory)
+
+	def analyze(self):
 		effect_patch: dict[int, BattleEffectPatchTable] = self._get_data(
 			'patch', 'battle_effects_custom.json'
 		)

@@ -18,7 +18,11 @@ class ElementTypeAnalyzer(BaseDataSourceAnalyzer):
 			unity_paths=('skillType.json',),
 		)
 
-	def analyze(self) -> tuple[AnalyzeResult, ...]:
+	@classmethod
+	def get_result_res_models(cls):
+		return (ElementType, TypeCombination)
+
+	def analyze(self):
 		data = self._get_data('unity', 'skillType.json')
 		element_type_data: dict[int, SkillType] = {
 			item['id']: item for item in data['root']['item']

@@ -55,6 +55,10 @@ class EidEffectAnalyzer(BasePostAnalyzer):
 	def get_input_analyzers(cls) -> tuple[type[BaseAnalyzer], ...]:
 		return (NewSeAnalyzer, EquipAnalyzer, EnergyBeadAnalyzer, SoulmarkAnalyzer)
 
+	@classmethod
+	def get_result_res_models(cls):
+		return (EidEffect,)
+
 	def _eid_ref_to_obj(self, eid_ref: EidEffectInUse) -> EidEffect:
 		return EidEffect(
 			id=eid_ref.effect.id,

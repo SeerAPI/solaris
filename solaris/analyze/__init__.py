@@ -1,14 +1,20 @@
 from collections.abc import Sequence
+import inspect
 from pathlib import Path
 
+from openapi_pydantic import Server
+from seerapi_models.build_model import BaseGeneralModel
 from seerapi_models.metadata import ApiMetadata
 from tqdm import tqdm
 
+from solaris.analyze.db import is_mapped_class
+from solaris.analyze.schema_generate import seerapi_common_models
 from solaris.utils import import_all_classes
 
 from .base import BaseAnalyzer, PostAnalyzerMixin
-from .output import DBOutputter, JsonOutputter
-from .typing_ import AnalyzeResult
+from .openapi_builder import OpenAPIBuilder
+from .output import DBOutputter, JsonOutputter, OpenAPISchemaOutputter, SchemaOutputter
+from .typing_ import AnalyzeResult, ResModel
 
 ANALYZER_DEFAULT_PACKAGE_NAME = 'solaris.analyze.analyzers'
 
@@ -34,31 +40,50 @@ class AnalyzerExecutionError(Exception):
 	pass
 
 
+def get_common_models() -> list[type[BaseGeneralModel]]:
+	models: list[type[BaseGeneralModel]] = [
+		model
+		for model in seerapi_common_models.__dict__.values()
+		if (
+			issubclass(model, BaseGeneralModel)
+			and not inspect.isabstract(model)
+			and not is_mapped_class(model)
+		)
+	]
+	return models
+
+
+def collect_analyzer_res_models(
+	analyzer_classes: list[type[BaseAnalyzer]],
+) -> list[type[ResModel]]:
+	return [
+		model
+		for analyzer in analyzer_classes
+		for model in analyzer.get_result_res_models()
+	]
+
+
 def analyze_result_to_json(
 	results: Sequence[AnalyzeResult],
 	*,
 	metadata: ApiMetadata,
 	base_output_dir: str | Path = '.',
-	schema_output_dir: str | Path,
-	base_schema_url: str | None = None,
 	data_output_dir: str | Path,
 	base_data_url: str | None = None,
 	merge_json_table: bool = False,
-	output_name_data: bool = False,
+	output_named_data: bool = False,
 ) -> None:
-	"""分析数据并输出到JSON文件（向后兼容的函数包装）"""
-	outputter = JsonOutputter(
+	"""分析数据并输出到 JSON 文件"""
+	json_outputter = JsonOutputter(
 		metadata=metadata,
 		base_output_dir=base_output_dir,
-		schema_output_dir=schema_output_dir,
-		base_schema_url=base_schema_url,
 		data_output_dir=data_output_dir,
 		base_data_url=base_data_url,
 	)
-	outputter.run(
+	json_outputter.run(
 		results,
 		merge_json_table=merge_json_table,
-		output_name_data=output_name_data,
+		output_named_data=output_named_data,
 	)
 
 
@@ -76,6 +101,58 @@ def analyze_result_to_db(
 	)
 	outputter.init()
 	outputter.run(results)
+
+
+def analyzers_to_jsonschema(
+	analyzer_classes: list[type[BaseAnalyzer]],
+	*,
+	metadata: ApiMetadata,
+	base_output_dir: str | Path = '.',
+	schema_output_dir: str | Path,
+	base_schema_url: str | None = None,
+	output_named_data: bool = False,
+) -> None:
+	schema_outputter = SchemaOutputter(
+		metadata=metadata,
+		base_output_dir=base_output_dir,
+		schema_output_dir=schema_output_dir,
+		base_schema_url=base_schema_url,
+	)
+	schema_outputter.run(
+		res_models=collect_analyzer_res_models(analyzer_classes),
+		common_models=get_common_models(),
+		output_named_data=output_named_data,
+	)
+
+
+def analyzers_to_oad(
+	analyzer_classes: list[type[BaseAnalyzer]],
+	*,
+	metadata: ApiMetadata,
+	title: str,
+	detail_version: str,
+	description: str,
+	base_output_dir: str | Path = '.',
+	output_filepath: str | Path = 'openapi.json',
+	output_named_data: bool = False,
+) -> None:
+	openapi_builder = OpenAPIBuilder(
+		title=title,
+		version=detail_version,
+		description=description,
+		servers=[Server(url=metadata.api_url)],
+	)
+	schema_outputter = OpenAPISchemaOutputter(
+		metadata=metadata,
+		openapi_builder=openapi_builder,
+		base_output_dir=base_output_dir,
+		output_filepath=output_filepath,
+	)
+	schema_outputter.run(
+		res_models=collect_analyzer_res_models(analyzer_classes),
+		common_models=get_common_models(),
+		output_named_data=output_named_data,
+	)
 
 
 def import_analyzer_classes(
@@ -103,7 +180,7 @@ def _build_dependency_graph(
 
 	# 构建依赖图
 	for analyzer in analyzers:
-		# 检查是否是后处理分析器（使用Mixin检查而不是具体类）
+		# 检查是否是后处理分析器（使用 Mixin 检查而不是具体类）
 		if issubclass(analyzer, PostAnalyzerMixin):
 			# 直接调用类方法获取依赖，不需要创建实例
 			dependencies = list(analyzer.get_input_analyzers())
@@ -145,7 +222,7 @@ def _build_dependency_graph(
 		if analyzer not in visited:
 			if _has_cycle(analyzer, visited, set()):
 				raise AnalyzerDependencyError(
-					f'检测到循环依赖，涉及分析器: {analyzer.__name__}'
+					f'检测到循环依赖，涉及分析器：{analyzer.__name__}'
 				)
 
 	return dependency_graph
@@ -175,18 +252,18 @@ def _topological_sort_analyzers(
 		analyzer: len(dependency_graph.get(analyzer, [])) for analyzer in analyzers
 	}
 
-	# 找出所有入度为0的节点（没有依赖的节点）
+	# 找出所有入度为 0 的节点（没有依赖的节点）
 	queue: list[type[BaseAnalyzer]] = [
 		analyzer for analyzer in analyzers if in_degree[analyzer] == 0
 	]
 	sorted_analyzers: list[type[BaseAnalyzer]] = []
 
 	while queue:
-		# 取出入度为0的节点
+		# 取出入度为 0 的节点
 		current = queue.pop(0)
 		sorted_analyzers.append(current)
 
-		# 找出所有依赖当前节点的节点，将它们的入度减1
+		# 找出所有依赖当前节点的节点，将它们的入度减 1
 		for analyzer in analyzers:
 			if current in dependency_graph.get(analyzer, []):
 				in_degree[analyzer] -= 1
@@ -234,13 +311,13 @@ def run_all_analyzer(
 	# 按顺序执行分析器
 	for analyzer_cls in (pbar_analyzer := tqdm(sorted_analyzers, leave=False)):
 		pbar_analyzer.set_description(
-			f'正在分析数据|调用{analyzer_cls.__name__}',
+			f'正在分析数据 | 调用{analyzer_cls.__name__}',
 			refresh=True,
 		)
 
 		try:
 			# 根据类型创建分析器实例
-			# 检查是否使用了PostAnalyzerMixin
+			# 检查是否使用了 PostAnalyzerMixin
 			if issubclass(analyzer_cls, PostAnalyzerMixin):
 				# 后处理分析器需要传入依赖结果
 				analyzer = analyzer_cls(input_results=analyzer_results)
@@ -257,7 +334,7 @@ def run_all_analyzer(
 
 		except Exception as e:
 			raise AnalyzerExecutionError(
-				f'分析器 {analyzer_cls.__name__} 执行失败: {e}'
+				f'分析器 {analyzer_cls.__name__} 执行失败：{e}'
 			) from e
 
 	return all_results

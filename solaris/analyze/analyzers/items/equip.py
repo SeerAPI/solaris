@@ -114,6 +114,10 @@ class EquipAnalyzer(BaseItemAnalyzer):
 			+ super().get_data_import_config()
 		)
 
+	@classmethod
+	def get_result_res_models(cls):
+		return (Equip, Suit, EquipType, EquipEffectiveOccasion)
+
 	def _create_equip_bonus_item(
 		self, flash_equip: dict[str, Any]
 	) -> EquipBonusItem | None:

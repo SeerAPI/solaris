@@ -19,6 +19,10 @@ class NatureAnalyzer(BaseDataSourceAnalyzer):
 			unity_paths=('nature.json',),
 		)
 
+	@classmethod
+	def get_result_res_models(cls):
+		return (Nature,)
+
 	def analyze(self) -> tuple[AnalyzeResult, ...]:
 		"""分析精灵性格修正"""
 		data: 'NatureConfig' = self._get_data('unity', 'nature.json')
