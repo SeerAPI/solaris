@@ -20,6 +20,8 @@ def cli_main(ctx: click.Context) -> None:
 	if ctx.invoked_subcommand is not None:
 		return
 
+	click.echo(ctx.get_help())
+
 
 from .analyze import analyze
 from .parse import parse

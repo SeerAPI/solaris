@@ -76,6 +76,8 @@ def parse(
 	package_name: tuple[str, ...],
 	list_parsers: bool,
 ) -> None:
+	"""批量解析赛尔号 Unity 端二进制数据"""
+
 	parser_classes = []
 	for name in package_name:
 		parser_classes.extend(import_parser_classes(name))
