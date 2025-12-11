@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import TypeVar, cast
+from typing import TypeVar
 
 import click
 
@@ -193,6 +193,8 @@ def run_command(
 		generator_name=solaris.__name__,
 		generator_version=solaris.__version__,
 	)
+	api_url = metadata.api_url
+	api_version = metadata.api_version
 
 	results = run_all_analyzer(analyzer_classes)
 	if output_mode in ('json', 'all'):
@@ -290,6 +292,8 @@ def schemas_command(
 		generator_name=solaris.__name__,
 		generator_version=solaris.__version__,
 	)
+	api_url = metadata.api_url
+	api_version = metadata.api_version
 
 	click.echo('正在生成 JSON Schema...')
 	analyzers_to_jsonschema(
@@ -300,9 +304,7 @@ def schemas_command(
 		base_schema_url=base_url,
 		output_named_data=output_named_data,
 	)
-	click.echo(
-		f'JSON Schema 已生成: {base_output_dir / cast(str, api_version) / output_dir}'
-	)
+	click.echo(f'JSON Schema 已生成: {base_output_dir / api_version / output_dir}')
 
 
 @analyze.command(name='openapi')
@@ -396,6 +398,8 @@ def openapi_command(
 		generator_name=solaris.__name__,
 		generator_version=solaris.__version__,
 	)
+	api_url = metadata.api_url
+	api_version = metadata.api_version
 
 	click.echo('正在生成 OpenAPI schema...')
 	analyzers_to_oad(
@@ -408,6 +412,4 @@ def openapi_command(
 		output_filepath=output,
 		output_named_data=output_named_data,
 	)
-	click.echo(
-		f'OpenAPI schema 已生成: {base_output_dir / cast(str, api_version) / output}'
-	)
+	click.echo(f'OpenAPI schema 已生成: {base_output_dir / api_version / output}')
