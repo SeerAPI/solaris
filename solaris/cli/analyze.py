@@ -131,6 +131,13 @@ def analyze(
 	show_default=True,
 )
 @click.option(
+	'--output-named-data/--no-output-named-data',
+	default=False,
+	show_default=True,
+	help='是否在 JSON 表中包含名称到数据的映射数据，'
+	'仅在 --output-mode 为 json 或 all 时有效',
+)
+@click.option(
 	'-d',
 	'--db-url',
 	type=str,
@@ -163,6 +170,7 @@ def run_command(
 	db_url: str,
 	api_url: str | None,
 	api_version: str | None,
+	output_named_data: bool,
 ) -> None:
 	"""运行分析器并输出结果到JSON文件或数据库"""
 	analyzer_classes = ctx.obj['analyzer_classes']
@@ -195,6 +203,7 @@ def run_command(
 			data_output_dir=output_dir,
 			base_data_url=base_json_url,
 			metadata=metadata,
+			output_named_data=output_named_data,
 		)
 	if output_mode in ('db', 'all'):
 		click.echo('正在输出数据到数据库...')
@@ -249,7 +258,7 @@ def run_command(
 	'--output-named-data/--no-output-named-data',
 	default=False,
 	show_default=True,
-	help='是否在 schema 中包含名称到数据的映射数据',
+	help='是否在 schema 中包含名称到数据的映射数据 Schems',
 )
 @click.pass_context
 def schemas_command(
