@@ -660,8 +660,8 @@ class JsonOutputter(OutputterProtocol):
 			lambda: NamedData(data={})
 		)
 		for id, model in data.items():
-			name = cast(NamedModelProtocol, model).name
-			name_data[name].data[id] = model
+			if name := getattr(model, 'name', None):
+				name_data[str(name)].data[id] = model
 
 		return name_data
 
