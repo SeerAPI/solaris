@@ -160,6 +160,14 @@ def is_commented_model(model: type) -> TypeIs['type[CommentedModel]']:
 	return isinstance(model.get_api_comment(), APIComment)
 
 
+class NamedModelProtocol(Protocol):
+	name: str
+
+
+def is_named_model(model: type) -> TypeIs['type[NamedModelProtocol]']:
+	return 'name' in model.model_fields
+
+
 class OutputterProtocol(Protocol):
 	"""输出器协议"""
 
@@ -301,7 +309,7 @@ class SchemaOutputter(SchemaOutputterProtocol):
 			)
 
 			# 生成名称映射 schema
-			if output_named_data and 'name' in res_model.model_fields:
+			if output_named_data and is_named_model(res_model):
 				named_schema = self._generate_named_data_schema(resource_name)
 				# 名称映射 schema 不添加 hash 字段
 				schemas.update(named_schema)
@@ -531,7 +539,7 @@ class OpenAPISchemaOutputter(SchemaOutputterProtocol):
 			)
 
 			# 生成名称映射 schema
-			if output_named_data and 'name' in res_model.model_fields:
+			if output_named_data and is_named_model(res_model):
 				named_schema = _generate_named_data_oas_schema(
 					build_ref_string(Schema, name=resource_name),
 				)
@@ -652,8 +660,8 @@ class JsonOutputter(OutputterProtocol):
 			lambda: NamedData(data={})
 		)
 		for id, model in data.items():
-			if name := getattr(model, 'name', None):
-				name_data[str(name)].data[id] = model
+			name = cast(NamedModelProtocol, model).name
+			name_data[name].data[id] = model
 
 		return name_data
 
@@ -743,7 +751,7 @@ class JsonOutputter(OutputterProtocol):
 		else:
 			self._output_individual_json(data, resource_name)
 			# 输出名称映射
-			if output_name_data:
+			if output_name_data and is_named_model(model):
 				name_data = self._generate_name_data(data)
 				self._output_named_json(name_data, resource_name)
 
