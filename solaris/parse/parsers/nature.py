@@ -61,10 +61,10 @@ class NatureParser(BaseParser[NatureConfig]):
 				'des': reader.ReadUTFBytesWithLength(),
 				'des2': reader.ReadUTFBytesWithLength(),
 				'id': reader.read_i32(),
-				'atk': round(reader.read_f32(), 2),
-				'def': round(reader.read_f32(), 2),
 				'sp_atk': round(reader.read_f32(), 2),
 				'sp_def': round(reader.read_f32(), 2),
+				'atk': round(reader.read_f32(), 2),
+				'def': round(reader.read_f32(), 2),
 				'spd': round(reader.read_f32(), 2),
 				'name': reader.ReadUTFBytesWithLength(),
 			}
