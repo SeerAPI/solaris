@@ -37,27 +37,31 @@ API_COMMENTS: dict[type[BaseResModel], APIComment] = {
 				'is_ability_bonus': False,
 				'ability_desc': None,
 				'type': {
-					'id': 0,
-					'url': 'https://api.seerapi.com/v1/achievement_type/0',
+					'id': 1,
+					'url': 'https://api.seerapi.com/v1/achievement_type/1',
 				},
 				'branch': {
-					'id': 11,
-					'url': 'https://api.seerapi.com/v1/achievement_branch/11',
+					'id': 1,
+					'url': 'https://api.seerapi.com/v1/achievement_branch/1',
 				},
 				'next_level_achievement': {
-					'id': 3,
-					'url': 'https://api.seerapi.com/v1/achievement/3',
+					'id': 163,
+					'url': 'https://api.seerapi.com/v1/achievement/163',
 				},
-				'prev_level_achievement': None,
-				'id': 2,
-				'name': '寒光闪闪',
-				'desc': '集齐冰系精灵20只',
-				'icon': 300002,
-				'reward_title': None,
-				'reward_item': 1200016,
-				'item_count': 1,
-				'reward_seer_bean': 10,
-				'hash': 'fa4c78ab',
+				'prev_level_achievement': {
+					'id': 161,
+					'url': 'https://api.seerapi.com/v1/achievement/161',
+				},
+				'attr_bonus': None,
+				'id': 162,
+				'name': '收集精灵（二）',
+				'point': 10,
+				'desc': '收集10只精灵',
+				'is_hide': False,
+				'title_id': None,
+				'title': None,
+				'original_title': None,
+				'hash': 'e23640c8',
 			}
 		],
 		tags=['成就'],
@@ -73,30 +77,32 @@ API_COMMENTS: dict[type[BaseResModel], APIComment] = {
 					'url': 'https://api.seerapi.com/v1/achievement_type/5',
 				},
 				'branch': {
-					'id': 166,
-					'url': 'https://api.seerapi.com/v1/achievement_branch/166',
+					'id': 129,
+					'url': 'https://api.seerapi.com/v1/achievement_branch/129',
 				},
 				'next_level_achievement': None,
 				'prev_level_achievement': None,
 				'attr_bonus': {
-					'atk': 45,
-					'def': 30,
-					'sp_atk': 45,
-					'sp_def': 0,
+					'atk': 0,
+					'def': 25,
+					'sp_atk': 0,
+					'sp_def': 25,
 					'spd': 0,
-					'hp': 45,
+					'hp': 100,
 					'percent': False,
-					'total': 165,
+					'total': 150,
 				},
-				'id': 385,
-				'name': '征服者',
-				'desc': '打败所有传奇精灵',
-				'icon': 302385,
-				'reward_title': None,
-				'reward_item': 1,
-				'item_count': 2,
-				'reward_seer_bean': 1,
-				'hash': 'e6dbdc88',
+				'is_ability_bonus': True,
+				'ability_desc': '体力+100，防御+25，特防+25',
+				'id': 300,
+				'name': '神话',
+				'point': 10,
+				'desc': '成为2018年年费VIP',
+				'is_hide': False,
+				'achievement_id': 1013,
+				'achievement_name': '神话',
+				'original_name': '神话',
+				'hash': '8388d45',
 			}
 		],
 		tags=['成就', '称号'],
@@ -105,14 +111,86 @@ API_COMMENTS: dict[type[BaseResModel], APIComment] = {
 	M.AchievementType: APIComment(
 		name_en='achievement_type',
 		name_cn='成就类型',
-		examples=[],
+		examples=[
+			{
+				'id': 1,
+				'name': '精灵类',
+				'point_total': 795,
+				'achievement': [],
+				'branch': [
+					{'id': 1, 'url': 'https://api.seerapi.com/v1/achievement_branch/1'},
+					{
+						'id': 49,
+						'url': 'https://api.seerapi.com/v1/achievement_branch/49',
+					},
+					{
+						'id': 62,
+						'url': 'https://api.seerapi.com/v1/achievement_branch/62',
+					},
+					{
+						'id': 100,
+						'url': 'https://api.seerapi.com/v1/achievement_branch/100',
+					},
+					{
+						'id': 101,
+						'url': 'https://api.seerapi.com/v1/achievement_branch/101',
+					},
+					{
+						'id': 102,
+						'url': 'https://api.seerapi.com/v1/achievement_branch/102',
+					},
+					{'id': 9, 'url': 'https://api.seerapi.com/v1/achievement_branch/9'},
+					{
+						'id': 55,
+						'url': 'https://api.seerapi.com/v1/achievement_branch/55',
+					},
+					{
+						'id': 108,
+						'url': 'https://api.seerapi.com/v1/achievement_branch/108',
+					},
+					{
+						'id': 121,
+						'url': 'https://api.seerapi.com/v1/achievement_branch/121',
+					},
+					{
+						'id': 167,
+						'url': 'https://api.seerapi.com/v1/achievement_branch/167',
+					},
+				],
+				'hash': '6da999fa',
+			}
+		],
 		tags=['成就', '分类'],
 		description='成就类型分类。',
 	),
 	M.AchievementBranch: APIComment(
 		name_en='achievement_branch',
 		name_cn='成就分支',
-		examples=[],
+		examples=[
+			{
+				'id': 62,
+				'name': '特殊精灵收集',
+				'point_total': 200,
+				'is_series': False,
+				'achievement': [
+					{'id': 173, 'url': 'https://api.seerapi.com/v1/achievement/173'},
+					{'id': 174, 'url': 'https://api.seerapi.com/v1/achievement/174'},
+					{'id': 175, 'url': 'https://api.seerapi.com/v1/achievement/175'},
+					{'id': 176, 'url': 'https://api.seerapi.com/v1/achievement/176'},
+					{'id': 177, 'url': 'https://api.seerapi.com/v1/achievement/177'},
+					{'id': 178, 'url': 'https://api.seerapi.com/v1/achievement/178'},
+					{'id': 179, 'url': 'https://api.seerapi.com/v1/achievement/179'},
+					{'id': 180, 'url': 'https://api.seerapi.com/v1/achievement/180'},
+					{'id': 181, 'url': 'https://api.seerapi.com/v1/achievement/181'},
+					{'id': 182, 'url': 'https://api.seerapi.com/v1/achievement/182'},
+				],
+				'type': {
+					'id': 1,
+					'url': 'https://api.seerapi.com/v1/achievement_type/1',
+				},
+				'hash': 'ae0c1d8',
+			}
+		],
 		tags=['成就'],
 		description='成就嵌套结构的中间层，没什么实际意义，仅用于还原游戏内数据结构。',
 	),
@@ -195,7 +273,7 @@ API_COMMENTS: dict[type[BaseResModel], APIComment] = {
 	M.EidEffect: APIComment(
 		name_en='eid_effect',
 		name_cn='eid效果',
-		examples=[],
+		examples=[{'id': 400, 'args_num': 6, 'hash': '6a210819'}],
 		tags=['eid效果'],
 		description='该资源描述并整理了赛尔号内部实现的一种通用效果，'
 		'魂印，特性，装备，能量珠效果在内部都通过 eid 描述，'
@@ -1339,7 +1417,41 @@ API_COMMENTS: dict[type[BaseResModel], APIComment] = {
 	M.Gem: APIComment(
 		name_en='gem',
 		name_cn='宝石',
-		examples=[],
+		examples=[
+			{
+				'next_level_gem': {
+					'id': 1800203,
+					'url': 'https://api.seerapi.com/v1/gem/1800203',
+				},
+				'category': {
+					'id': 101,
+					'url': 'https://api.seerapi.com/v1/gem_category/101',
+				},
+				'effect': [
+					{
+						'info': '使用技能10%不消耗PP值',
+						'args': [10],
+						'effect': {
+							'id': 1703,
+							'url': 'https://api.seerapi.com/v1/skill_effect_type/1703',
+						},
+					}
+				],
+				'item': {
+					'id': 1800202,
+					'url': 'https://api.seerapi.com/v1/item/1800202',
+				},
+				'id': 1800202,
+				'name': '活力维持宝石Ⅱ',
+				'level': 2,
+				'generation_id': 2,
+				'inlay_rate': 100,
+				'equivalent_level1_count': None,
+				'fail_compensate_range': None,
+				'upgrade_cost': 10000,
+				'hash': 'fd6c4a6a',
+			}
+		],
 		tags=['刻印宝石', '刻印', '道具'],
 		description='刻印宝石，返回的模型中同时包含一代和二代宝石的相关字段，可通过generation_id字段区分。',
 	),
@@ -1388,8 +1500,8 @@ API_COMMENTS: dict[type[BaseResModel], APIComment] = {
 		examples=[
 			{
 				'next_level_gem': {
-					'id': 1800202,
-					'url': 'https://api.seerapi.com/v1/gem/1800202',
+					'id': 1800203,
+					'url': 'https://api.seerapi.com/v1/gem/1800203',
 				},
 				'category': {
 					'id': 101,
@@ -1397,8 +1509,8 @@ API_COMMENTS: dict[type[BaseResModel], APIComment] = {
 				},
 				'effect': [
 					{
-						'info': '使用技能5%不消耗PP值',
-						'args': [5],
+						'info': '使用技能10%不消耗PP值',
+						'args': [10],
 						'effect': {
 							'id': 1703,
 							'url': 'https://api.seerapi.com/v1/skill_effect_type/1703',
@@ -1406,14 +1518,15 @@ API_COMMENTS: dict[type[BaseResModel], APIComment] = {
 					}
 				],
 				'item': {
-					'id': 1800201,
-					'url': 'https://api.seerapi.com/v1/item/1800201',
+					'id': 1800202,
+					'url': 'https://api.seerapi.com/v1/item/1800202',
 				},
-				'id': 1800201,
-				'name': '活力维持宝石Ⅰ',
-				'level': 1,
-				'upgrade_cost': 50,
-				'hash': 'b3d9c0e7',
+				'id': 1800202,
+				'name': '活力维持宝石Ⅱ',
+				'level': 2,
+				'generation_id': 2,
+				'upgrade_cost': 10000,
+				'hash': '51a1a1',
 			}
 		],
 		tags=['刻印宝石', '刻印', '道具'],
