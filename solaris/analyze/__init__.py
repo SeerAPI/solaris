@@ -3,18 +3,18 @@ import inspect
 from pathlib import Path
 
 from openapi_pydantic import Server
-from seerapi_models.build_model import BaseGeneralModel
+from seerapi_models.build_model import BaseGeneralModel, BaseResModel
 from seerapi_models.metadata import ApiMetadata
 from tqdm import tqdm
 
-from solaris.analyze.db import is_mapped_class
-from solaris.analyze.schema_generate import seerapi_common_models
 from solaris.utils import import_all_classes
 
 from .base import BaseAnalyzer, PostAnalyzerMixin
-from .openapi_builder import OpenAPIBuilder
 from .output import DBOutputter, JsonOutputter, OpenAPISchemaOutputter, SchemaOutputter
-from .typing_ import AnalyzeResult, ResModel
+from .output.db import is_mapped_class
+from .output.openapi_builder import OpenAPIBuilder
+from .output.schema_generate import seerapi_common_models
+from .typing_ import AnalyzeResult
 
 ANALYZER_DEFAULT_PACKAGE_NAME = 'solaris.analyze.analyzers'
 
@@ -55,7 +55,7 @@ def get_common_models() -> list[type[BaseGeneralModel]]:
 
 def collect_analyzer_res_models(
 	analyzer_classes: list[type[BaseAnalyzer]],
-) -> list[type[ResModel]]:
+) -> list[type[BaseResModel]]:
 	return [
 		model
 		for analyzer in analyzer_classes

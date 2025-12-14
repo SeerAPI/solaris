@@ -18,7 +18,7 @@ from pydantic.json_schema import (
 from pydantic_core import CoreSchema
 from seerapi_models.build_model import BaseGeneralModel
 
-from solaris.analyze.openapi_builder import build_ref_string, create_model_name_string
+from .openapi_builder import build_ref_string, create_model_name_string
 
 if TYPE_CHECKING:
 	from pydantic._internal._core_utils import CoreSchemaOrField

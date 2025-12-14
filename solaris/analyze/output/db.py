@@ -6,7 +6,7 @@ from sqlalchemy import Engine
 from sqlmodel import Session, SQLModel, create_engine, inspect, select
 from sqlmodel.main import FieldInfo
 
-from .typing_ import ResModel
+from solaris.analyze.typing_ import ResModel
 
 
 def is_mapped_class(cls: type) -> bool:

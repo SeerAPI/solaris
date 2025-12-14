@@ -18,7 +18,7 @@ from openapi_pydantic import DataType, Operation, Parameter, PathItem, Reference
 from pydantic import BaseModel, TypeAdapter
 from pydantic.fields import FieldInfo
 from pydantic.json_schema import GenerateJsonSchema, model_json_schema
-from seerapi_models.build_model import APIComment
+from seerapi_models.build_model import BaseResModel
 from seerapi_models.common import (
 	ApiResourceList,
 	BaseGeneralModel,
@@ -29,13 +29,19 @@ from seerapi_models.common import (
 from seerapi_models.metadata import ApiMetadata
 from tqdm import tqdm
 
-from solaris.analyze.db import DBManager
-from solaris.analyze.openapi_builder import (
+from solaris.analyze.typing_ import AnalyzeResult, TResModelRequiredId
+from solaris.analyze.utils import to_json
+from solaris.typing import JSONObject
+from solaris.utils import join_url
+
+from .db import DBManager
+from .openapi_builder import (
 	OpenAPIBuilder,
 	build_ref_string,
 	create_model_name_string,
 )
-from solaris.analyze.schema_generate import (
+from .openapi_comments import APIComment, get_api_comment
+from .schema_generate import (
 	JsonSchemaGenerator,
 	OpenAPISchemaGenerator,
 	OpenAPIShrinkOnlyNonRoot,
@@ -43,10 +49,6 @@ from solaris.analyze.schema_generate import (
 	create_extra_schema,
 	create_generator,
 )
-from solaris.analyze.typing_ import AnalyzeResult, ResModel, TResModelRequiredId
-from solaris.analyze.utils import to_json
-from solaris.typing import JSONObject
-from solaris.utils import join_url
 
 HASH_FIELD = FieldInfo(
 	annotation=str,
@@ -151,15 +153,6 @@ def _generate_named_data_oas_schema(resource_ref_path: str):
 _GT = TypeVar('_GT', bound=GenerateJsonSchema)
 
 
-class CommentedModel(Protocol):
-	@classmethod
-	def get_api_comment(cls) -> APIComment: ...
-
-
-def is_commented_model(model: type) -> TypeIs['type[CommentedModel]']:
-	return isinstance(model.get_api_comment(), APIComment)
-
-
 class NamedModelProtocol(Protocol):
 	name: str
 
@@ -181,7 +174,7 @@ class SchemaOutputterProtocol(Protocol):
 
 	def run(
 		self,
-		res_models: Sequence[type[ResModel]],
+		res_models: Sequence[type[BaseResModel]],
 		common_models: Sequence[type[BaseGeneralModel]],
 		*,
 		output_named_data: bool = False,
@@ -257,7 +250,7 @@ class SchemaOutputter(SchemaOutputterProtocol):
 
 	def generate_schemas(
 		self,
-		res_models: Sequence[type[ResModel]],
+		res_models: Sequence[type[BaseResModel]],
 		common_models: Sequence[type[BaseGeneralModel]],
 		*,
 		output_named_data: bool = False,
@@ -330,7 +323,7 @@ class SchemaOutputter(SchemaOutputterProtocol):
 
 	def run(
 		self,
-		res_models: Sequence[type[ResModel]],
+		res_models: Sequence[type[BaseResModel]],
 		common_models: Sequence[type[BaseGeneralModel]],
 		*,
 		output_named_data: bool = False,
@@ -509,7 +502,7 @@ class OpenAPISchemaOutputter(SchemaOutputterProtocol):
 
 	def run(
 		self,
-		res_models: Sequence[type[ResModel]],
+		res_models: Sequence[type[BaseResModel]],
 		common_models: Sequence[type[BaseGeneralModel]],
 		*,
 		output_named_data: bool = False,
@@ -522,10 +515,7 @@ class OpenAPISchemaOutputter(SchemaOutputterProtocol):
 
 		for res_model in res_models:
 			resource_name = res_model.resource_name()
-			if not is_commented_model(res_model):
-				raise ValueError(f'{res_model} is not a commented model')
-
-			comment = res_model.get_api_comment()
+			comment = get_api_comment(res_model)
 			# 生成 ID 映射 schema
 			schema = model_json_schema(
 				res_model, schema_generator=self.shrink_generator
@@ -866,7 +856,7 @@ class DBOutputter(OutputterProtocol):
 				continue
 
 			with self.db_manager.get_session() as session:
-				from solaris.analyze.db import write_result_to_db
+				from .db import write_result_to_db
 
 				write_result_to_db(session, data)
 
