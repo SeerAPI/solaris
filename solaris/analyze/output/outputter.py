@@ -1,9 +1,8 @@
 from collections import defaultdict
-from collections.abc import Iterable, Mapping, MutableMapping, Sequence
+from collections.abc import Mapping, MutableMapping, Sequence
 import inspect
 from pathlib import Path
 from typing import (
-	Annotated,
 	Any,
 	Literal,
 	Protocol,
@@ -14,9 +13,8 @@ from typing import (
 )
 from typing_extensions import TypeIs
 
-from openapi_pydantic import DataType, Operation, Parameter, PathItem, Reference, Schema
-from pydantic import BaseModel, TypeAdapter
-from pydantic.fields import FieldInfo
+from openapi_pydantic import Operation, Parameter, PathItem, Reference, Schema
+from pydantic import BaseModel, Field
 from pydantic.json_schema import GenerateJsonSchema, model_json_schema
 from seerapi_models.build_model import BaseResModel
 from seerapi_models.common import (
@@ -50,34 +48,20 @@ from .schema_generate import (
 	create_generator,
 )
 
-HASH_FIELD = FieldInfo(
-	annotation=str,
-	title='Hash',
-	description='数据哈希值，目前 pydantic 不支持对 key 进行排序，所以哈希值变化可能意味着数据结构变化而非数据值变化',
-)
 
-DEFAULT_FIELDS = (('hash', HASH_FIELD),)
+class HashPartial(BaseGeneralModel):
+	hash: str = Field(
+		description='数据哈希值，目前 pydantic 不支持对 key 进行排序，'
+		'所以哈希值变化可能意味着数据结构变化而非数据值变化',
+		examples=['abb7l9d6'],
+	)
+
+	@classmethod
+	def schema_path(cls) -> str:
+		return 'analyzer_custom/hash_partial/'
 
 
-_TMap = TypeVar('_TMap', bound=MutableMapping[str, Any])
 DataMap: TypeAlias = Mapping[int, TResModelRequiredId]
-
-
-def _add_fields_to_schema(
-	schema: _TMap, fields: Iterable[tuple[str, FieldInfo]]
-) -> _TMap:
-	"""向 schema 添加额外字段"""
-	if 'properties' not in schema:
-		return schema
-
-	for field_name, field_info in fields:
-		field_name = field_info.alias or field_name
-		adapter = TypeAdapter(Annotated[field_info.annotation, field_info])
-		schema['properties'][field_name] = adapter.json_schema(mode='serialization')
-		if field_info.is_required:
-			schema['required'].append(field_name)
-
-	return schema
 
 
 def _calc_hash(data: str | bytes) -> str:
@@ -161,7 +145,7 @@ def is_named_model(model: type) -> TypeIs['type[NamedModelProtocol]']:
 	return 'name' in model.model_fields
 
 
-class OutputterProtocol(Protocol):
+class DataOutputterProtocol(Protocol):
 	"""输出器协议"""
 
 	def run(self, results: Sequence[AnalyzeResult]):
@@ -224,17 +208,13 @@ class SchemaOutputter(SchemaOutputterProtocol):
 		self.shrink_generator = self._create_generator(ShrinkOnlyNonRoot)
 		self.normal_generator = self._create_generator(JsonSchemaGenerator)
 
+	def _merge_to_schema(self, *schemas: JSONObject) -> JSONObject:
+		return {'allOf': list(schemas)}
+
 	def _create_generator(self, schema_generator: type[_GT]) -> type[_GT]:
 		return create_generator(schema_generator, base_url=self.schema_url)
 
-	def _dump_schema(
-		self,
-		schema: JSONObject,
-		path: Path | str,
-		*,
-		fields: tuple[tuple[str, FieldInfo], ...] = DEFAULT_FIELDS,
-	) -> None:
-		schema = _add_fields_to_schema(schema, fields)
+	def _dump_schema(self, schema: JSONObject, path: Path | str) -> None:
 		path = self.schema_output_dir.joinpath(path)
 		path.parent.mkdir(parents=True, exist_ok=True)
 		path.write_bytes(to_json(schema))
@@ -267,6 +247,7 @@ class SchemaOutputter(SchemaOutputterProtocol):
 		"""
 		schemas: dict[str, JSONObject] = {}
 
+		common_models = [*common_models, HashPartial]  # 暂时先这样处理，后续需要优化
 		# 生成通用模型 Schema
 		for model in common_models:
 			if not issubclass(model, BaseGeneralModel) or inspect.isabstract(model):
@@ -274,10 +255,12 @@ class SchemaOutputter(SchemaOutputterProtocol):
 
 			schema_path = model.schema_path()
 			schema = model_json_schema(model, schema_generator=self.shrink_generator)
-			# 不添加额外字段
 			path_key = str(Path(schema_path) / 'index.json')
 			schemas[path_key] = schema
 
+		hash_schema = model_json_schema(
+			HashPartial, schema_generator=self.normal_generator
+		)
 		index_data: dict[str, str] = {}
 		for res_model in res_models:
 			resource_name = res_model.resource_name()
@@ -289,7 +272,7 @@ class SchemaOutputter(SchemaOutputterProtocol):
 
 			# 生成 ID 模式 schema
 			schema_path = str(Path(resource_name) / '$id' / 'index.json')
-			schemas[schema_path] = _add_fields_to_schema(dict(schema), DEFAULT_FIELDS)
+			schemas[schema_path] = self._merge_to_schema(schema, hash_schema)
 
 			# ApiResourceList schema
 			api_resource_list_schema = model_json_schema(
@@ -297,8 +280,8 @@ class SchemaOutputter(SchemaOutputterProtocol):
 				schema_generator=self.normal_generator,
 			) | create_extra_schema(model_name=resource_name)
 			api_list_path = str(Path(resource_name) / 'index.json')
-			schemas[api_list_path] = _add_fields_to_schema(
-				api_resource_list_schema, DEFAULT_FIELDS
+			schemas[api_list_path] = self._merge_to_schema(
+				api_resource_list_schema, hash_schema
 			)
 
 			# 生成名称映射 schema
@@ -311,13 +294,11 @@ class SchemaOutputter(SchemaOutputterProtocol):
 		metadata_schema = model_json_schema(
 			type(self.metadata), schema_generator=self.normal_generator
 		)
-		schemas['metadata.json'] = _add_fields_to_schema(
-			metadata_schema, DEFAULT_FIELDS
-		)
+		schemas['metadata.json'] = self._merge_to_schema(metadata_schema, hash_schema)
 
 		index_model = _create_index_model('Index', index_data)
 		index_schema = model_json_schema(index_model)
-		schemas['index.json'] = _add_fields_to_schema(index_schema, DEFAULT_FIELDS)
+		schemas['index.json'] = self._merge_to_schema(index_schema, hash_schema)
 
 		return schemas
 
@@ -344,7 +325,7 @@ class SchemaOutputter(SchemaOutputterProtocol):
 		for path, schema in (pbar_schemas := tqdm(schemas.items(), leave=False)):
 			pbar_schemas.set_description(f'正在输出 Schema|{path}', refresh=True)
 			# 注意：schema 已经包含了额外字段（hash 等），不需要再次添加
-			self._dump_schema(schema, path, fields=())
+			self._dump_schema(schema, path)
 
 
 class OpenAPISchemaOutputter(SchemaOutputterProtocol):
@@ -393,14 +374,8 @@ class OpenAPISchemaOutputter(SchemaOutputterProtocol):
 		}
 
 	def _init_hash_partial_schema(self) -> None:
-		field = Schema(
-			title='CRC16 Hash',
-			description='该对象的哈希值，目前 pydantic 不支持对 key 进行排序，所以哈希值变化可能意味着数据结构变化而非数据值变化',
-			type=DataType.STRING,
-			example='abb7l9d6',
-		)
 		self.openapi_builder.add_ref(
-			Schema(type=DataType.OBJECT, properties={'hash': field}, required=['hash']),
+			HashPartial.model_json_schema(),
 			name=self._hash_partial_ref_str,
 		)
 
@@ -572,7 +547,7 @@ class OpenAPISchemaOutputter(SchemaOutputterProtocol):
 			f.write(openapi.model_dump_json(by_alias=True, exclude_none=True, indent=2))
 
 
-class JsonOutputter(OutputterProtocol):
+class JsonOutputter(DataOutputterProtocol):
 	"""负责将分析结果输出为 JSON 文件的类"""
 
 	def __init__(
@@ -801,7 +776,7 @@ class JsonOutputter(OutputterProtocol):
 			self._output_root_index(root_index_data)
 
 
-class DBOutputter(OutputterProtocol):
+class DBOutputter(DataOutputterProtocol):
 	"""负责将分析结果输出到数据库的类"""
 
 	@overload
