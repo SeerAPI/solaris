@@ -10,6 +10,13 @@ if TYPE_CHECKING:
 	from solaris.parse.parsers.nature import NatureConfig
 
 
+def _convert_percent(value: float) -> float:
+	"""将小数转换为百分比（例如1.1倍转换为10%加成），如果value为1，则返回0"""
+	if value == 1:
+		return 0
+	return round((value - 1) * 100, 2)
+
+
 class NatureAnalyzer(BaseDataSourceAnalyzer):
 	"""精灵性格修正分析器"""
 
@@ -35,12 +42,12 @@ class NatureAnalyzer(BaseDataSourceAnalyzer):
 				des=item['des'],
 				des2=item['des2'],
 				attributes=SixAttributes(
-					atk=item['atk'],
-					def_=item['def'],
-					sp_atk=item['sp_atk'],
-					sp_def=item['sp_def'],
-					spd=item['spd'],
-					hp=1,
+					atk=_convert_percent(item['atk']),
+					def_=_convert_percent(item['def']),
+					sp_atk=_convert_percent(item['sp_atk']),
+					sp_def=_convert_percent(item['sp_def']),
+					spd=_convert_percent(item['spd']),
+					hp=0,
 					percent=True,
 				),
 			)
