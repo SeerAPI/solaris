@@ -141,10 +141,14 @@ class AchievementAnalyzer(BaseDataSourceAnalyzer):
 					for achievement in rule_['rule']:
 						original_title = achievement['title']
 						title = original_title.replace('|', '')
+						name = achievement['ach_name']
+						if not name and achievement['hide'] != 1:
+							name = rule_['desc']
+
 						achievement_model = Achievement(
 							id=achievement_id,
 							title_id=achievement['spe_name_bonus'] or None,
-							name=achievement['ach_name'],
+							name=name,
 							point=achievement['achievement_point'],
 							desc=achievement['desc'],
 							original_title=original_title or None,
