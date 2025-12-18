@@ -151,11 +151,12 @@ class GemAnalyzer(BaseSkillEffectAnalyzer):
 			gem_category_map.add_element(category_id, gem_ref)
 			gem_gen_category_map.add_element(generation_id, gem_ref)
 
-		for gem_id, gem_data in self.gem_data.items():
-			if upgrade_gem_id := gem_data.get('upgrade_gem_id'):
-				gem_map[gem_id].next_level_gem = ResourceRef.from_model(
-					gem_map[upgrade_gem_id],
-				)
+		for gem_category in gem_category_map.values():
+			for prev_ref, next_ref in zip(gem_category.gem, gem_category.gem[1:]):
+				prev_model = gem_map[prev_ref.id]
+				next_model = gem_map[next_ref.id]
+				prev_model.next_level_gem = next_ref
+				next_model.prev_level_gem = prev_ref
 
 		return (
 			AnalyzeResult(model=Gem, data=gem_map),
