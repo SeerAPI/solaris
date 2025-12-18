@@ -2,7 +2,12 @@ from collections import defaultdict
 from functools import cached_property
 from typing import TYPE_CHECKING, Any, cast
 
-from solaris.analyze.base import BaseDataSourceAnalyzer, DataImportConfig
+from solaris.analyze.analyzers.peak_pool import PeakPoolAnalyzer
+from solaris.analyze.base import (
+	BaseAnalyzer,
+	BaseDataSourcePostAnalyzer,
+	DataImportConfig,
+)
 from solaris.analyze.utils import merge_dict_item
 
 if TYPE_CHECKING:
@@ -12,7 +17,6 @@ if TYPE_CHECKING:
 	from solaris.parse.parsers.petbook import ArchivesStoryConfig, ArchivesStoryInfo
 	from solaris.parse.parsers.sp_hide_moves import SpHideMovesConfig, SpMovesItem
 
-
 general_import_config = DataImportConfig(
 	unity_paths=(
 		'monsters.json',
@@ -21,6 +25,8 @@ general_import_config = DataImportConfig(
 		'archivesStory.json',
 		'petSkin.json',
 		'effectIcon.json',
+		'pvpBan.json',
+		'pvpBanExpert.json',
 	),
 	flash_paths=(
 		'config.xml.PetXMLInfo.xml',
@@ -36,10 +42,14 @@ general_import_config = DataImportConfig(
 )
 
 
-class BasePetAnalyzer(BaseDataSourceAnalyzer):
+class BasePetAnalyzer(BaseDataSourcePostAnalyzer):
 	@classmethod
 	def get_data_import_config(cls) -> DataImportConfig:
 		return general_import_config
+
+	@classmethod
+	def get_input_analyzers(cls) -> tuple[type[BaseAnalyzer], ...]:
+		return (PeakPoolAnalyzer,)
 
 	@cached_property
 	def pet_origin_data(self) -> dict[int, dict[str, Any]]:

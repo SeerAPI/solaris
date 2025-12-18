@@ -3,6 +3,7 @@ from typing import Any
 from seerapi_models.common import ResourceRef, SixAttributes
 from seerapi_models.element_type import TypeCombination
 from seerapi_models.items import SkillActivationItem
+from seerapi_models.peak_pool import PeakExpertPool, PeakPool
 from seerapi_models.pet import (
 	Pet,
 	PetArchiveStoryEntry,
@@ -17,6 +18,7 @@ from seerapi_models.pet import (
 from seerapi_models.pet.pet import DiyStatsRange
 from seerapi_models.skill import Skill
 
+from solaris.analyze.analyzers.peak_pool import PeakPoolAnalyzer
 from solaris.analyze.typing_ import AnalyzeResult, CsvTable
 from solaris.analyze.utils import CategoryMap, create_category_map
 from solaris.utils import get_nested_value
@@ -118,6 +120,16 @@ class PetAnalyzer(BasePetAnalyzer):
 				mount_type_table, model_cls=PetMountTypeCategory, array_key='pet'
 			)
 		)
+		id_to_peak_pool_map = {
+			pet_ref.id: k
+			for k, v in self._get_input_data(PeakPoolAnalyzer, PeakPool).items()
+			for pet_ref in v.pet
+		}
+		id_to_peak_expert_pool_map = {
+			pet_ref.id: k
+			for k, v in self._get_input_data(PeakPoolAnalyzer, PeakExpertPool).items()
+			for pet_ref in v.pet
+		}
 
 		pet_map = {}
 		for pet_id, pet_dict in self.pet_origin_data.items():
@@ -283,8 +295,14 @@ class PetAnalyzer(BasePetAnalyzer):
 				archive_story_entry=archive_story_entry,
 			)
 			pet_map[pet_id] = pet_resource
-
-			pet_ref = ResourceRef.from_model(pet_resource)
+			if (peak_pool_id := id_to_peak_pool_map.get(pet_id)) is not None:
+				pet_resource.peak_pool = ResourceRef.from_model(
+					PeakPool, id=peak_pool_id
+				)
+			if (expert_pool_id := id_to_peak_expert_pool_map.get(pet_id)) is not None:
+				pet_resource.peak_expert_pool = ResourceRef.from_model(
+					PeakExpertPool, id=expert_pool_id
+				)
 			pet_gender_map.add_element(pet_gender_id, pet_ref)
 			pet_vipbuff_map.add_element(vipbuff_id, pet_ref)
 			pet_mount_type_map.add_element(mount_type, pet_ref)
