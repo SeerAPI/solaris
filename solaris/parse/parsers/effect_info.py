@@ -20,6 +20,8 @@ class EffectInfoItem(TypedDict):
 	param: list[int]  # 可选数组，优先使用空列表而不是None
 	args_num: int
 	id: int
+	key: str
+	type: int
 
 
 # 内部根结构
@@ -61,6 +63,7 @@ class EffectInfoParser(BaseParser[EffectInfoConfig]):
 				args_num = reader.read_i32()  # argsNum
 				effect_id = reader.read_i32()  # id
 				info = reader.ReadUTFBytesWithLength()
+				key = reader.ReadUTFBytesWithLength()
 
 				# 处理可选的param数组
 				param: list[int] = []
@@ -68,11 +71,14 @@ class EffectInfoParser(BaseParser[EffectInfoConfig]):
 					param_count = reader.read_i32()
 					param = [reader.read_i32() for _ in range(param_count)]
 
+				type_ = reader.read_i32()
 				effect_item: EffectInfoItem = {
 					'info': info,
 					'param': param,
 					'args_num': args_num,
 					'id': effect_id,
+					'key': key,
+					'type': type_,
 				}
 				result['root']['effect'].append(effect_item)
 
