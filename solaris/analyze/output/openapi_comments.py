@@ -988,6 +988,78 @@ API_COMMENTS: dict[type[BaseResModel], APIComment] = {
 		tags=['精灵', '故事', '图鉴', '分类'],
 		description='精灵故事系列（永夜纪年/莱达物语）。',
 	),
+	M.PeakPool: APIComment(
+		name_en='peak_pool',
+		name_cn='巅峰禁限池',
+		examples=[
+			{
+				'id': 2,
+				'count': 2,
+				'start_time': '2025-12-12T10:00:00+08:00',
+				'end_time': '2026-01-09T10:00:00+08:00',
+				'pet': [
+					{'id': 4622, 'url': 'https://api.seerapi.com/v1/pet/4622'},
+					{'id': 4762, 'url': 'https://api.seerapi.com/v1/pet/4762'},
+					{'id': 4677, 'url': 'https://api.seerapi.com/v1/pet/4677'},
+					{'id': 5000, 'url': 'https://api.seerapi.com/v1/pet/5000'},
+					{'id': 3577, 'url': 'https://api.seerapi.com/v1/pet/3577'},
+					{'id': 4586, 'url': 'https://api.seerapi.com/v1/pet/4586'},
+					{'id': 4515, 'url': 'https://api.seerapi.com/v1/pet/4515'},
+					{'id': 4644, 'url': 'https://api.seerapi.com/v1/pet/4644'},
+					{'id': 4732, 'url': 'https://api.seerapi.com/v1/pet/4732'},
+					{'id': 4661, 'url': 'https://api.seerapi.com/v1/pet/4661'},
+					{'id': 4468, 'url': 'https://api.seerapi.com/v1/pet/4468'},
+					{'id': 4717, 'url': 'https://api.seerapi.com/v1/pet/4717'},
+				],
+				'hash': '4ab021f8',
+			}
+		],
+		tags=['巅峰圣战', '禁限池'],
+		description='巅峰禁限池资源，该资源用于提供当前版本巅峰禁限池，该值的id等同于限制数量',
+	),
+	M.PeakExpertPool: APIComment(
+		name_en='peak_expert_pool',
+		name_cn='巅峰专家模式禁限池',
+		examples=[
+			{
+				'id': 0,
+				'count': 0,
+				'start_time': '2025-12-12T10:00:00+08:00',
+				'end_time': '2026-01-09T10:00:00+08:00',
+				'pet': [
+					{'id': 5000, 'url': 'https://api.seerapi.com/v1/pet/5000'},
+					{'id': 4808, 'url': 'https://api.seerapi.com/v1/pet/4808'},
+					{'id': 4762, 'url': 'https://api.seerapi.com/v1/pet/4762'},
+					{'id': 4732, 'url': 'https://api.seerapi.com/v1/pet/4732'},
+					{'id': 4717, 'url': 'https://api.seerapi.com/v1/pet/4717'},
+					{'id': 4706, 'url': 'https://api.seerapi.com/v1/pet/4706'},
+					{'id': 4697, 'url': 'https://api.seerapi.com/v1/pet/4697'},
+					{'id': 4677, 'url': 'https://api.seerapi.com/v1/pet/4677'},
+					{'id': 4661, 'url': 'https://api.seerapi.com/v1/pet/4661'},
+					{'id': 4644, 'url': 'https://api.seerapi.com/v1/pet/4644'},
+					{'id': 4622, 'url': 'https://api.seerapi.com/v1/pet/4622'},
+					{'id': 4600, 'url': 'https://api.seerapi.com/v1/pet/4600'},
+					{'id': 4586, 'url': 'https://api.seerapi.com/v1/pet/4586'},
+					{'id': 4554, 'url': 'https://api.seerapi.com/v1/pet/4554'},
+					{'id': 4515, 'url': 'https://api.seerapi.com/v1/pet/4515'},
+					{'id': 4510, 'url': 'https://api.seerapi.com/v1/pet/4510'},
+					{'id': 4468, 'url': 'https://api.seerapi.com/v1/pet/4468'},
+					{'id': 4163, 'url': 'https://api.seerapi.com/v1/pet/4163'},
+					{'id': 4126, 'url': 'https://api.seerapi.com/v1/pet/4126'},
+					{'id': 3896, 'url': 'https://api.seerapi.com/v1/pet/3896'},
+					{'id': 3788, 'url': 'https://api.seerapi.com/v1/pet/3788'},
+					{'id': 3577, 'url': 'https://api.seerapi.com/v1/pet/3577'},
+					{'id': 3550, 'url': 'https://api.seerapi.com/v1/pet/3550'},
+					{'id': 3516, 'url': 'https://api.seerapi.com/v1/pet/3516'},
+					{'id': 3291, 'url': 'https://api.seerapi.com/v1/pet/3291'},
+					{'id': 3056, 'url': 'https://api.seerapi.com/v1/pet/3056'},
+				],
+				'hash': '961ee40e',
+			}
+		],
+		tags=['巅峰圣战', '禁限池'],
+		description='巅峰专家模式禁限池资源，该资源用于提供当前版本专家模式禁限池，该值的id等同于限制数量',
+	),
 	# 技能相关
 	M.SkillEffectParam: APIComment(
 		name_en='skill_effect_param',
@@ -1419,6 +1491,10 @@ API_COMMENTS: dict[type[BaseResModel], APIComment] = {
 		name_cn='宝石',
 		examples=[
 			{
+				'prev_level_gem': {
+					'id': 1800201,
+					'url': 'https://api.seerapi.com/v1/gem/1800201',
+				},
 				'next_level_gem': {
 					'id': 1800203,
 					'url': 'https://api.seerapi.com/v1/gem/1800203',
@@ -1460,6 +1536,7 @@ API_COMMENTS: dict[type[BaseResModel], APIComment] = {
 		name_cn='一代刻印宝石',
 		examples=[
 			{
+				'prev_level_gem': None,
 				'next_level_gem': {
 					'id': 1800002,
 					'url': 'https://api.seerapi.com/v1/gem/1800002',
@@ -1499,6 +1576,10 @@ API_COMMENTS: dict[type[BaseResModel], APIComment] = {
 		name_cn='二代刻印宝石',
 		examples=[
 			{
+				'prev_level_gem': {
+					'id': 1800201,
+					'url': 'https://api.seerapi.com/v1/gem/1800201',
+				},
 				'next_level_gem': {
 					'id': 1800203,
 					'url': 'https://api.seerapi.com/v1/gem/1800203',
