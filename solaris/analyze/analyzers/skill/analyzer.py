@@ -267,20 +267,12 @@ def clac_crit_rate(crit_rate: int) -> float:
 	return crit_rate / 16 * 100
 
 
-if TYPE_CHECKING:
-
-	class MoveItem(UnityMoveItem):
-		accuracy: int
-		crit_rate: int | None
-
-
 class SkillAnalyzer(BaseSkillEffectAnalyzer):
 	@classmethod
 	def get_data_import_config(cls) -> DataImportConfig:
 		super_config = super().get_data_import_config()
 		config = DataImportConfig(
 			unity_paths=('moves.json',),
-			flash_paths=('config.xml.SkillXMLInfo.xml',),
 			patch_paths=(
 				'skill_hide_effect.json',
 				'skill_category.json',
@@ -301,26 +293,21 @@ class SkillAnalyzer(BaseSkillEffectAnalyzer):
 		)
 
 	@cached_property
-	def moves_data(self) -> dict[int, 'MoveItem']:
+	def moves_data(self) -> dict[int, 'UnityMoveItem']:
 		unity_data: list['UnityMoveItem'] = self._get_data('unity', 'moves.json')[
 			'root'
 		]['moves']['move']
-		flash_data = self._get_data('flash', 'config.xml.SkillXMLInfo.xml')['root'][
-			'item'
-		]
-		flash_data_map = {i['ID']: i for i in flash_data}
 
 		result = {}
 		for move in unity_data:
 			move_id = move['id']
 			crit_rate = None
 			if move['category'] != 4:
-				crit_rate = clac_crit_rate(flash_data_map[move_id].get('CritRate', 1))
+				crit_rate = clac_crit_rate(move.get('crit_rate') or 1)
+
 			result[move_id] = {
 				**move,
-				'accuracy': flash_data_map[move_id]['Accuracy'],
 				'crit_rate': crit_rate,
-				**flash_data_map[move_id],
 			}
 
 		return result
@@ -371,7 +358,7 @@ class SkillAnalyzer(BaseSkillEffectAnalyzer):
 				accuracy=skill['accuracy'],
 				crit_rate=skill['crit_rate'],
 				priority=skill['priority'],
-				atk_num=skill.get('AtkNum', 1),
+				atk_num=skill['atk_num'] or 1,
 				must_hit=bool(skill['must_hit']),
 				info=skill['info'] or None,
 			)
