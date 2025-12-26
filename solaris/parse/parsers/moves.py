@@ -6,9 +6,11 @@ from ..bytes_reader import BytesReader
 
 # 基础招式项结构
 class UnityMoveItem(TypedDict):
+	accuracy: int
 	atk_num: int
 	atk_type: int
 	category: int
+	crit_rate: int
 	friend_side_effect: list[int]
 	friend_side_effect_arg: list[int]
 	id: int
@@ -87,9 +89,11 @@ class MovesParser(BaseParser[MovesConfig]):
 					# 循环读取每个MoveItem
 					for _ in range(move_count):
 						move_item: UnityMoveItem = {
+							'accuracy': reader.ReadSignedInt(),
 							'atk_num': reader.ReadSignedInt(),
 							'atk_type': reader.ReadSignedInt(),
 							'category': reader.ReadSignedInt(),
+							'crit_rate': reader.ReadSignedInt(),
 							'friend_side_effect': [],
 							'friend_side_effect_arg': [],
 							'id': 0,
@@ -108,17 +112,16 @@ class MovesParser(BaseParser[MovesConfig]):
 
 						# 读取可选的FriendSideEffect数组
 						if reader.ReadBoolean():
-							friend_se_count = reader.ReadSignedInt()
+							count = reader.ReadSignedInt()
 							move_item['friend_side_effect'] = [
-								reader.ReadSignedInt() for _ in range(friend_se_count)
+								reader.ReadSignedInt() for _ in range(count)
 							]
 
 						# 读取可选的FriendSideEffectArg数组
 						if reader.ReadBoolean():
-							friend_se_arg_count = reader.ReadSignedInt()
+							count = reader.ReadSignedInt()
 							move_item['friend_side_effect_arg'] = [
-								reader.ReadSignedInt()
-								for _ in range(friend_se_arg_count)
+								reader.ReadSignedInt() for _ in range(count)
 							]
 
 						# 继续读取基础字段
@@ -132,16 +135,16 @@ class MovesParser(BaseParser[MovesConfig]):
 
 						# 读取可选的SideEffect数组
 						if reader.ReadBoolean():
-							se_count = reader.ReadSignedInt()
+							count = reader.ReadSignedInt()
 							move_item['side_effect'] = [
-								reader.ReadSignedInt() for _ in range(se_count)
+								reader.ReadSignedInt() for _ in range(count)
 							]
 
 						# 读取可选的SideEffectArg数组
 						if reader.ReadBoolean():
-							se_arg_count = reader.ReadSignedInt()
+							count = reader.ReadSignedInt()
 							move_item['side_effect_arg'] = [
-								reader.ReadSignedInt() for _ in range(se_arg_count)
+								reader.ReadSignedInt() for _ in range(count)
 							]
 
 						# 完成剩余字段

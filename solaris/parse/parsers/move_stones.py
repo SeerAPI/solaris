@@ -13,6 +13,7 @@ class MoveEffectItem(TypedDict):
 
 # 技能石项结构
 class MoveStoneItem(TypedDict):
+	accuracy: int
 	id: int
 	max_pp: int
 	move_effect: list[MoveEffectItem]  # 可选数组字段
@@ -57,6 +58,7 @@ class MoveStonesParser(BaseParser[MoveStonesConfig]):
 				# 循环读取每个MoveStoneItem
 				for _ in range(stone_count):
 					stone_item: MoveStoneItem = {
+						'accuracy': reader.ReadSignedInt(),
 						'id': reader.ReadSignedInt(),
 						'max_pp': reader.ReadSignedInt(),
 						'move_effect': [],
