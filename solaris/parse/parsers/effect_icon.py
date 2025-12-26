@@ -8,6 +8,7 @@ from ..bytes_reader import BytesReader
 class EffectIconItem(TypedDict):
 	"""效果图标项数据结构"""
 
+	analyze: str
 	args: str
 	come: str
 	des: list[str]  # 可选字符串数组
@@ -25,6 +26,7 @@ class EffectIconItem(TypedDict):
 	limited_type: int
 	target: int
 	to: int
+	type: int
 
 
 # 内部根结构
@@ -68,6 +70,7 @@ class EffectIconParser(BaseParser[EffectIconConfig]):
 		for _ in range(count):
 			# 按照C# Parse方法的顺序读取所有字段
 			item_id = reader.read_i32()  # Id
+			analyze = reader.ReadUTFBytesWithLength()
 			args = reader.ReadUTFBytesWithLength()
 			come = reader.ReadUTFBytesWithLength()
 
@@ -112,8 +115,10 @@ class EffectIconParser(BaseParser[EffectIconConfig]):
 			target = reader.read_i32()
 			tips = reader.ReadUTFBytesWithLength()
 			to = reader.read_i32()
+			type_ = reader.read_i32()
 
 			effect_item: EffectIconItem = {
+				'analyze': analyze,
 				'args': args,
 				'come': come,
 				'des': des,
@@ -131,6 +136,7 @@ class EffectIconParser(BaseParser[EffectIconConfig]):
 				'limited_type': limited_type,
 				'target': target,
 				'to': to,
+				'type': type_,
 			}
 			result['root']['effect'].append(effect_item)
 
