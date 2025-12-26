@@ -16,6 +16,7 @@ class ParamTypeItem(TypedDict):
 class EffectInfoItem(TypedDict):
 	"""效果信息项数据结构"""
 
+	analyze: str
 	info: str
 	param: list[int]  # 可选数组，优先使用空列表而不是None
 	args_num: int
@@ -60,6 +61,7 @@ class EffectInfoParser(BaseParser[EffectInfoConfig]):
 			effect_count = reader.read_i32()
 			for _ in range(effect_count):
 				# 按照C#解析顺序读取字段
+				analyze = reader.ReadUTFBytesWithLength()
 				args_num = reader.read_i32()  # argsNum
 				effect_id = reader.read_i32()  # id
 				info = reader.ReadUTFBytesWithLength()
@@ -73,6 +75,7 @@ class EffectInfoParser(BaseParser[EffectInfoConfig]):
 
 				type_ = reader.read_i32()
 				effect_item: EffectInfoItem = {
+					'analyze': analyze,
 					'info': info,
 					'param': param,
 					'args_num': args_num,
