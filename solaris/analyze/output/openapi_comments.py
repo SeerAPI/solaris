@@ -37,41 +37,45 @@ API_COMMENTS: dict[type[BaseResModel], APIComment] = {
 				'is_ability_bonus': False,
 				'ability_desc': None,
 				'type': {
-					'id': 1,
-					'url': 'https://api.seerapi.com/v1/achievement_type/1',
+					'id': 0,
+					'url': 'https://api.seerapi.com/v1/achievement_type/0',
 				},
 				'branch': {
-					'id': 1,
-					'url': 'https://api.seerapi.com/v1/achievement_branch/1',
+					'id': 79,
+					'url': 'https://api.seerapi.com/v1/achievement_branch/79',
 				},
 				'next_level_achievement': {
-					'id': 163,
-					'url': 'https://api.seerapi.com/v1/achievement/163',
+					'id': 1079003,
+					'url': 'https://api.seerapi.com/v1/achievement/1079003',
 				},
 				'prev_level_achievement': {
-					'id': 161,
-					'url': 'https://api.seerapi.com/v1/achievement/161',
+					'id': 1079001,
+					'url': 'https://api.seerapi.com/v1/achievement/1079001',
 				},
 				'attr_bonus': None,
-				'id': 162,
-				'name': '收集精灵（二）',
+				'id': 1079002,
+				'name': '派对乐不停（二）',
 				'point': 10,
-				'desc': '收集10只精灵',
+				'desc': '举办10场派对',
 				'is_hide': False,
 				'title_id': None,
 				'title': None,
 				'original_title': None,
-				'hash': 'e23640c8',
+				'hash': '7952fd41',
 			}
 		],
 		tags=['成就'],
-		description='成就资源。该模型同时集成了具有能力加成的成就称号数据，通过is_ability_bonus字段区分。',
+		description='成就资源。该模型同时集成了具有能力加成的成就称号数据，通过is_ability_bonus字段区分。<br>'
+		'**注意**：该资源的ID字段是通过计算得出的，因为游戏内数据中没有提供ID。<br>'
+		'计算公式为：`(类型ID + 1) * 1000000 + 分支ID * 1000 + 成就ID`',
 	),
 	M.Title: APIComment(
 		name_en='title',
 		name_cn='成就称号',
 		examples=[
 			{
+				'is_ability_bonus': True,
+				'ability_desc': '体力+100，防御+25，特防+25',
 				'type': {
 					'id': 5,
 					'url': 'https://api.seerapi.com/v1/achievement_type/5',
@@ -92,17 +96,14 @@ API_COMMENTS: dict[type[BaseResModel], APIComment] = {
 					'percent': False,
 					'total': 150,
 				},
-				'is_ability_bonus': True,
-				'ability_desc': '体力+100，防御+25，特防+25',
-				'id': 300,
+				'id': 6129032,
 				'name': '神话',
 				'point': 10,
 				'desc': '成为2018年年费VIP',
 				'is_hide': False,
-				'achievement_id': 1013,
-				'achievement_name': '神话',
-				'original_name': '神话',
-				'hash': '8388d45',
+				'title_id': 300,
+				'title': '神话',
+				'original_title': '神话',
 			}
 		],
 		tags=['成就', '称号'],
@@ -173,22 +174,52 @@ API_COMMENTS: dict[type[BaseResModel], APIComment] = {
 				'point_total': 200,
 				'is_series': False,
 				'achievement': [
-					{'id': 173, 'url': 'https://api.seerapi.com/v1/achievement/173'},
-					{'id': 174, 'url': 'https://api.seerapi.com/v1/achievement/174'},
-					{'id': 175, 'url': 'https://api.seerapi.com/v1/achievement/175'},
-					{'id': 176, 'url': 'https://api.seerapi.com/v1/achievement/176'},
-					{'id': 177, 'url': 'https://api.seerapi.com/v1/achievement/177'},
-					{'id': 178, 'url': 'https://api.seerapi.com/v1/achievement/178'},
-					{'id': 179, 'url': 'https://api.seerapi.com/v1/achievement/179'},
-					{'id': 180, 'url': 'https://api.seerapi.com/v1/achievement/180'},
-					{'id': 181, 'url': 'https://api.seerapi.com/v1/achievement/181'},
-					{'id': 182, 'url': 'https://api.seerapi.com/v1/achievement/182'},
+					{
+						'id': 2062001,
+						'url': 'https://api.seerapi.com/v1/achievement/2062001',
+					},
+					{
+						'id': 2062002,
+						'url': 'https://api.seerapi.com/v1/achievement/2062002',
+					},
+					{
+						'id': 2062003,
+						'url': 'https://api.seerapi.com/v1/achievement/2062003',
+					},
+					{
+						'id': 2062004,
+						'url': 'https://api.seerapi.com/v1/achievement/2062004',
+					},
+					{
+						'id': 2062005,
+						'url': 'https://api.seerapi.com/v1/achievement/2062005',
+					},
+					{
+						'id': 2062006,
+						'url': 'https://api.seerapi.com/v1/achievement/2062006',
+					},
+					{
+						'id': 2062007,
+						'url': 'https://api.seerapi.com/v1/achievement/2062007',
+					},
+					{
+						'id': 2062008,
+						'url': 'https://api.seerapi.com/v1/achievement/2062008',
+					},
+					{
+						'id': 2062009,
+						'url': 'https://api.seerapi.com/v1/achievement/2062009',
+					},
+					{
+						'id': 2062010,
+						'url': 'https://api.seerapi.com/v1/achievement/2062010',
+					},
 				],
 				'type': {
 					'id': 1,
 					'url': 'https://api.seerapi.com/v1/achievement_type/1',
 				},
-				'hash': 'ae0c1d8',
+				'hash': '82c26263',
 			}
 		],
 		tags=['成就'],
@@ -203,16 +234,16 @@ API_COMMENTS: dict[type[BaseResModel], APIComment] = {
 				'name': 'hide_achievement',
 				'achievement': [
 					{
-						'id': 312,
-						'url': 'https://api.seerapi.com/v1/achievement/312',
+						'id': 3103019,
+						'url': 'https://api.seerapi.com/v1/achievement/3103019',
 					},
 					{
-						'id': 318,
-						'url': 'https://api.seerapi.com/v1/achievement/318',
+						'id': 3103025,
+						'url': 'https://api.seerapi.com/v1/achievement/3103025',
 					},
 					{
-						'id': 320,
-						'url': 'https://api.seerapi.com/v1/achievement/320',
+						'id': 3103027,
+						'url': 'https://api.seerapi.com/v1/achievement/3103027',
 					},
 				],
 				'hash': '3e9da18f',
@@ -1187,7 +1218,8 @@ API_COMMENTS: dict[type[BaseResModel], APIComment] = {
 			}
 		],
 		tags=['技能', '技能效果', '标签'],
-		description='技能效果类型标签，用于标记技能效果的类型。',
+		description='技能效果类型标签，用于标记技能效果的类型，<br>'
+		'**注意**：该资源的ID字段是标签名称的CRC16 Hash值，因为游戏内数据中没有提供ID。',
 	),
 	M.Skill: APIComment(
 		name_en='skill',

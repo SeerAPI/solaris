@@ -79,13 +79,17 @@ def _achievement_classifier(achievement: Achievement) -> set[CatNameEnum]:
 	return category_names
 
 
+def _achievement_id_generator(type_id: int, branch_id: int, achievement_id: int) -> int:
+	return (type_id + 1) * 1000000 + branch_id * 1000 + achievement_id
+
+
 CATEGORY_NAME_MAP: CsvTable[dict] = {
 	id_: {'id': id_, 'name': enum.value} for id_, enum in enumerate(CatNameEnum)
 }
 
 
 CATEGORY_ID_MAP: dict[CatNameEnum, int] = {
-	enum: id_ for id_, enum in enumerate(CatNameEnum)
+	enum.value: id_ for id_, enum in enumerate(CatNameEnum)
 }
 
 
@@ -119,7 +123,6 @@ class AchievementAnalyzer(BaseDataSourceAnalyzer):
 				array_key='achievement',
 			)
 		)
-		achievement_id = 1
 		for type_ in data['achievement_rules']['type']:
 			type_id = type_['id']
 			type_model = AchievementType(
@@ -139,6 +142,9 @@ class AchievementAnalyzer(BaseDataSourceAnalyzer):
 						type=ResourceRef.from_model(AchievementType, id=type_id),
 					)
 					for achievement in rule_['rule']:
+						achievement_id = _achievement_id_generator(
+							type_id, branch_id, achievement['id']
+						)
 						original_title = achievement['title']
 						title = original_title.replace('|', '')
 						name = achievement['ach_name']
@@ -185,7 +191,6 @@ class AchievementAnalyzer(BaseDataSourceAnalyzer):
 						achievement_map[achievement_id] = achievement_model
 						branch_point_total += achievement_model.point
 						branch_model.achievement.append(ref)
-						achievement_id += 1
 
 					branch_model.point_total = branch_point_total
 					type_model.point_total += branch_model.point_total
@@ -206,6 +211,8 @@ class AchievementAnalyzer(BaseDataSourceAnalyzer):
 				prev_model.next_level_achievement = next_ref
 				next_model.prev_level_achievement = prev_ref
 
+		for category in category_map.values():
+			category.name = category.name.value
 		return (
 			AnalyzeResult(Achievement, achievement_map),
 			AnalyzeResult(AchievementBranch, achievement_branch_map),
