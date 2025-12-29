@@ -1460,6 +1460,7 @@ API_COMMENTS: dict[type[BaseResModel], APIComment] = {
 				},
 				'effect': [
 					{
+						'inner_id': 1,
 						'prob': 0.15,
 						'effect': [
 							{

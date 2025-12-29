@@ -54,6 +54,7 @@ class SkillStoneAnalyzer(BaseSkillEffectAnalyzer, BaseItemAnalyzer):
 			flash_stone = flash_data_map[id_]
 			move_effects = [
 				SkillStoneEffect(
+					inner_id=effect['ID'],
 					prob=effect['EffectProb'] / 100,
 					effect=self.create_skill_effect(
 						type_ids=split_string_arg(effect['SideEffect']),
