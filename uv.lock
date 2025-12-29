@@ -501,15 +501,15 @@ wheels = [
 
 [[package]]
 name = "seerapi-models"
-version = "1.3.0"
+version = "1.3.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pydantic" },
     { name = "sqlmodel" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/27/89/e5ca679d99e11f2a85d9089f582ba178eb4574ceaed54aa36662c0940753/seerapi_models-1.3.0.tar.gz", hash = "sha256:e76af06a79739ad65fc7ecf2d9f7feb4e87260b00c72384fc69fd1c9af56d652", size = 26657, upload-time = "2025-12-18T13:19:12.31Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/eb/03/45b03879bdac3e2f0b40fc1e876114fb064b94e2a046d6a31e6c180342f5/seerapi_models-1.3.1.tar.gz", hash = "sha256:f342b0adee93fe6eb5a3616108fdbca941844085de025e23b63f5b6c54c081c2", size = 26716, upload-time = "2025-12-29T03:26:17.911Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/fe/22/fcbbeff6c7997aaebcdbeee8007b2eabc39b0d7ddffbd79cc46150c4a0fe/seerapi_models-1.3.0-py3-none-any.whl", hash = "sha256:fd653307c85675b8781508718a56af633e5651660b38a19f367a8cdab143837d", size = 40502, upload-time = "2025-12-18T13:19:12.98Z" },
+    { url = "https://files.pythonhosted.org/packages/5a/45/d4c15f85a0956de689c34ccc40073f85d555246520818392aedac209bf52/seerapi_models-1.3.1-py3-none-any.whl", hash = "sha256:283957c7bb878fd432d4c9c6a55c4d6e9095fd59c831f23a02e99c37f79f2100", size = 40571, upload-time = "2025-12-29T03:26:16.782Z" },
 ]
 
 [[package]]
@@ -552,7 +552,7 @@ requires-dist = [
     { name = "openapi-pydantic", specifier = ">=0.5.1" },
     { name = "pydantic", specifier = ">=2.11.7" },
     { name = "pydantic-settings", specifier = ">=2.10.1" },
-    { name = "seerapi-models", specifier = ">=1.3.0,<1.4.0" },
+    { name = "seerapi-models", specifier = ">=1.3.1,<1.4.0" },
     { name = "sqlmodel", specifier = ">=0.0.24" },
     { name = "tqdm", specifier = ">=4.67.1" },
     { name = "xmltodict", specifier = ">=1.0.2" },
