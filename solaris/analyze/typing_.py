@@ -1,4 +1,4 @@
-from collections.abc import Mapping, MutableMapping
+from collections.abc import Callable, Mapping, MutableMapping
 from dataclasses import dataclass
 from typing import (
 	Generic,
@@ -48,6 +48,8 @@ TResModelWithOptionalId = TypeVar(
 
 TResModel = TypeVar('TResModel', bound=ResModel)
 
+NameGenerator: TypeAlias = Callable[[TResModelRequiredId], str | None]
+
 
 @dataclass(frozen=True, slots=True)
 class AnalyzeResult(Generic[TResModelRequiredId]):
@@ -56,7 +58,6 @@ class AnalyzeResult(Generic[TResModelRequiredId]):
 	Args:
 		model: 资源模型类型
 		data: 资源数据字典，键为ID，值为模型实例
-		schema: JSON模式定义，用于数据验证，当为None时，使用模型的model_json_schema
 		output_mode: 输出模式，控制数据的输出方式
 	"""
 

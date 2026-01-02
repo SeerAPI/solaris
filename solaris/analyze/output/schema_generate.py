@@ -109,7 +109,8 @@ class PydanticJsFunctionInjector:
 	工作原理：
 	1. 通过 @register 装饰器将自定义函数与目标类型关联
 	2. 在 schema 生成时，inject_functions 将注册的函数注入到 CoreSchema 的 metadata 中
-	3. Pydantic 在生成 JSON Schema 时会自动调用 metadata['pydantic_js_functions'] 中的所有函数
+	3. Pydantic 在生成 JSON Schema 时会自动调用
+	   metadata['pydantic_js_functions'] 中的所有函数
 
 	使用场景：
 	- 为多个相似类型统一添加额外的 JSON Schema 字段（如 ResourceRef 和 ApiResourceList）
@@ -301,13 +302,15 @@ class OpenAPISchemaGenerator(GenerateJsonSchema):
 				if '$ref' in schema:
 					json_ref = JsonRef(schema['$ref'])
 					if not isinstance(json_ref, str):
-						return  # in this case, '$ref' might have been the name of a property
+						# in this case, '$ref' might have been the name of a property
+						return
 					if json_ref.startswith('#/components/schemas/'):
 						return
 					already_visited = json_ref in json_refs
 					json_refs[json_ref] += 1
 					if already_visited:
-						return  # prevent recursion on a definition that was already visited
+						# prevent recursion on a definition that was already visited
+						return
 					try:
 						defs_ref = self.json_to_defs_refs[json_ref]
 						if defs_ref in self._core_defs_invalid_for_json_schema:

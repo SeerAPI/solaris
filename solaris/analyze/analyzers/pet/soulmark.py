@@ -13,6 +13,12 @@ if TYPE_CHECKING:
 	from solaris.parse.parsers.pet_effect_icon import PetEffectIconInfo
 
 
+def _generate_soulmark_alias(effect: EidEffectInUse) -> str | None:
+	return '_'.join(
+		[str(arg) for arg in [effect.effect.id, *(effect.effect_args or [])]]
+	)
+
+
 class SoulmarkAnalyzer(BaseDataSourceAnalyzer):
 	@classmethod
 	def get_data_import_config(cls) -> DataImportConfig:
@@ -97,6 +103,7 @@ class SoulmarkAnalyzer(BaseDataSourceAnalyzer):
 				is_adv=bool(soulmark_dict['is_adv']),
 				desc_formatting_adjustment=desc_formatting_adjustment,
 				pve_effective=pve_effective,
+				effect_alias=_generate_soulmark_alias(effect) if effect else None,
 			)
 			soulmark_map[soulmark.id] = soulmark
 			for tag in tags:

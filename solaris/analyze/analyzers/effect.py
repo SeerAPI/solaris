@@ -1,11 +1,21 @@
 from typing import Any
 
 from seerapi_models.common import EidEffect, EidEffectInUse, ResourceRef
-from seerapi_models.effect import PetEffect, PetEffectGroup, VariationEffect
+from seerapi_models.effect import (
+	PetEffect,
+	PetEffectGroup,
+	VariationEffect,
+)
 
 from solaris.analyze.base import BaseDataSourceAnalyzer, DataImportConfig
 from solaris.analyze.typing_ import AnalyzeResult
 from solaris.utils import split_string_arg
+
+
+def _generate_effect_alias(effect: EidEffectInUse) -> str | None:
+	return '_'.join(
+		[str(arg) for arg in [effect.effect.id, *(effect.effect_args or [])]]
+	)
 
 
 class NewSeAnalyzer(BaseDataSourceAnalyzer):
@@ -38,6 +48,7 @@ class NewSeAnalyzer(BaseDataSourceAnalyzer):
 				'name': effect.get('Desc', ''),
 				'desc': effect.get('Intro') or effect.get('Des') or '',
 				'effect': effect_obj,
+				'effect_alias': _generate_effect_alias(effect_obj),
 			}
 			# 处理特性
 			if effect['Stat'] == 1:

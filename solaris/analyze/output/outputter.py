@@ -11,7 +11,6 @@ from typing import (
 	cast,
 	overload,
 )
-from typing_extensions import TypeIs
 
 from openapi_pydantic import Operation, Parameter, PathItem, Reference, Schema
 from pydantic import BaseModel, Field
@@ -27,7 +26,7 @@ from seerapi_models.common import (
 from seerapi_models.metadata import ApiMetadata
 from tqdm import tqdm
 
-from solaris.analyze.typing_ import AnalyzeResult, TResModelRequiredId
+from solaris.analyze.typing_ import AnalyzeResult, NameGenerator, TResModelRequiredId
 from solaris.analyze.utils import to_json
 from solaris.typing import JSONObject
 from solaris.utils import join_url
@@ -88,14 +87,16 @@ def _create_index_model(name: str, data: dict[str, Any]) -> type[BaseModel]:
 
 
 def _generate_api_resource_list(data: DataMap[TResModelRequiredId]) -> ApiResourceList:
-	refs: list[NamedResourceRef] = [
-		NamedResourceRef.from_res_name(
-			id=i.id,
-			resource_name=i.resource_name(),
-			name=getattr(i, 'name', None),
+	refs: list[NamedResourceRef] = []
+	for i in data.values():
+		refs.append(
+			NamedResourceRef.from_res_name(
+				id=i.id,
+				resource_name=i.resource_name(),
+				name=getattr(i, 'name', None),
+			)
 		)
-		for i in data.values()
-	]
+
 	return ApiResourceList(count=len(refs), results=refs)
 
 
@@ -137,12 +138,22 @@ def _generate_named_data_oas_schema(resource_ref_path: str):
 _GT = TypeVar('_GT', bound=GenerateJsonSchema)
 
 
-class NamedModelProtocol(Protocol):
-	name: str
+def get_name_fields(model: type) -> list[str]:
+	"""获取模型中用于表示名称的字段名列表
+
+	查找模型定义的 ``__name_fields__`` 属性，
+	默认值为 `['name']`
+	"""
+	return getattr(model, '__name_fields__', ['name'])
 
 
-def is_named_model(model: type) -> TypeIs['type[NamedModelProtocol]']:
-	return 'name' in model.model_fields
+def get_primary_name_field(model: type) -> str:
+	"""获取模型的主要名称字段名（第一个）"""
+	return get_name_fields(model)[0]
+
+
+def is_named_model(model: type) -> bool:
+	return any(field in model.model_fields for field in get_name_fields(model))
 
 
 class DataOutputterProtocol(Protocol):
@@ -614,7 +625,10 @@ class JsonOutputter(DataOutputterProtocol):
 		self._dump_data(data, f'{resource_name}.json')
 
 	def _generate_name_data(
-		self, data: DataMap[TResModelRequiredId]
+		self,
+		data: DataMap[TResModelRequiredId],
+		*,
+		name_generator: NameGenerator,
 	) -> Mapping[str, NamedData[TResModelRequiredId]]:
 		"""生成名称到数据的映射表
 
@@ -625,7 +639,7 @@ class JsonOutputter(DataOutputterProtocol):
 			lambda: NamedData(data={})
 		)
 		for id, model in data.items():
-			if name := getattr(model, 'name', None):
+			if name := name_generator(model):
 				name_data[str(name)].data[id] = model
 
 		return name_data
@@ -717,8 +731,18 @@ class JsonOutputter(DataOutputterProtocol):
 			self._output_individual_json(data, resource_name)
 			# 输出名称映射
 			if output_name_data and is_named_model(model):
-				name_data = self._generate_name_data(data)
-				self._output_named_json(name_data, resource_name)
+				# 遍历所有定义的名称字段
+				for name_field in get_name_fields(model):
+
+					def _name_generator(
+						m: TResModelRequiredId, field: str = name_field
+					) -> str | None:
+						return getattr(m, field, None)
+
+					name_data = self._generate_name_data(
+						data, name_generator=_name_generator
+					)
+					self._output_named_json(name_data, resource_name)
 
 		# 返回索引信息
 		return resource_name, join_url(self.data_url, resource_name)
