@@ -273,6 +273,7 @@ class SkillAnalyzer(BaseSkillEffectAnalyzer):
 		super_config = super().get_data_import_config()
 		config = DataImportConfig(
 			unity_paths=('moves.json',),
+			flash_paths=('config.xml.SkillXMLInfo.xml',),
 			patch_paths=(
 				'skill_hide_effect.json',
 				'skill_category.json',
@@ -297,13 +298,17 @@ class SkillAnalyzer(BaseSkillEffectAnalyzer):
 		unity_data: list['UnityMoveItem'] = self._get_data('unity', 'moves.json')[
 			'root'
 		]['moves']['move']
+		flash_data = self._get_data('flash', 'config.xml.SkillXMLInfo.xml')['root'][
+			'item'
+		]
+		flash_data_map = {i['ID']: i for i in flash_data}
 
 		result = {}
 		for move in unity_data:
 			move_id = move['id']
 			crit_rate = None
 			if move['category'] != 4:
-				crit_rate = clac_crit_rate(move.get('crit_rate') or 1)
+				crit_rate = clac_crit_rate(flash_data_map[move_id].get('CritRate', 1))
 
 			result[move_id] = {
 				**move,
