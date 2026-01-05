@@ -1,3 +1,4 @@
+from importlib.metadata import version
 from pathlib import Path
 from typing import TypeVar
 
@@ -311,7 +312,9 @@ def schemas_command(
 @click.option(
 	'--detail-version',
 	type=str,
-	help='API 详细版本号，该版本号会写入到 OpenAPI 的 info.version 中',
+	default=version('seerapi-models'),
+	help='API 详细版本号，该版本号会写入到 OpenAPI 的 info.version 中，'
+	'如果未指定，则尝试使用 seerapi-models 的版本号',
 )
 @click.option(
 	'--base-output-dir',
