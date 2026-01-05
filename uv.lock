@@ -501,15 +501,15 @@ wheels = [
 
 [[package]]
 name = "seerapi-models"
-version = "1.3.2"
+version = "103.2.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pydantic" },
     { name = "sqlmodel" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/77/66/719b561e0ef2429b72ffe263dd49e331762c56d29576e7029e848a3c38f3/seerapi_models-1.3.2.tar.gz", hash = "sha256:15255768bf245f6a313ac4151ceae94040e453f8b0649b50720662e220a551c6", size = 26902, upload-time = "2026-01-02T11:11:26.695Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/75/56/2ec2892bb81b6763971f21a221a8ebff30ad95d8ad129d65eb993ee469fb/seerapi_models-103.2.0.tar.gz", hash = "sha256:939cab294389847c62eea51e821a798405cd4862f97b9d736a143f95c8d1f5b9", size = 26900, upload-time = "2026-01-05T12:19:19.412Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/7e/cd/6fd4a191839111a4428b46dc5bf512fa635ebda6d145bd005346c4ae2ed1/seerapi_models-1.3.2-py3-none-any.whl", hash = "sha256:d288990c02ba464915d2481d1cad043d86cc8d859ad5fe949622d8559f60aa9c", size = 40785, upload-time = "2026-01-02T11:11:27.71Z" },
+    { url = "https://files.pythonhosted.org/packages/e0/38/d973983694609f14c4fc6f0850f2ce69a33d3cee5b27a1ec4b54cd55b754/seerapi_models-103.2.0-py3-none-any.whl", hash = "sha256:47e26e466f53e3c8e1be6dc88bc30f8e5c81445cfd8887bb72f7ed9cf0b65c74", size = 40806, upload-time = "2026-01-05T12:19:20.245Z" },
 ]
 
 [[package]]
@@ -523,7 +523,7 @@ wheels = [
 
 [[package]]
 name = "solaris"
-version = "1.0.0"
+version = "103.2.0"
 source = { editable = "." }
 dependencies = [
     { name = "anycrc" },
@@ -552,7 +552,7 @@ requires-dist = [
     { name = "openapi-pydantic", specifier = ">=0.5.1" },
     { name = "pydantic", specifier = ">=2.11.7" },
     { name = "pydantic-settings", specifier = ">=2.10.1" },
-    { name = "seerapi-models", specifier = ">=1.3.2,<1.4.0" },
+    { name = "seerapi-models", specifier = ">=103.2.0,<104.0.0" },
     { name = "sqlmodel", specifier = ">=0.0.24" },
     { name = "tqdm", specifier = ">=4.67.1" },
     { name = "xmltodict", specifier = ">=1.0.2" },
