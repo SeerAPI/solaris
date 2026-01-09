@@ -15,6 +15,7 @@ class EffectDesItem(TypedDict):
 	id: int
 	kind: int
 	tab: int
+	link: str
 
 
 # 内部根结构
@@ -64,6 +65,7 @@ class EffectDesParser(BaseParser[EffectDesConfig]):
 				'kinddes': reader.read_utf(
 					reader.read_u16()
 				),  # kinddes: 先读长度再读字符串
+				'link': reader.ReadUTFBytesWithLength(),
 				'monster': reader.read_utf(
 					reader.read_u16()
 				),  # monster: 先读长度再读字符串
