@@ -39,6 +39,8 @@ class MintMarkItem(TypedDict):
 	rarity: int
 	total_consume: int
 	type: int
+	connect: int
+	hide: int
 
 
 # 刻印容器结构
@@ -96,6 +98,7 @@ class MintmarkParser(BaseParser[MintmarkConfig]):
 						reader.ReadSignedInt() for _ in range(base_count)
 					]
 
+				connect = reader.ReadSignedInt()
 				# 3. Des 和 EffectDes 字符串
 				des = reader.ReadUTFBytesWithLength()
 				effect_des = reader.ReadUTFBytesWithLength()
@@ -110,6 +113,7 @@ class MintmarkParser(BaseParser[MintmarkConfig]):
 
 				# 5. 基本整型字段
 				grade = reader.ReadSignedInt()
+				hide = reader.ReadSignedInt()
 				id_value = reader.ReadSignedInt()
 				level = reader.ReadSignedInt()
 				max_value = reader.ReadSignedInt()
@@ -165,6 +169,8 @@ class MintmarkParser(BaseParser[MintmarkConfig]):
 					'rarity': rarity,
 					'total_consume': total_consume,
 					'type': type_value,
+					'connect': connect,
+					'hide': hide,
 				}
 				result['mint_marks']['mint_mark'].append(mintmark_item)
 
