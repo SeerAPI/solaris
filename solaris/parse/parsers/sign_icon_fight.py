@@ -13,6 +13,7 @@ class ItemItem(TypedDict):
 	class_name: str
 	dec: str
 	des: str
+	spDes: str
 	frame: list[str]
 	num_des: str
 	sp_des: list[str]
@@ -66,6 +67,7 @@ class SignIconFightParser(BaseParser[_SignIconFightConfig]):
 				# 按照 C# 代码的顺序严格读取字段
 				des = reader.ReadUTFBytesWithLength()
 				num_des = reader.ReadUTFBytesWithLength()
+				spDes = reader.ReadUTFBytesWithLength()
 				class_name = reader.ReadUTFBytesWithLength()
 				dec = reader.ReadUTFBytesWithLength()
 
@@ -116,6 +118,7 @@ class SignIconFightParser(BaseParser[_SignIconFightConfig]):
 					'class_name': class_name,
 					'dec': dec,
 					'des': des,
+					'spDes': spDes,
 					'frame': frame,
 					'num_des': num_des,
 					'sp_des': sp_des,
