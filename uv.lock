@@ -523,7 +523,7 @@ wheels = [
 
 [[package]]
 name = "solaris"
-version = "103.2.3"
+version = "103.2.4"
 source = { editable = "." }
 dependencies = [
     { name = "anycrc" },
