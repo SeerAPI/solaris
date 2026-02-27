@@ -1,4 +1,5 @@
 from functools import cached_property
+from string import Formatter
 from typing import TYPE_CHECKING
 
 from seerapi_models.common import ResourceRef, SkillEffectInUse
@@ -33,6 +34,23 @@ if TYPE_CHECKING:
 	from solaris.parse.parsers.effect_info import EffectInfoItem, ParamTypeItem
 	from solaris.parse.parsers.moves import UnityMoveItem
 	from solaris.parse.parsers.skill_effect import SkillEffectItem
+
+
+_formatter = Formatter()
+
+
+def _safe_format(template: str, args: list[object] | tuple[object, ...]) -> str:
+	"""尽可能多地格式化参数，缺失的占位符保留原样。"""
+	parts: list[str] = []
+	for literal_text, field_name, _, _ in _formatter.parse(template):
+		parts.append(literal_text)
+		if field_name is None:
+			continue
+		try:
+			parts.append(str(args[int(field_name)]))
+		except (ValueError, IndexError):
+			parts.append("{" + field_name + "}")
+	return "".join(parts)
 
 
 def _slice_args(args: EffectArgs, args_nums: list[int]) -> list[EffectArgs]:
@@ -250,11 +268,13 @@ class BaseSkillEffectAnalyzer(BaseDataSourcePostAnalyzer):
 			if type_id in INFO_HANDLER_MAP:
 				info_args = INFO_HANDLER_MAP[type_id](effect_args, info_args)
 
+			info = _safe_format(type_.info, info_args)
+
 			results.append(
 				SkillEffectInUse(
 					effect=ResourceRef.from_model(type_),
 					args=effect_args,
-					info=type_.info.format(*info_args),
+					info=info,
 				)
 			)
 
