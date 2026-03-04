@@ -12,3 +12,6 @@ wheels/
 .ruff_cache/
 
 .pytest_cache/
+
+# Documentation archive (not for commit)
+docs/archive/
