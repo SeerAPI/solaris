@@ -11,6 +11,16 @@ class SubEffectItem(TypedDict):
 	efftype: int
 	name: str
 	id: int
+	ctrl: int
+	dependent: int
+	derivation: int
+	restriction: int
+	unctrl: int
+	undependent: int
+	underivation: int
+	unrestriction: int
+	unweaken: int
+	weaken: int
 
 
 # 战斗效果项结构定义
@@ -45,7 +55,7 @@ class BattleEffectsParser(BaseParser[BattleEffectsConfig]):
 
 	def parse(self, data: bytes) -> BattleEffectsConfig:
 		"""解析战斗效果二进制数据
-		
+
 		数据结构说明：
 		- 根布尔标志：标识是否有数据
 		- BattleEffects存在标志：标识战斗效果容器是否存在
@@ -56,10 +66,10 @@ class BattleEffectsParser(BaseParser[BattleEffectsConfig]):
 		      - id: 效果ID
 		      - name: 效果名称
 		    - type: 战斗效果类型
-		
+
 		Args:
 			data: 二进制数据
-			
+
 		Returns:
 			解析后的战斗效果配置数据
 		"""
@@ -80,16 +90,24 @@ class BattleEffectsParser(BaseParser[BattleEffectsConfig]):
 		# 循环读取战斗效果项
 		for _ in range(count):
 			sub_effects: list[SubEffectItem] = []
-
 			# 检查SubEffect数组存在标志
 			if reader.read_bool():
 				sub_count = reader.read_i32()
 				for _ in range(sub_count):
-					# 读取子效果的三个字段：类型、ID、名称
 					sub_item: SubEffectItem = {
+						'ctrl': reader.read_i32(),
+						'dependent': reader.read_i32(),
+						'derivation': reader.read_i32(),
 						'efftype': reader.read_i32(),
 						'id': reader.read_i32(),
 						'name': reader.ReadUTFBytesWithLength(),
+						'restriction': reader.read_i32(),
+						'unctrl': reader.read_i32(),
+						'undependent': reader.read_i32(),
+						'underivation': reader.read_i32(),
+						'unrestriction': reader.read_i32(),
+						'unweaken': reader.read_i32(),
+						'weaken': reader.read_i32(),
 					}
 					sub_effects.append(sub_item)
 
