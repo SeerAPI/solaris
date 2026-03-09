@@ -45,7 +45,8 @@ def get_common_models() -> list[type[BaseGeneralModel]]:
 		model
 		for model in seerapi_common_models.__dict__.values()
 		if (
-			issubclass(model, BaseGeneralModel)
+			type(model) is type
+			and issubclass(model, BaseGeneralModel)
 			and not inspect.isabstract(model)
 			and not is_mapped_class(model)
 		)
