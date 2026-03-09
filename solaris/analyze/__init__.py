@@ -326,6 +326,7 @@ def run_all_analyzer(
 				analyzer = analyzer_cls()
 
 			# 执行分析
+
 			result = analyzer.analyze()
 
 			# 存储结果

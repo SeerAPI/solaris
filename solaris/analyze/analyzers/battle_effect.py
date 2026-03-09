@@ -36,7 +36,7 @@ class BattleEffectAnalyzer(BaseDataSourceAnalyzer):
 
 	def analyze(self):
 		"""分析战斗效果数据
-		
+
 		处理流程：
 		1. 加载补丁数据、效果数据和效果描述
 		2. 识别限制类异常状态（从描述中提取）
@@ -46,7 +46,7 @@ class BattleEffectAnalyzer(BaseDataSourceAnalyzer):
 		   - 为限制类异常状态添加额外的类型引用
 		   - 优先使用效果描述，否则使用补丁描述
 		5. 建立双向引用关系（效果 <-> 效果类型）
-		
+
 		Returns:
 			包含 BattleEffect 和 BattleEffectCategory 的分析结果元组
 		"""
@@ -54,7 +54,7 @@ class BattleEffectAnalyzer(BaseDataSourceAnalyzer):
 		effect_patch: dict[int, BattleEffectPatchTable] = self._get_data(
 			'patch', 'battle_effects_custom.json'
 		)
-		
+
 		# 加载效果数据，以名称为键构建字典
 		effect_data: dict[str, 'SubEffectItem'] = {
 			effect['name']: effect
@@ -62,13 +62,13 @@ class BattleEffectAnalyzer(BaseDataSourceAnalyzer):
 				'battle_effects'
 			]['battle_effect'][0]['sub_effect']
 		}
-		
+
 		# 加载效果描述数据
 		effect_descs: dict[str, 'EffectDesItem'] = {
 			effect['kinddes']: effect
 			for effect in self._get_data('unity', 'effectDes.json')['root']['item']
 		}
-		
+
 		# 识别限制类异常状态（描述中包含"限制类异常状态"的效果）
 		restricted_effect_id: set[int] = {
 			effect['icon']
@@ -82,7 +82,7 @@ class BattleEffectAnalyzer(BaseDataSourceAnalyzer):
 			model_cls=BattleEffectCategory,
 			array_key='effect',
 		)
-		
+
 		# 构建效果映射
 		effect_map: dict[int, BattleEffect] = {}
 		for name, effect in effect_data.items():
@@ -93,7 +93,7 @@ class BattleEffectAnalyzer(BaseDataSourceAnalyzer):
 
 			# 创建效果类型引用列表
 			ref_list = [ResourceRef.from_model(effect_type_map[type_id])]
-			
+
 			# 如果有效果描述或补丁数据，则创建 BattleEffect
 			if (
 				effect_info := effect_descs.get(name)
@@ -101,14 +101,14 @@ class BattleEffectAnalyzer(BaseDataSourceAnalyzer):
 				# 限制类异常状态需要额外添加类型引用（类型ID=3）
 				if id_ in restricted_effect_id:
 					ref_list.append(ResourceRef.from_model(effect_type_map[3]))
-				
+
 				# 优先使用效果描述，否则使用补丁描述
 				desc = (
 					effect_info['desc']
 					if effect_info is not None
 					else effect_patch[id_]['desc']
 				)
-				
+
 				# 创建 BattleEffect 对象
 				effect_map[id_] = BattleEffect(
 					id=id_,
@@ -116,7 +116,7 @@ class BattleEffectAnalyzer(BaseDataSourceAnalyzer):
 					type=ref_list,
 					desc=desc,
 				)
-				
+
 				# 建立双向引用：在效果类型中添加对该效果的引用
 				for ref in ref_list:
 					effect_type_map[ref.id].effect.append(
