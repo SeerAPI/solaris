@@ -1,5 +1,6 @@
 from typing import Any
 
+from seerapi_models import PetAdvance
 from seerapi_models.common import ResourceRef, SixAttributes
 from seerapi_models.element_type import TypeCombination
 from seerapi_models.items import SkillActivationItem
@@ -263,6 +264,10 @@ class PetAnalyzer(BasePetAnalyzer):
 					id=story_entry_data['id'],
 				)
 
+			advance = None
+			if advance_data := self.pet_advance_data.get(pet_id):
+				advance = ResourceRef.from_model(PetAdvance, id=advance_data['id'])
+
 			pet_resource = Pet(
 				id=pet_id,
 				name=pet_name,
@@ -293,6 +298,7 @@ class PetAnalyzer(BasePetAnalyzer):
 				enemy_resource_id=self.pet_left_and_right_data.get(pet_id),
 				encyclopedia_entry=encyclopedia_entry,
 				archive_story_entry=archive_story_entry,
+				advance=advance,
 			)
 			pet_map[pet_id] = pet_resource
 			if (peak_pool_id := id_to_peak_pool_map.get(pet_id)) is not None:

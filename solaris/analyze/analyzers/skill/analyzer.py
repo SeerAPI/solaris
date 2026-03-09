@@ -2,6 +2,7 @@ from functools import cached_property
 from string import Formatter
 from typing import TYPE_CHECKING
 
+from seerapi_models import PetAdvance
 from seerapi_models.common import ResourceRef, SkillEffectInUse
 from seerapi_models.element_type import TypeCombination
 from seerapi_models.skill import (
@@ -15,6 +16,7 @@ from seerapi_models.skill import (
 )
 
 from solaris.analyze.analyzers.element_type import ElementTypeAnalyzer
+from solaris.analyze.analyzers.pet.pet_advance import PetAdvanceAnalyzer
 from solaris.analyze.base import (
 	BaseAnalyzer,
 	BaseDataSourcePostAnalyzer,
@@ -49,8 +51,8 @@ def _safe_format(template: str, args: list[object] | tuple[object, ...]) -> str:
 		try:
 			parts.append(str(args[int(field_name)]))
 		except (ValueError, IndexError):
-			parts.append("{" + field_name + "}")
-	return "".join(parts)
+			parts.append('{' + field_name + '}')
+	return ''.join(parts)
 
 
 def _slice_args(args: EffectArgs, args_nums: list[int]) -> list[EffectArgs]:
@@ -101,7 +103,7 @@ def add_condition_labels(
 class BaseSkillEffectAnalyzer(BaseDataSourcePostAnalyzer):
 	@classmethod
 	def get_input_analyzers(cls) -> tuple[type[BaseAnalyzer], ...]:
-		return (ElementTypeAnalyzer,)
+		return (ElementTypeAnalyzer, PetAdvanceAnalyzer)
 
 	@classmethod
 	def get_data_import_config(cls) -> DataImportConfig:
@@ -203,6 +205,7 @@ class BaseSkillEffectAnalyzer(BaseDataSourcePostAnalyzer):
 				param=params,
 				info=info,
 				skill=[],
+				analyze_info=effect_type.get('analyze', info),
 				**other_data_kwargs,
 			)
 			for tag in tags:
@@ -269,12 +272,14 @@ class BaseSkillEffectAnalyzer(BaseDataSourcePostAnalyzer):
 				info_args = INFO_HANDLER_MAP[type_id](effect_args, info_args)
 
 			info = _safe_format(type_.info, info_args)
+			analyze_info = _safe_format(type_.analyze_info, info_args)
 
 			results.append(
 				SkillEffectInUse(
 					effect=ResourceRef.from_model(type_),
 					args=effect_args,
 					info=info,
+					analyze_info=analyze_info,
 				)
 			)
 
@@ -370,6 +375,14 @@ class SkillAnalyzer(BaseSkillEffectAnalyzer):
 				skill['friend_side_effect_arg'],
 			)
 
+			advance: ResourceRef[PetAdvance] | None = None
+			advance_resoures = self._get_input_result(PetAdvanceAnalyzer, PetAdvance)
+			for _id, advance_resource in advance_resoures.data.items():
+				for skill_ref in advance_resource.skill:
+					if skill_ref.id == skill_id:
+						advance = ResourceRef.from_model(PetAdvance, id=_id)
+						break
+
 			skill_model = Skill(
 				id=skill_id,
 				name=skill_name,
@@ -386,6 +399,7 @@ class SkillAnalyzer(BaseSkillEffectAnalyzer):
 				atk_num=skill['atk_num'] or 1,
 				must_hit=bool(skill['must_hit']),
 				info=skill['info'] or None,
+				advance=advance,
 			)
 			skill_map[skill_id] = skill_model
 			skill_ref = ResourceRef.from_model(skill_model)

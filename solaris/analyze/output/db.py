@@ -212,26 +212,33 @@ def write_result_to_db(session: Session, data: Mapping[int, ResModel]) -> None:
 		# 获取当前ORM对象的链接关系表信息并遍历每个链接关系
 		link_relationships = get_orm_link_relationship(orm_type)
 		for field_name, link_model in link_relationships.items():
-			# 获取链接表的外键信息，用于确定如何连接两个模型
-			foreign_key_info = get_orm_foreign_key_info(link_model)
-
-			# 初始化字段变量，用于存储链接表中对应的外键字段名
 			current_model_field = None
 			target_model_field = None
 
-			# 遍历链接表的外键信息，确定哪个外键指向当前模型，哪个指向目标模型
-			# 例如：在EffectLink表中，effect_id指向PetEffect，target_id指向PetEffectGroup
-			for fk_field_name, (fk_table, _) in foreign_key_info.items():
-				if fk_table is orm_type:
-					current_model_field = fk_field_name
-				else:
-					target_model_field = fk_field_name
+			# 通过 SQLAlchemy 关系属性的 synchronize_pairs
+			# 确定链接表中的字段映射，
+			# 可正确处理自引用多对多的情况
+			mapper = inspect(orm_type)
+			rel_prop = mapper.relationships[field_name]  # type: ignore
+			if rel_prop.secondary is not None:
+				for _, link_col in rel_prop.synchronize_pairs:
+					current_model_field = link_col.key
+				for _, col in rel_prop.secondary_synchronize_pairs:
+					target_model_field = col.key
+			else:
+				fk_info = get_orm_foreign_key_info(link_model)
+				for fk_name, (fk_tbl, _) in fk_info.items():
+					if fk_tbl is orm_type:
+						current_model_field = fk_name
+					else:
+						target_model_field = fk_name
 
-			# 根据之前获取的链接关系，遍历原始模型中的关联数据，为每个数据创建一个链接表对象
+			# 遍历原始模型中的关联数据，为每个数据创建链接表对象
 			for item in getattr(model, field_name, []) or []:
 				if current_model_field is None or target_model_field is None:
 					raise ValueError(
-						f'Current model field or target model field is not found: {field_name}'
+						'Current model field or target model '
+						f'field is not found: {field_name}'
 					)
 				# 获取关联数据ID
 				item_id = get_item_id(session, item)

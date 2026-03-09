@@ -11,11 +11,13 @@ from solaris.analyze.base import (
 from solaris.analyze.utils import merge_dict_item
 
 if TYPE_CHECKING:
+	from solaris.parse.parsers.awakendetail import TaskItem as AwakenDetailTaskItem
 	from solaris.parse.parsers.effect_icon import EffectIconItem
 	from solaris.parse.parsers.monsters import MonsterItem
 	from solaris.parse.parsers.pet_skin import PetSkinConfig, _SkinItem
 	from solaris.parse.parsers.petbook import ArchivesStoryConfig, ArchivesStoryInfo
 	from solaris.parse.parsers.sp_hide_moves import SpHideMovesConfig, SpMovesItem
+
 
 general_import_config = DataImportConfig(
 	unity_paths=(
@@ -24,9 +26,12 @@ general_import_config = DataImportConfig(
 		'petbook.json',
 		'archivesStory.json',
 		'petSkin.json',
+		'effectag.json',
+		'petEffectIcon.json',
 		'effectIcon.json',
 		'pvpBan.json',
 		'pvpBanExpert.json',
+		'awakenDetail.json',
 	),
 	flash_paths=(
 		'config.xml.PetXMLInfo.xml',
@@ -132,6 +137,32 @@ class BasePetAnalyzer(BaseDataSourcePostAnalyzer):
 		return dict(result)
 
 	@cached_property
+	def eid_to_soulmark_id_map(self) -> dict[int, list[int]]:
+		data: list['EffectIconItem'] = self._get_data('unity', 'effectIcon.json')[
+			'root'
+		]['effect']
+		result = defaultdict(list)
+		for item in data:
+			result[item['effect_id']].append(item['id'])
+
+		return dict(result)
+
+	@cached_property
 	def pet_left_and_right_data(self) -> dict[int, int]:
 		data = self._get_data('flash', 'config.xml.PetLeftAndRightXmlInfo_petClass.xml')
 		return {int(key): value for key, value in data.items() if key.isdigit()}
+
+	@cached_property
+	def pet_advance_data(self) -> dict[int, 'AwakenDetailTaskItem']:
+		data: list['AwakenDetailTaskItem'] = self._get_data(
+			'unity', 'awakenDetail.json'
+		)['root']['task']
+
+		result = {}
+		for task in data:
+			if not (advances := task['advances']):
+				continue
+
+			result[advances['monster_id']] = task
+
+		return result

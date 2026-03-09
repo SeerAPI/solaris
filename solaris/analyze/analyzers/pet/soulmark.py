@@ -1,11 +1,13 @@
 from typing import TYPE_CHECKING
 
 from seerapi_models.common import EidEffect, EidEffectInUse, ResourceRef
-from seerapi_models.pet import Pet, Soulmark, SoulmarkTagCategory
+from seerapi_models.pet import Pet, PetAdvance, Soulmark, SoulmarkTagCategory
 
-from solaris.analyze.base import BaseDataSourceAnalyzer, DataImportConfig
+from solaris.analyze.analyzers.pet._general import BasePetAnalyzer
+from solaris.analyze.base import DataImportConfig
 from solaris.analyze.typing_ import AnalyzeResult
 from solaris.analyze.utils import CategoryMap, create_category_map
+from solaris.parse.parsers.effect_icon import EffectIconItem
 from solaris.utils import split_string_arg
 
 if TYPE_CHECKING:
@@ -19,19 +21,33 @@ def _generate_soulmark_alias(effect: EidEffectInUse) -> str | None:
 	)
 
 
-class SoulmarkAnalyzer(BaseDataSourceAnalyzer):
+class SoulmarkAnalyzer(BasePetAnalyzer):
 	@classmethod
 	def get_data_import_config(cls) -> DataImportConfig:
-		return DataImportConfig(
-			unity_paths=('effectag.json', 'effectIcon.json', 'petEffectIcon.json'),
+		return (
+			DataImportConfig(
+				unity_paths=('effectag.json', 'effectIcon.json', 'petEffectIcon.json'),
+			)
+			+ super().get_data_import_config()
 		)
 
 	@classmethod
 	def get_result_res_models(cls):
 		return (Soulmark, SoulmarkTagCategory)
 
+	def search_advance_soulmark_data(self, pet_id: int, eid: int) -> int | None:
+		if not (advance_data := self.pet_advance_data.get(pet_id)):
+			return None
+
+		if eid != advance_data['new_eff_id']:
+			return None
+
+		return advance_data['id']
+
 	def analyze(self) -> tuple[AnalyzeResult, ...]:
-		soulmark_data = self._get_data('unity', 'effectIcon.json')['root']['effect']
+		soulmark_data: list[EffectIconItem] = self._get_data(
+			'unity', 'effectIcon.json'
+		)['root']['effect']
 		tag_data: list[EffectTagItem] = self._get_data('unity', 'effectag.json')['data']
 		pet_effect_icon_data: list['PetEffectIconInfo'] = self._get_data(
 			'unity', 'petEffectIcon.json'
@@ -91,6 +107,14 @@ class SoulmarkAnalyzer(BaseDataSourceAnalyzer):
 				desc_formatting_adjustment = pet_effect_icon['Desc']
 				pve_effective = bool(pet_effect_icon['affectedBoss'])
 
+			advance = None
+			for pet_ref in pet_refs:
+				if advance_id := self.search_advance_soulmark_data(
+					pet_ref.id, effect_id
+				):
+					advance = ResourceRef.from_model(PetAdvance, id=advance_id)
+					break
+
 			soulmark = Soulmark(
 				id=id_,
 				desc=soulmark_dict['tips'],
@@ -100,10 +124,12 @@ class SoulmarkAnalyzer(BaseDataSourceAnalyzer):
 				intensified_to=to_res,
 				from_=from_res,
 				intensified=bool(soulmark_dict['intensify']),
-				is_adv=bool(soulmark_dict['is_adv']),
+				is_adv=bool(advance),
 				desc_formatting_adjustment=desc_formatting_adjustment,
 				pve_effective=pve_effective,
 				effect_alias=_generate_soulmark_alias(effect) if effect else None,
+				advance=advance,
+				analyze_desc=soulmark_dict['analyze'],
 			)
 			soulmark_map[soulmark.id] = soulmark
 			for tag in tags:
