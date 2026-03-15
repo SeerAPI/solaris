@@ -338,6 +338,7 @@ class SkillAnalyzer(BaseSkillEffectAnalyzer):
 			result[move_id] = {
 				**move,
 				'crit_rate': crit_rate,
+				**flash_data_map[move_id],
 			}
 
 		return result
