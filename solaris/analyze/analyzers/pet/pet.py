@@ -1,6 +1,6 @@
 from typing import Any
 
-from seerapi_models import PetAdvance
+from seerapi_models import PeakPoolVote, PetAdvance
 from seerapi_models.common import ResourceRef, SixAttributes
 from seerapi_models.element_type import TypeCombination
 from seerapi_models.items import SkillActivationItem
@@ -129,6 +129,11 @@ class PetAnalyzer(BasePetAnalyzer):
 		id_to_peak_expert_pool_map = {
 			pet_ref.id: k
 			for k, v in self._get_input_data(PeakPoolAnalyzer, PeakExpertPool).items()
+			for pet_ref in v.pet
+		}
+		id_to_peak_pool_vote_map = {
+			pet_ref.id: k
+			for k, v in self._get_input_data(PeakPoolAnalyzer, PeakPoolVote).items()
 			for pet_ref in v.pet
 		}
 
@@ -309,6 +314,8 @@ class PetAnalyzer(BasePetAnalyzer):
 				pet_resource.peak_expert_pool = ResourceRef.from_model(
 					PeakExpertPool, id=expert_pool_id
 				)
+			pet_resource.peak_pool_vote_id = id_to_peak_pool_vote_map.get(pet_id)
+
 			pet_gender_map.add_element(pet_gender_id, pet_ref)
 			pet_vipbuff_map.add_element(vipbuff_id, pet_ref)
 			pet_mount_type_map.add_element(mount_type, pet_ref)
