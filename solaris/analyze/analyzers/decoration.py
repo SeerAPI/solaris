@@ -43,8 +43,8 @@ class DecorationAnalyzer(BaseDataSourceAnalyzer):
 			1: AvatarHead,
 			2: AvatarFrame,
 			3: NamecardBackground,
-			4: NicknameBackground,
-			5: HomepageBackground,
+			4: HomepageBackground,
+			5: NicknameBackground,
 			6: Emoji,
 		}
 		result: dict[int, AnalyzeResult] = {
