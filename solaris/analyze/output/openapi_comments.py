@@ -2134,6 +2134,154 @@ API_COMMENTS: dict[type[BaseResModel], APIComment] = {
 		tags=['术语', '术语条目'],
 		description='术语条目，用于表示一个术语的详细信息。在Unity端的新版魂印/技能面板中显示。',
 	),
+	M.ErrorCode: APIComment(
+		name_en='error_code',
+		name_cn='错误码',
+		examples=[
+			{
+				'id': 1000,
+				'name': 'Error_1000',
+				'message': '错误信息',
+			}
+		],
+		tags=['错误码'],
+		description='Socket通信中返回的错误码，用于表示一个错误码的详细信息。',
+	),
+	M.AvatarHead: APIComment(
+		name_en='avatar_head',
+		name_cn='头像',
+		examples=[
+			{
+				'id': 2,
+				'name': '白色赛尔',
+				'desc': 'SPT奖励商城兑换获得',
+				'icon_id': 2,
+				'hash': '5d75d6f8',
+			}
+		],
+		tags=['头像', '装饰品'],
+		description='头像资源，用于表示玩家头像信息。',
+	),
+	M.AvatarFrame: APIComment(
+		name_en='avatar_frame',
+		name_cn='头像框',
+		examples=[
+			{
+				'id': 124,
+				'name': '2025新春限定头像框',
+				'desc': '参与“奥菲利娅的新春试炼”活动获得',
+				'icon_id': 46,
+				'hash': '9e0fa68d',
+			}
+		],
+		tags=['头像框', '装饰品'],
+		description='头像框资源，用于表示玩家头像框信息。',
+	),
+	M.NamecardBackground: APIComment(
+		name_en='namecard_background',
+		name_cn='名片背景',
+		examples=[
+			{
+				'id': 27,
+				'name': '时空怪盗',
+				'desc': '参与“新春回馈”活动获得',
+				'icon_id': 2,
+				'hash': '898a793c',
+			}
+		],
+		tags=['名片背景', '装饰品'],
+		description='名片背景资源，用于表示用于Unity端玩家信息页面的背景资源。',
+	),
+	M.NicknameBackground: APIComment(
+		name_en='nickname_background',
+		name_cn='昵称背景',
+		examples=[
+			{
+				'id': 196,
+				'name': '2026年费专属昵称框',
+				'desc': '成为2026年费VIP后即可获得',
+				'icon_id': 5,
+				'hash': 'c5e5d119',
+			}
+		],
+		tags=['昵称背景', '装饰品'],
+		description='昵称背景资源，用于表示玩家昵称背景信息。',
+	),
+	M.HomepageBackground: APIComment(
+		name_en='homepage_background',
+		name_cn='主页背景',
+		examples=[
+			{
+				'id': 43,
+				'name': '悦动星辰_diduozhuchangjing',
+				'desc': '参与“2023年国庆蒂朵回归”活动获得',
+				'icon_id': 1,
+				'hash': '30844c95',
+			}
+		],
+		tags=['主页背景', '装饰品'],
+		description='主页背景资源，用于表示用于Unity端主页的背景资源。',
+	),
+	M.Emoji: APIComment(
+		name_en='emoji',
+		name_cn='表情',
+		examples=[
+			{
+				'id': 159,
+				'name': '为什么',
+				'desc': '参与浪浪山小妖怪联动活动“穿越浪浪山”获得',
+				'icon_id': 159,
+				'hash': '8d3fc830',
+			}
+		],
+		tags=['表情', '装饰品'],
+		description='表情资源，用于表示表情资源。',
+	),
+	M.PeakPoolVote: APIComment(
+		name_en='peak_pool_vote',
+		name_cn='巅峰圣战禁限池票选',
+		examples=[
+			{
+				'id': 2,
+				'start_time': '2026-04-03T12:00:00+08:00',
+				'end_time': '2026-04-09T00:00:00+08:00',
+				'count': 2,
+				'subkey': 20260403,
+				'pet': [
+					{'id': 5000, 'url': 'https://api.seerapi.com/v1/pet/5000'},
+					{'id': 3577, 'url': 'https://api.seerapi.com/v1/pet/3577'},
+					{'id': 4677, 'url': 'https://api.seerapi.com/v1/pet/4677'},
+					{'id': 4125, 'url': 'https://api.seerapi.com/v1/pet/4125'},
+					{'id': 3291, 'url': 'https://api.seerapi.com/v1/pet/3291'},
+					{'id': 4762, 'url': 'https://api.seerapi.com/v1/pet/4762'},
+					{'id': 4554, 'url': 'https://api.seerapi.com/v1/pet/4554'},
+					{'id': 4766, 'url': 'https://api.seerapi.com/v1/pet/4766'},
+					{'id': 4586, 'url': 'https://api.seerapi.com/v1/pet/4586'},
+					{'id': 4510, 'url': 'https://api.seerapi.com/v1/pet/4510'},
+					{'id': 3788, 'url': 'https://api.seerapi.com/v1/pet/3788'},
+					{'id': 4808, 'url': 'https://api.seerapi.com/v1/pet/4808'},
+					{'id': 4126, 'url': 'https://api.seerapi.com/v1/pet/4126'},
+					{'id': 3613, 'url': 'https://api.seerapi.com/v1/pet/3613'},
+					{'id': 3886, 'url': 'https://api.seerapi.com/v1/pet/3886'},
+					{'id': 3056, 'url': 'https://api.seerapi.com/v1/pet/3056'},
+					{'id': 4622, 'url': 'https://api.seerapi.com/v1/pet/4622'},
+					{'id': 4644, 'url': 'https://api.seerapi.com/v1/pet/4644'},
+					{'id': 4605, 'url': 'https://api.seerapi.com/v1/pet/4605'},
+					{'id': 3586, 'url': 'https://api.seerapi.com/v1/pet/3586'},
+					{'id': 3741, 'url': 'https://api.seerapi.com/v1/pet/3741'},
+					{'id': 3516, 'url': 'https://api.seerapi.com/v1/pet/3516'},
+					{'id': 4732, 'url': 'https://api.seerapi.com/v1/pet/4732'},
+					{'id': 4661, 'url': 'https://api.seerapi.com/v1/pet/4661'},
+					{'id': 3739, 'url': 'https://api.seerapi.com/v1/pet/3739'},
+					{'id': 4717, 'url': 'https://api.seerapi.com/v1/pet/4717'},
+					{'id': 4468, 'url': 'https://api.seerapi.com/v1/pet/4468'},
+				],
+				'hash': '2042bac7',
+			}
+		],
+		tags=['巅峰圣战', '禁限池'],
+		description='巅峰圣战禁限池票选资源，用于表示一轮巅峰圣战禁限池票选信息。',
+	),
 }
 
 
