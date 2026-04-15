@@ -38,6 +38,20 @@ def _handle_yielding_ev(value: str | int) -> SixAttributes:
 	)
 
 
+def _deduplicate_pet_skills_by_id(
+	skill_resources: list[SkillInPet],
+) -> list[SkillInPet]:
+	"""根据 skill.id 去重，保留第一个出现的"""
+	seen_skill_ids = set()
+	unique_skill_resources = []
+	for item in skill_resources:
+		skill_id = item.skill.id
+		if skill_id not in seen_skill_ids:
+			seen_skill_ids.add(skill_id)
+			unique_skill_resources.append(item)
+	return unique_skill_resources
+
+
 class PetAnalyzer(BasePetAnalyzer):
 	@classmethod
 	def get_result_res_models(cls):
@@ -253,6 +267,16 @@ class PetAnalyzer(BasePetAnalyzer):
 				pet_skill_resources.extend(
 					self.extract_skills_from_list(pet_id, move, is_fifth=True, **kw)
 				)
+
+			moves = get_nested_value(pet_dict, 'show_extra_moves.move') or []
+			for move in moves:
+				pet_skill_resources.extend(
+					self.extract_skills_from_list(
+						pet_id, move, is_fifth=True, is_special=True
+					)
+				)
+
+			pet_skill_resources = _deduplicate_pet_skills_by_id(pet_skill_resources)
 
 			encyclopedia_entry = None
 			if pet_id in self.pet_encyclopedia_data:
