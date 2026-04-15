@@ -253,7 +253,7 @@ class PetAnalyzer(BasePetAnalyzer):
 						pet_id,
 						fifth_skill,
 						is_fifth=True,
-						is_special=True,
+						is_special=False,
 					)
 				)
 
