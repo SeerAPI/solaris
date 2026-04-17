@@ -13,7 +13,6 @@ class AutocardContentInfo(TypedDict):
     buff_param: str
     card_txt: str
     des: str
-    effect_icon: str
     name: str
     attack: int
     compose: int
@@ -23,8 +22,6 @@ class AutocardContentInfo(TypedDict):
     display: int
     health: int
     id: int
-    is_death_effect: int
-    is_place_effect: int
     is_use: int
     level: int
     nature: int
@@ -63,15 +60,12 @@ class AutocardContentParser(BaseParser[AutocardContentConfig]):
             buff_param = reader.ReadUTFBytesWithLength()
             count_num = reader.ReadSignedInt()
             display = reader.ReadSignedInt()
-            is_death_effect = reader.ReadSignedInt()
-            is_place_effect = reader.ReadSignedInt()
             attack = reader.ReadSignedInt()
             card_txt = reader.ReadUTFBytesWithLength()
             compose = reader.ReadSignedInt()
             compose_to = reader.ReadSignedInt()
             cost = reader.ReadSignedInt()
             des = reader.ReadUTFBytesWithLength()
-            effect_icon = reader.ReadUTFBytesWithLength()
             health = reader.ReadSignedInt()
             id_val = reader.ReadSignedInt()
             is_use = reader.ReadSignedInt()
@@ -88,7 +82,6 @@ class AutocardContentParser(BaseParser[AutocardContentConfig]):
                     buff_param=buff_param,
                     card_txt=card_txt,
                     des=des,
-                    effect_icon=effect_icon,
                     name=name,
                     attack=attack,
                     compose=compose,
@@ -98,8 +91,6 @@ class AutocardContentParser(BaseParser[AutocardContentConfig]):
                     display=display,
                     health=health,
                     id=id_val,
-                    is_death_effect=is_death_effect,
-                    is_place_effect=is_place_effect,
                     is_use=is_use,
                     level=level,
                     nature=nature,
