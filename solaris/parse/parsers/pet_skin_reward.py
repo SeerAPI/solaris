@@ -10,6 +10,7 @@ class PetSkinRewardInfo(TypedDict):
 	"""精灵皮肤奖励信息条目"""
 
 	id: int
+	changereward: str
 	param: int
 	redbadge: int
 	reward: str
@@ -18,6 +19,7 @@ class PetSkinRewardInfo(TypedDict):
 	subtype: int
 	userbit: int
 	userinfo: int
+	userinfo1: int
 
 
 class PetSkinRewardConfig(TypedDict):
@@ -51,6 +53,7 @@ class PetSkinRewardParser(BaseParser[PetSkinRewardConfig]):
 		# 循环读取每个 PetSkinRewardInfo
 		for _ in range(count):
 			# 按照 IPetSkinRewardInfo.Parse 方法的读取顺序
+			changereward = reader.ReadUTFBytesWithLength()
 			id_val = reader.ReadSignedInt()
 			param = reader.ReadSignedInt()
 			redbadge = reader.ReadSignedInt()
@@ -60,10 +63,11 @@ class PetSkinRewardParser(BaseParser[PetSkinRewardConfig]):
 			subtype = reader.ReadSignedInt()
 			userbit = reader.ReadSignedInt()
 			userinfo = reader.ReadSignedInt()
-
+			userinfo1 = reader.ReadSignedInt()
 			result['data'].append(
 				PetSkinRewardInfo(
 					id=id_val,
+					changereward=changereward,
 					param=param,
 					redbadge=redbadge,
 					reward=reward,
@@ -72,6 +76,7 @@ class PetSkinRewardParser(BaseParser[PetSkinRewardConfig]):
 					subtype=subtype,
 					userbit=userbit,
 					userinfo=userinfo,
+					userinfo1=userinfo1,
 				)
 			)
 
