@@ -66,7 +66,6 @@ class SignIconFightParser(BaseParser[_SignIconFightConfig]):
 				# 按照 C# 代码的顺序严格读取字段
 				des = reader.ReadUTFBytesWithLength()
 				num_des = reader.ReadUTFBytesWithLength()
-				spDes = reader.ReadUTFBytesWithLength()
 				class_name = reader.ReadUTFBytesWithLength()
 				dec = reader.ReadUTFBytesWithLength()
 
