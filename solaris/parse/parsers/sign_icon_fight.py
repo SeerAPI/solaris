@@ -13,7 +13,6 @@ class ItemItem(TypedDict):
 	class_name: str
 	dec: str
 	des: str
-	spDes: str
 	frame: list[str]
 	num_des: str
 	sp_des: list[str]
@@ -118,7 +117,6 @@ class SignIconFightParser(BaseParser[_SignIconFightConfig]):
 					'class_name': class_name,
 					'dec': dec,
 					'des': des,
-					'spDes': spDes,
 					'frame': frame,
 					'num_des': num_des,
 					'sp_des': sp_des,
