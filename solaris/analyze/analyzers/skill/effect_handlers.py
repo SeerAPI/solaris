@@ -156,8 +156,11 @@ def effect_handler_default(
 	# 如果参数有预定义的描述信息(param.infos)
 	elif isinstance(param_infos := param.infos, list):
 		pos = effect_args[param_position]
-		# 使用参数值作为索引，在infos中查找对应的描述文本并使用
-		info_args[param_position] = param_infos[pos]
+		try:
+			# 使用参数值作为索引，在infos中查找对应的描述文本并使用
+			info_args[param_position] = param_infos[pos]
+		except IndexError:
+			info_args[param_position] = pos
 
 	return info_args
 
