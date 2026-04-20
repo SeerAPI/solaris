@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from typing import TYPE_CHECKING
 
 from seerapi_models.common import ResourceRef
@@ -7,14 +7,12 @@ from seerapi_models.pet import Pet
 
 from solaris.analyze.base import BaseDataSourceAnalyzer, DataImportConfig
 from solaris.analyze.typing_ import AnalyzeResult
+from solaris.utils import CN_TZ
 
 if TYPE_CHECKING:
 	from solaris.parse.parsers.pvp_ban import PvpBanConfig
 	from solaris.parse.parsers.pvp_ban_expert import PvpBanExpertConfig
 	from solaris.parse.parsers.pvp_vote import PvpVoteConfig, PvpVoteInfo
-
-
-CN_TZ = timezone(timedelta(hours=8))
 
 
 def parse_pool_start_time(time_str: str) -> datetime:

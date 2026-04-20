@@ -1,10 +1,11 @@
 from collections.abc import Generator, MutableSequence
 from contextlib import contextmanager
+from datetime import timedelta, timezone
 import importlib
 import inspect
 from pathlib import Path
 import pkgutil
-from typing import Any, Literal, TypeVar, get_origin, overload
+from typing import Any, Final, Literal, TypeVar, get_origin, overload
 
 T = TypeVar('T')
 
@@ -281,3 +282,6 @@ def join_url(base_url: str, *parts: str, end_slash: bool = False) -> str:
 		url += '/'
 
 	return url
+
+
+CN_TZ: Final[timezone] = timezone(timedelta(hours=8))
