@@ -2282,6 +2282,20 @@ API_COMMENTS: dict[type[BaseResModel], APIComment] = {
 		tags=['巅峰圣战', '禁限池'],
 		description='巅峰圣战禁限池票选资源，用于表示一轮巅峰圣战禁限池票选信息。',
 	),
+	M.PeakSeason: APIComment(
+		name_en='peak_season',
+		name_cn='巅峰圣战赛季',
+		examples=[
+			{
+				'id': 1,
+				'start_time': '2026-04-17T10:00:00+08:00',
+				'end_time': '2026-07-17T10:00:00+08:00',
+				'hash': '6ca2aef1',
+			}
+		],
+		tags=['巅峰圣战'],
+		description='巅峰圣战赛季资源，用于表示当前的巅峰赛季，该端口仅有一个资源且id固定为1。',
+	),
 }
 
 
