@@ -1,6 +1,7 @@
 from collections.abc import Sequence
 import inspect
 from pathlib import Path
+from typing import cast
 
 from openapi_pydantic import Server
 from seerapi_models.build_model import BaseGeneralModel, BaseResModel
@@ -43,9 +44,9 @@ class AnalyzerExecutionError(Exception):
 def get_common_models() -> list[type[BaseGeneralModel]]:
 	models: list[type[BaseGeneralModel]] = [
 		model
-		for model in seerapi_common_models.__dict__.values()
+		for model_cls_name in cast(list[str], seerapi_common_models.__all__)
 		if (
-			type(model) is type
+			(model := getattr(seerapi_common_models, model_cls_name))
 			and issubclass(model, BaseGeneralModel)
 			and not inspect.isabstract(model)
 			and not is_mapped_class(model)
