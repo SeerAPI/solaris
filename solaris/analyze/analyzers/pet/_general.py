@@ -104,11 +104,6 @@ class BasePetAnalyzer(BaseDataSourcePostAnalyzer):
 		return {data['moves']: data for data in data['config']['sp_moves']}
 
 	@cached_property
-	def pet_advanced_skill_data(self) -> dict[int, 'SpMovesItem']:
-		data: SpHideMovesConfig = self._get_data('unity', 'spHideMoves.json')
-		return {data['moves']: data for data in data['config']['show_moves']}
-
-	@cached_property
 	def pet_encyclopedia_data(self) -> dict[int, dict[str, Any]]:
 		return {
 			book['ID']: book
@@ -164,5 +159,21 @@ class BasePetAnalyzer(BaseDataSourcePostAnalyzer):
 				continue
 
 			result[advances['monster_id']] = task
+
+		return result
+
+	@cached_property
+	def pet_advanced_skill_set(self) -> set[int]:
+		data = self.pet_advance_data.values()
+		result: set[int] = set()
+		for task in data:
+			if not (advances := task['advances']):
+				continue
+
+			if advances['ex_move']:
+				result.add(advances['ex_move']['extra_moves'])
+
+			if advances['sp_move']:
+				result.update(advances['sp_move']['sp_moves'])
 
 		return result

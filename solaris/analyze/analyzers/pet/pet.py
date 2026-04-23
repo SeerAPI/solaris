@@ -260,7 +260,7 @@ class PetAnalyzer(BasePetAnalyzer):
 			# 获取特训/觉醒第五技能（U端特训/觉醒第五在同一个字段中，需要单独分辨）
 			moves = get_nested_value(pet_dict, 'sp_extra_moves.move') or []
 			for move in moves:
-				if move['id'] in self.pet_advanced_skill_data:
+				if move['id'] in self.pet_advanced_skill_set:
 					kw = {'is_advanced': True}
 				else:
 					kw = {'is_special': True}
