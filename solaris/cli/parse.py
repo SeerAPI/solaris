@@ -3,7 +3,7 @@ from pathlib import Path
 
 import click
 
-from solaris.parse import import_parser_classes, run_all_parser
+from solaris.parse import filter_parser_classes, import_parser_classes, run_all_parser
 from solaris.parse.base import BaseParser
 
 
@@ -70,11 +70,20 @@ def format_parsers(parser_classes: Sequence[type[BaseParser]]) -> str:
 	help='解析器所在的包名',
 )
 @click.option('-l', '--list-parsers', is_flag=True, help='输出解析器信息')
+@click.option(
+	'-p',
+	'--parser',
+	'parser_names',
+	type=str,
+	multiple=True,
+	help='指定要运行的解析器源文件名（可指定多个），如 -p monsters.bytes -p moves',
+)
 def parse(
 	source_dir: Path,
 	output_dir: Path,
 	package_name: tuple[str, ...],
 	list_parsers: bool,
+	parser_names: tuple[str, ...],
 ) -> None:
 	"""批量解析赛尔号 Unity 端二进制数据"""
 
@@ -82,8 +91,19 @@ def parse(
 	for name in package_name:
 		parser_classes.extend(import_parser_classes(name))
 
+	if parser_names:
+		parser_classes, not_found = filter_parser_classes(
+			parser_classes, parser_names
+		)
+		if not_found:
+			click.echo(f'未找到以下解析器: {", ".join(sorted(not_found))}', err=True)
+
 	if list_parsers:
 		click.echo(format_parsers(parser_classes))
+		return
+
+	if not parser_classes:
+		click.echo('没有匹配的解析器', err=True)
 		return
 
 	run_all_parser(parser_classes, source_dir, output_dir)
