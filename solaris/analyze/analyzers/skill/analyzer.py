@@ -164,7 +164,7 @@ class BaseSkillEffectAnalyzer(BaseDataSourcePostAnalyzer):
 
 		effect_type_map: dict[int, SkillEffectType] = {}
 		for effect_type in effect_type_data:
-			if not (info := effect_type.get('info')):
+			if (info := effect_type.get('info')) is None:
 				continue
 			id_ = effect_type['id']
 			params: list[SkillEffectParamInType] | None = None
