@@ -1,3 +1,5 @@
+该仓库已迁移至 https://github.com/SeerAPI/seerapi
+
 <div align="center">
 
 # Solaris
